@@ -1,0 +1,67 @@
+{
+  "name": "kandy",
+  "displayName": "Kandy - Kubernetes Cluster Manager",
+  "description": "An AI-powered VS Code extension for Kubernetes cluster management that makes DevOps workflows conversational and intelligent",
+  "version": "0.1.0",
+  "publisher": "alto9",
+  "engines": {
+    "vscode": "^1.80.0",
+    "node": ">=22.0.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [],
+    "configuration": {
+      "title": "Kandy",
+      "properties": {
+        "kandy.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for Kandy server authentication",
+          "scope": "application"
+        },
+        "kandy.serverUrl": {
+          "type": "string",
+          "default": "https://api.kandy.dev",
+          "description": "Kandy server URL",
+          "scope": "application"
+        },
+        "kandy.debugMode": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable debug logging",
+          "scope": "application"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.80.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@vscode/test-electron": "^2.3.0",
+    "@vscode/vsce": "^2.19.0",
+    "eslint": "^8.45.0",
+    "typescript": "^5.1.6"
+  },
+  "dependencies": {
+    "@kubernetes/client-node": "^0.20.0"
+  }
+}
+

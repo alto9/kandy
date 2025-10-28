@@ -1,12 +1,12 @@
 # Kandy
 
-An AI-powered desktop application for Kubernetes cluster management that makes DevOps workflows conversational and intelligent.
+An AI-powered VS Code extension for Kubernetes cluster management that makes DevOps workflows conversational and intelligent.
 
-![Kandy Logo](https://img.shields.io/badge/Status-MVP-blue) ![Electron](https://img.shields.io/badge/Electron-25.0.0-green) ![Kubernetes](https://img.shields.io/badge/Kubernetes-Supported-blue)
+![Kandy Logo](https://img.shields.io/badge/Status-MVP-blue) ![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue) ![Kubernetes](https://img.shields.io/badge/Kubernetes-Supported-blue)
 
 ## Overview
 
-Kandy transforms Kubernetes management from complex command-line operations into an intuitive, AI-assisted experience. Built with Electron for cross-platform compatibility, Kandy brings the power of AI to your desktop for seamless cluster operations.
+Kandy transforms Kubernetes management from complex command-line operations into an intuitive, AI-assisted experience. Built as a VS Code extension, Kandy brings the power of AI directly into your development environment for seamless cluster operations.
 
 ## MVP Features
 
@@ -25,17 +25,18 @@ Kandy transforms Kubernetes management from complex command-line operations into
 ```
 kandy/
 ├── src/
-│   ├── main/           # Electron main process
-│   ├── renderer/       # React frontend
-│   ├── ai/            # AI integration layer
-│   └── shared/        # Shared utilities
-├── ai/                # Glam context files
-│   ├── contexts/      # Context definitions
-│   ├── decisions/     # Architecture decisions
-│   ├── features/      # Feature specifications
-│   ├── specs/         # Technical specifications
-│   └── tasks/         # Implementation tasks
-└── docs/              # Documentation
+│   ├── extension.ts        # Main extension entry point
+│   ├── providers/          # Tree view and content providers
+│   ├── services/           # Kubernetes and AI services
+│   ├── commands/           # Command implementations
+│   └── utils/              # Shared utilities
+├── ai/                     # Glam context files
+│   ├── contexts/           # Context definitions
+│   ├── decisions/          # Architecture decisions
+│   ├── features/           # Feature specifications
+│   ├── specs/              # Technical specifications
+│   └── tickets/            # Implementation tasks
+└── out/                    # Compiled TypeScript output
 ```
 
 ## Getting Started
@@ -46,6 +47,16 @@ kandy/
 - kubectl configured for your clusters
 
 ### Installation
+
+#### For Users
+
+Install directly from the VS Code Marketplace:
+1. Open VS Code
+2. Go to Extensions (`Ctrl/Cmd + Shift + X`)
+3. Search for "Kandy"
+4. Click Install
+
+#### For Developers
 
 1. **Clone the repository**
    ```bash
@@ -58,16 +69,20 @@ kandy/
    npm install
    ```
 
-3. **Start development server**
+3. **Compile TypeScript**
    ```bash
-   npm run dev
+   npm run compile
    ```
 
-4. **Build for production**
+4. **Run extension in Development Mode**
+   - Press `F5` in VS Code to open a new Extension Development Host window
+   - Or run: `npm run watch` for automatic recompilation
+
+5. **Package extension**
    ```bash
-   npm run build
    npm run package
    ```
+   This creates a `.vsix` file that can be installed locally or published to the marketplace.
 
 ### First Run
 
@@ -77,9 +92,11 @@ kandy/
    - Search for "Kandy" and configure your API key
    - Set server URL if using custom deployment
 
-2. **Launch Kandy**
-   - Import your kubeconfig file (File → Import kubeconfig)
-   - Select a cluster from the sidebar
+2. **Start Using Kandy**
+   - The extension activates automatically when VS Code starts
+   - Access Kandy features from the Activity Bar sidebar
+   - Import your kubeconfig file using the command palette (`Ctrl/Cmd + Shift + P` → "Kandy: Import kubeconfig")
+   - Select a cluster from the Kandy sidebar
    - Try AI analysis: "Show me resource usage" or "Check for issues"
 
 ### Authentication Setup
@@ -169,15 +186,15 @@ This project uses the [Glam methodology](https://github.com/your-glam-repo) for 
 
 ## Technology Stack
 
-- **Frontend**: React + TypeScript
-- **Backend**: Electron main process with Node.js 22+ (LTS)
+- **Extension Framework**: VS Code Extension API
+- **Language**: TypeScript (ES2020 target)
+- **Runtime**: Node.js 22+ (LTS)
 - **AI Integration**: Custom NLP + LLM integration via Kandy Server
-- **Kubernetes**: Official client libraries
-- **Styling**: Tailwind CSS / shadcn/ui
-- **State Management**: Zustand / Redux Toolkit
-- **Build**: Vite + electron-builder
+- **Kubernetes**: Official client libraries (@kubernetes/client-node)
+- **Build**: TypeScript compiler
+- **Package Manager**: npm
 
-**Note**: Requires Node.js 22 LTS or later for both development and runtime. Production deployment uses AWS CDK v2 for Infrastructure as Code.
+**Note**: Requires Node.js 22 LTS or later for development. VS Code 1.80.0+ required for running the extension. Server infrastructure deployment uses AWS CDK v2 for Infrastructure as Code.
 
 ## License
 

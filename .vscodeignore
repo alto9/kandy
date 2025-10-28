@@ -1,0 +1,37 @@
+# Development files
+.vscode/**
+.vscode-test/**
+src/**
+.gitignore
+.yarnrc
+vsc-extension-quickstart.md
+**/tsconfig.json
+**/.eslintrc.json
+**/*.map
+**/*.ts
+
+# Build artifacts
+node_modules/**
+out/test/**
+
+# Documentation and AI context
+ai/**
+docs/**
+*.md
+!README.md
+
+# Git
+.git/**
+.github/**
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Testing
+coverage/**
+.nyc_output/**
+
+# Misc
+*.vsix
+
