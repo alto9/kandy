@@ -4,7 +4,7 @@ session_id: design-the-installation-and-setup-procedures-for-u
 feature_id: [initial-configuration]
 spec_id: [tree-view-spec]
 model_id: []
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 25
 ---
