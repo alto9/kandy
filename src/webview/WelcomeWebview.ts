@@ -44,13 +44,13 @@ export class WelcomeWebview {
         panel.webview.onDidReceiveMessage(
             async (message) => {
                 switch (message.command) {
-                    case 'dismiss':
+                    case 'dismiss': {
                         // Update global state to remember the user dismissed the welcome screen
                         const globalState = GlobalState.getInstance();
                         await globalState.setWelcomeScreenDismissed(message.doNotShowAgain);
                         panel.dispose();
                         break;
-
+                    }
                     case 'openPortal':
                         // Open the Kandy portal in external browser
                         vscode.env.openExternal(vscode.Uri.parse('https://portal.kandy.dev'));

@@ -137,5 +137,117 @@ suite('GlobalState Test Suite', () => {
         const value = mockMemento.get<boolean>('kandy.welcomeScreen.dismissed');
         assert.strictEqual(value, true);
     });
+
+    // Dismiss Logic Scenarios
+
+    test('Dismiss with checkbox checked - should persist dismissal', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        GlobalState.initialize(mockContext as any);
+        const state = GlobalState.getInstance();
+        
+        // Simulate user dismissing with checkbox checked
+        const doNotShowAgain = true;
+        await state.setWelcomeScreenDismissed(doNotShowAgain);
+        
+        // Verify dismissal is persisted
+        assert.strictEqual(
+            state.getWelcomeScreenDismissed(),
+            true,
+            'Welcome screen should be permanently dismissed'
+        );
+        
+        // Simulate extension restart - create new GlobalState instance
+        GlobalState.reset();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        GlobalState.initialize(mockContext as any);
+        const newState = GlobalState.getInstance();
+        
+        // Verify dismissal persists across restart
+        assert.strictEqual(
+            newState.getWelcomeScreenDismissed(),
+            true,
+            'Welcome screen dismissal should persist across restarts'
+        );
+    });
+
+    test('Dismiss with checkbox unchecked - should not persist dismissal', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        GlobalState.initialize(mockContext as any);
+        const state = GlobalState.getInstance();
+        
+        // Simulate user dismissing WITHOUT checkbox checked
+        const doNotShowAgain = false;
+        await state.setWelcomeScreenDismissed(doNotShowAgain);
+        
+        // Verify dismissal is NOT persisted
+        assert.strictEqual(
+            state.getWelcomeScreenDismissed(),
+            false,
+            'Welcome screen should not be permanently dismissed'
+        );
+        
+        // Simulate extension restart
+        GlobalState.reset();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        GlobalState.initialize(mockContext as any);
+        const newState = GlobalState.getInstance();
+        
+        // Verify welcome screen will show again
+        assert.strictEqual(
+            newState.getWelcomeScreenDismissed(),
+            false,
+            'Welcome screen should appear again on next activation'
+        );
+    });
+
+    test('Welcome screen reappears after temporary dismissal', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        GlobalState.initialize(mockContext as any);
+        const state = GlobalState.getInstance();
+        
+        // Initial state - not dismissed
+        assert.strictEqual(state.getWelcomeScreenDismissed(), false);
+        
+        // User closes without checking box (temporary dismiss)
+        await state.setWelcomeScreenDismissed(false);
+        
+        // Verify still not dismissed
+        assert.strictEqual(state.getWelcomeScreenDismissed(), false);
+        
+        // Simulate another activation - welcome should show again
+        GlobalState.reset();
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        GlobalState.initialize(mockContext as any);
+        const newState = GlobalState.getInstance();
+        
+        assert.strictEqual(
+            newState.getWelcomeScreenDismissed(),
+            false,
+            'Welcome screen should reappear after temporary dismissal'
+        );
+    });
+
+    test('Permanent dismissal prevents welcome screen on future activations', async () => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        GlobalState.initialize(mockContext as any);
+        const state = GlobalState.getInstance();
+        
+        // User permanently dismisses
+        await state.setWelcomeScreenDismissed(true);
+        
+        // Simulate multiple restarts
+        for (let i = 0; i < 3; i++) {
+            GlobalState.reset();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            GlobalState.initialize(mockContext as any);
+            const newState = GlobalState.getInstance();
+            
+            assert.strictEqual(
+                newState.getWelcomeScreenDismissed(),
+                true,
+                `Welcome screen should remain dismissed after restart ${i + 1}`
+            );
+        }
+    });
 });
 

@@ -4,7 +4,7 @@ session_id: design-the-installation-and-setup-procedures-for-u
 feature_id: [initial-configuration]
 spec_id: [webview-spec]
 model_id: []
-status: pending
+status: completed
 priority: high
 estimated_minutes: 20
 ---
@@ -33,12 +33,12 @@ Users should have control over whether the welcome screen appears on subsequent 
 
 ## Acceptance Criteria
 
-- [ ] Clicking "Close" with checkbox unchecked closes webview but doesn't persist dismissal
-- [ ] Clicking "Close" with checkbox checked persists dismissal to GlobalState
-- [ ] Welcome screen reappears on next activation if not permanently dismissed
-- [ ] Welcome screen does not appear on next activation if permanently dismissed
-- [ ] State is properly saved and retrieved across VS Code restarts
-- [ ] Webview disposal is handled correctly
+- [x] Clicking "Close" with checkbox unchecked closes webview but doesn't persist dismissal
+- [x] Clicking "Close" with checkbox checked persists dismissal to GlobalState
+- [x] Welcome screen reappears on next activation if not permanently dismissed
+- [x] Welcome screen does not appear on next activation if permanently dismissed
+- [x] State is properly saved and retrieved across VS Code restarts
+- [x] Webview disposal is handled correctly
 
 ## Dependencies
 
