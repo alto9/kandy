@@ -124,12 +124,11 @@ export class KubeconfigParser {
 
     /**
      * Parses the kubeconfig file and returns structured, typed data.
-     * If the file doesn't exist or is inaccessible, returns an empty configuration
-     * instead of throwing an error to allow graceful degradation.
+     * If the file doesn't exist, is inaccessible, or contains invalid YAML,
+     * returns an empty configuration instead of throwing an error to allow graceful degradation.
      * 
      * @param kubeconfigPath Optional path to kubeconfig file. If not provided, uses getKubeconfigPath()
-     * @returns Parsed kubeconfig data, or empty config if file is missing/inaccessible
-     * @throws Error only if the file exists but contains invalid YAML data
+     * @returns Parsed kubeconfig data, or empty config if file is missing/inaccessible/invalid
      */
     public static async parseKubeconfig(kubeconfigPath?: string): Promise<ParsedKubeconfig> {
         const configPath = kubeconfigPath || this.getKubeconfigPath();
@@ -169,8 +168,22 @@ export class KubeconfigParser {
                 return emptyConfig;
             }
             
-            // Parse YAML
-            const rawConfig = yaml.load(fileContents) as RawKubeconfig;
+            // Parse YAML - wrap in try-catch to handle invalid YAML syntax
+            let rawConfig: RawKubeconfig;
+            try {
+                rawConfig = yaml.load(fileContents) as RawKubeconfig;
+            } catch (yamlError) {
+                // Invalid YAML syntax - provide user-friendly error message
+                const errorMessage = yamlError instanceof Error ? yamlError.message : String(yamlError);
+                console.error(`Invalid kubeconfig file at ${configPath}: The file contains invalid YAML syntax.`);
+                console.error(`Error details: ${errorMessage}`);
+                console.error('Please check the file for syntax errors. Common issues include:');
+                console.error('  - Incorrect indentation');
+                console.error('  - Missing or extra quotes');
+                console.error('  - Invalid characters');
+                console.error('The extension will continue with no clusters.');
+                return emptyConfig;
+            }
             
             // Handle null or non-object YAML results
             if (!rawConfig || typeof rawConfig !== 'object') {
@@ -195,14 +208,11 @@ export class KubeconfigParser {
             
             return parsedConfig;
         } catch (error) {
-            if (error instanceof Error) {
-                // For YAML parsing errors, still throw as these indicate data corruption
-                if (error.message.includes('YAML') || error.name === 'YAMLException') {
-                    throw new Error(`Failed to parse kubeconfig: ${error.message}`);
-                }
-                throw new Error(`Failed to parse kubeconfig: ${error.message}`);
-            }
-            throw new Error(`Failed to parse kubeconfig: ${String(error)}`);
+            // Catch any other unexpected errors during file reading or processing
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`Unexpected error parsing kubeconfig at ${configPath}: ${errorMessage}`);
+            console.error('The extension will continue with no clusters.');
+            return emptyConfig;
         }
     }
 

@@ -175,13 +175,14 @@ suite('KubeconfigParser Test Suite', () => {
             assert.strictEqual(config.currentContext, undefined);
         });
 
-        test('Should throw error when file contains invalid YAML', async () => {
-            await assert.rejects(
-                async () => {
-                    await KubeconfigParser.parseKubeconfig(invalidKubeconfigPath);
-                },
-                /Failed to parse kubeconfig/
-            );
+        test('Should return empty config when file contains invalid YAML', async () => {
+            const config = await KubeconfigParser.parseKubeconfig(invalidKubeconfigPath);
+            
+            assert.ok(config);
+            assert.strictEqual(config.clusters.length, 0);
+            assert.strictEqual(config.contexts.length, 0);
+            assert.strictEqual(config.users.length, 0);
+            assert.strictEqual(config.currentContext, undefined);
         });
 
         test('Should use getKubeconfigPath when no path is provided', async () => {
@@ -290,14 +291,14 @@ suite('KubeconfigParser Test Suite', () => {
             assert.strictEqual(config.users.length, 0);
         });
 
-        test('Should still throw for invalid YAML content', async () => {
-            // Invalid YAML should still throw as it indicates data corruption
-            await assert.rejects(
-                async () => {
-                    await KubeconfigParser.parseKubeconfig(invalidKubeconfigPath);
-                },
-                /Failed to parse kubeconfig/
-            );
+        test('Should gracefully handle invalid YAML content', async () => {
+            // Invalid YAML should return empty config, not throw
+            const config = await KubeconfigParser.parseKubeconfig(invalidKubeconfigPath);
+            
+            assert.ok(config);
+            assert.strictEqual(config.clusters.length, 0);
+            assert.strictEqual(config.contexts.length, 0);
+            assert.strictEqual(config.users.length, 0);
         });
     });
 });
