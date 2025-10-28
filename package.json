@@ -23,7 +23,7 @@
         "kandy.apiKey": {
           "type": "string",
           "default": "",
-          "description": "API key for Kandy server authentication",
+          "description": "Optional API key for AI-powered features. Get your key at portal.kandy.dev",
           "scope": "application"
         },
         "kandy.serverUrl": {
