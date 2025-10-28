@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { GlobalState } from './state/GlobalState';
+import { WelcomeWebview } from './webview/WelcomeWebview';
 
 /**
  * Global extension context accessible to all components.
@@ -41,8 +42,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // Register commands
         registerCommands();
         
-        // Display a message to the user
-        vscode.window.showInformationMessage('Kandy - Kubernetes Cluster Manager is ready!');
+        // Show welcome screen on first activation
+        const globalState = GlobalState.getInstance();
+        if (!globalState.getWelcomeScreenDismissed()) {
+            WelcomeWebview.show(context);
+        }
         
         console.log('Kandy extension activated successfully!');
         
