@@ -1,9 +1,15 @@
 import * as vscode from 'vscode';
+import { ClusterStatus } from '../kubernetes/ClusterTypes';
 
 /**
  * Types of tree items that can appear in the cluster tree view.
  */
 export type TreeItemType = 'cluster' | 'namespace' | 'resourceType' | 'resource';
+
+/**
+ * Re-export ClusterStatus for convenience.
+ */
+export { ClusterStatus };
 
 /**
  * Custom tree item class that extends VS Code's TreeItem with additional metadata.
@@ -27,6 +33,12 @@ export class ClusterTreeItem extends vscode.TreeItem {
      * Used for hierarchical navigation in the tree view.
      */
     public children?: ClusterTreeItem[];
+
+    /**
+     * Connection status of the cluster.
+     * Only relevant for cluster-type tree items.
+     */
+    public status?: ClusterStatus;
 
     /**
      * Creates a new ClusterTreeItem.

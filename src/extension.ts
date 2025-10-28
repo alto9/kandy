@@ -65,6 +65,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // Pass parsed kubeconfig to tree provider to populate clusters
         clusterTreeProvider.setKubeconfig(kubeconfig);
         
+        // Start periodic connectivity checks (every 30 seconds)
+        clusterTreeProvider.startPeriodicRefresh();
+        console.log('Started periodic cluster connectivity checks (30s interval).');
+        
         // Register commands
         registerCommands();
         
@@ -154,6 +158,11 @@ export async function deactivate(): Promise<void> {
         
         // Reset global state singleton
         GlobalState.reset();
+        
+        // Dispose tree provider and stop periodic refresh
+        if (clusterTreeProvider) {
+            clusterTreeProvider.dispose();
+        }
         
         // Clear tree provider reference
         clusterTreeProvider = undefined;

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
-import { ClusterTreeItem } from './ClusterTreeItem';
+import { ClusterTreeItem, ClusterStatus } from './ClusterTreeItem';
 import { ParsedKubeconfig } from '../kubernetes/KubeconfigParser';
+import { ClusterConnectivity } from '../kubernetes/ClusterConnectivity';
 
 /**
  * Tree data provider for displaying Kubernetes clusters in the VS Code sidebar.
@@ -32,6 +33,12 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      * Updated when kubeconfig is parsed or refreshed.
      */
     private kubeconfig: ParsedKubeconfig | undefined;
+
+    /**
+     * Timer for periodic connectivity checks.
+     * Refreshes cluster status every 30 seconds.
+     */
+    private refreshTimer: NodeJS.Timeout | undefined;
 
     /**
      * Get the UI representation of a tree element.
@@ -69,6 +76,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     /**
      * Get cluster tree items from the parsed kubeconfig.
      * Creates a tree item for each context, showing the cluster name and context information.
+     * Also checks connectivity status for each cluster asynchronously.
      * 
      * @returns Array of cluster tree items, or a message item if no clusters are available
      */
@@ -118,14 +126,12 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 item.description = cluster.name;
             }
 
-            // Mark the current context with a checkmark icon
-            if (context.name === this.kubeconfig!.currentContext) {
-                item.iconPath = new vscode.ThemeIcon('check');
-                item.tooltip = `${context.name} (current context)`;
-            } else {
-                item.iconPath = new vscode.ThemeIcon('cloud');
-                item.tooltip = context.name;
-            }
+            // Initialize with unknown status
+            item.status = ClusterStatus.Unknown;
+            
+            // Set initial icon and tooltip (will be updated after connectivity check)
+            const isCurrentContext = context.name === this.kubeconfig!.currentContext;
+            this.updateTreeItemAppearance(item, isCurrentContext, ClusterStatus.Unknown);
 
             // Add server URL to tooltip if available
             if (cluster) {
@@ -137,6 +143,9 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
 
             return item;
         });
+
+        // Check connectivity for all clusters asynchronously
+        this.checkAllClustersConnectivity(clusterItems);
 
         return clusterItems;
     }
@@ -169,6 +178,127 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      */
     refreshItem(element?: ClusterTreeItem): void {
         this._onDidChangeTreeData.fire(element);
+    }
+
+    /**
+     * Check connectivity for all clusters asynchronously and update their status.
+     * This method runs in the background and updates the tree when complete.
+     * 
+     * @param clusterItems Array of cluster tree items to check
+     */
+    private async checkAllClustersConnectivity(clusterItems: ClusterTreeItem[]): Promise<void> {
+        // Filter out non-cluster items (like message items)
+        const validClusters = clusterItems.filter(item => 
+            item.type === 'cluster' && 
+            item.resourceData?.cluster?.server
+        );
+
+        if (validClusters.length === 0) {
+            return;
+        }
+
+        // Extract server URLs
+        const serverUrls = validClusters.map(item => item.resourceData.cluster.server);
+
+        try {
+            // Check all clusters in parallel for better performance
+            const statuses = await ClusterConnectivity.checkMultipleConnectivity(serverUrls);
+
+            // Update each cluster item with its connectivity status
+            validClusters.forEach((item, index) => {
+                const status = statuses[index];
+                item.status = status;
+
+                // Determine if this is the current context
+                const isCurrentContext = item.resourceData.context.name === this.kubeconfig?.currentContext;
+
+                // Update the item's appearance based on its status
+                this.updateTreeItemAppearance(item, isCurrentContext, status);
+            });
+
+            // Refresh the tree view to show updated icons and tooltips
+            this.refresh();
+        } catch (error) {
+            console.error('Error checking cluster connectivity:', error);
+        }
+    }
+
+    /**
+     * Updates a tree item's icon and tooltip based on its status.
+     * 
+     * @param item The tree item to update
+     * @param isCurrentContext Whether this cluster is the current context
+     * @param status The connection status of the cluster
+     */
+    private updateTreeItemAppearance(
+        item: ClusterTreeItem, 
+        isCurrentContext: boolean, 
+        status: ClusterStatus
+    ): void {
+        // Determine the appropriate icon based on status and current context
+        let iconId: string;
+        let statusText: string;
+
+        if (status === ClusterStatus.Unknown) {
+            iconId = 'loading~spin';
+            statusText = 'Checking connection...';
+        } else if (status === ClusterStatus.Connected) {
+            if (isCurrentContext) {
+                iconId = 'vm-active'; // Active VM icon for current + connected
+                statusText = 'Current context (connected)';
+            } else {
+                iconId = 'vm-connect'; // Connected VM icon
+                statusText = 'Connected';
+            }
+        } else { // Disconnected
+            if (isCurrentContext) {
+                iconId = 'vm-outline'; // Outlined VM for current + disconnected
+                statusText = 'Current context (disconnected)';
+            } else {
+                iconId = 'debug-disconnect'; // Disconnect icon
+                statusText = 'Disconnected';
+            }
+        }
+
+        item.iconPath = new vscode.ThemeIcon(iconId);
+        
+        // Update tooltip with status information
+        const contextName = item.resourceData?.context?.name || item.label;
+        item.tooltip = `${contextName}\nStatus: ${statusText}`;
+    }
+
+    /**
+     * Start periodic refresh of cluster connectivity status.
+     * Checks connectivity every 30 seconds automatically.
+     */
+    startPeriodicRefresh(): void {
+        // Clear any existing timer
+        this.stopPeriodicRefresh();
+
+        // Set up new timer for 30-second intervals
+        this.refreshTimer = setInterval(() => {
+            console.log('Performing periodic cluster connectivity check...');
+            this.refresh();
+        }, 30000); // 30 seconds
+    }
+
+    /**
+     * Stop periodic refresh of cluster connectivity.
+     * Should be called when the tree provider is disposed.
+     */
+    stopPeriodicRefresh(): void {
+        if (this.refreshTimer) {
+            clearInterval(this.refreshTimer);
+            this.refreshTimer = undefined;
+        }
+    }
+
+    /**
+     * Dispose of the tree provider and clean up resources.
+     * Stops periodic refresh timer.
+     */
+    dispose(): void {
+        this.stopPeriodicRefresh();
     }
 }
 
