@@ -124,30 +124,58 @@ export class KubeconfigParser {
 
     /**
      * Parses the kubeconfig file and returns structured, typed data.
+     * If the file doesn't exist or is inaccessible, returns an empty configuration
+     * instead of throwing an error to allow graceful degradation.
      * 
      * @param kubeconfigPath Optional path to kubeconfig file. If not provided, uses getKubeconfigPath()
-     * @returns Parsed kubeconfig data
-     * @throws Error if the file doesn't exist, can't be read, or contains invalid data
+     * @returns Parsed kubeconfig data, or empty config if file is missing/inaccessible
+     * @throws Error only if the file exists but contains invalid YAML data
      */
     public static async parseKubeconfig(kubeconfigPath?: string): Promise<ParsedKubeconfig> {
         const configPath = kubeconfigPath || this.getKubeconfigPath();
         
+        // Create empty config to return when file is missing or inaccessible
+        const emptyConfig: ParsedKubeconfig = {
+            clusters: [],
+            contexts: [],
+            users: [],
+            currentContext: undefined
+        };
+        
         try {
-            // Check if file exists
+            // Check if file exists and is accessible
             await fs.access(configPath);
         } catch (error) {
-            throw new Error(`Kubeconfig file not found at: ${configPath}`);
+            // File doesn't exist or isn't accessible - this is not an error condition
+            // The extension should work without a kubeconfig file
+            const errorCode = (error as NodeJS.ErrnoException).code;
+            if (errorCode === 'ENOENT') {
+                console.log(`No kubeconfig file found at ${configPath}. Extension will continue with no clusters.`);
+            } else if (errorCode === 'EACCES') {
+                console.error(`Kubeconfig file at ${configPath} is not accessible due to permissions. Extension will continue with no clusters.`);
+            } else {
+                console.error(`Unable to access kubeconfig file at ${configPath}: ${error}. Extension will continue with no clusters.`);
+            }
+            return emptyConfig;
         }
         
         try {
             // Read file contents
             const fileContents = await fs.readFile(configPath, 'utf-8');
             
+            // Handle truly empty files (no content or only whitespace)
+            if (!fileContents || fileContents.trim().length === 0) {
+                console.log(`Kubeconfig file at ${configPath} is empty. Extension will continue with no clusters.`);
+                return emptyConfig;
+            }
+            
             // Parse YAML
             const rawConfig = yaml.load(fileContents) as RawKubeconfig;
             
+            // Handle null or non-object YAML results
             if (!rawConfig || typeof rawConfig !== 'object') {
-                throw new Error('Invalid kubeconfig: file does not contain a valid YAML object');
+                console.log(`Kubeconfig file at ${configPath} is empty or contains no clusters.`);
+                return emptyConfig;
             }
             
             // Extract and transform data
@@ -158,12 +186,19 @@ export class KubeconfigParser {
                 currentContext: rawConfig['current-context']
             };
             
+            // Log helpful information about what was found
+            if (parsedConfig.clusters.length === 0) {
+                console.log(`Kubeconfig file at ${configPath} contains no clusters.`);
+            } else {
+                console.log(`Found ${parsedConfig.clusters.length} cluster(s) in kubeconfig at ${configPath}`);
+            }
+            
             return parsedConfig;
         } catch (error) {
             if (error instanceof Error) {
-                // Re-throw our custom errors
-                if (error.message.startsWith('Invalid kubeconfig') || error.message.startsWith('Kubeconfig file not found')) {
-                    throw error;
+                // For YAML parsing errors, still throw as these indicate data corruption
+                if (error.message.includes('YAML') || error.name === 'YAMLException') {
+                    throw new Error(`Failed to parse kubeconfig: ${error.message}`);
                 }
                 throw new Error(`Failed to parse kubeconfig: ${error.message}`);
             }

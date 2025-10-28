@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { GlobalState } from './state/GlobalState';
 import { WelcomeWebview } from './webview/WelcomeWebview';
+import { KubeconfigParser } from './kubernetes/KubeconfigParser';
 
 /**
  * Global extension context accessible to all components.
@@ -38,6 +39,23 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         
         // Initialize global state management
         GlobalState.initialize(context);
+        
+        // Parse kubeconfig to discover available clusters
+        // This is non-blocking and will gracefully handle missing/invalid configs
+        try {
+            const kubeconfig = await KubeconfigParser.parseKubeconfig();
+            console.log(`Kubeconfig parsing completed. Found ${kubeconfig.clusters.length} cluster(s).`);
+            
+            // TODO: Store parsed kubeconfig for use by tree view and other components
+            // This will be implemented when creating the tree view provider
+        } catch (error) {
+            // Only critical parsing errors (invalid YAML) will reach here
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Error parsing kubeconfig:', errorMessage);
+            vscode.window.showWarningMessage(
+                `Failed to parse kubeconfig: ${errorMessage}. The extension will continue with limited functionality.`
+            );
+        }
         
         // Register commands
         registerCommands();

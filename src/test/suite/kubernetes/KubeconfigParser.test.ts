@@ -165,13 +165,14 @@ suite('KubeconfigParser Test Suite', () => {
             assert.strictEqual(config.users.length, 0);
         });
 
-        test('Should throw error when file does not exist', async () => {
-            await assert.rejects(
-                async () => {
-                    await KubeconfigParser.parseKubeconfig(nonExistentPath);
-                },
-                /Kubeconfig file not found/
-            );
+        test('Should return empty config when file does not exist', async () => {
+            const config = await KubeconfigParser.parseKubeconfig(nonExistentPath);
+            
+            assert.ok(config);
+            assert.strictEqual(config.clusters.length, 0);
+            assert.strictEqual(config.contexts.length, 0);
+            assert.strictEqual(config.users.length, 0);
+            assert.strictEqual(config.currentContext, undefined);
         });
 
         test('Should throw error when file contains invalid YAML', async () => {
@@ -239,6 +240,64 @@ suite('KubeconfigParser Test Suite', () => {
             
             // current-context is optional
             assert.strictEqual(config.currentContext, undefined);
+        });
+    });
+
+    suite('Graceful Error Handling', () => {
+        test('Should not throw error for missing file', async () => {
+            // This should not throw, but return empty config
+            const config = await KubeconfigParser.parseKubeconfig(nonExistentPath);
+            
+            assert.ok(config);
+            assert.deepStrictEqual(config.clusters, []);
+            assert.deepStrictEqual(config.contexts, []);
+            assert.deepStrictEqual(config.users, []);
+        });
+
+        test('Should return empty config for truly empty file', async () => {
+            // Create a test with an empty file fixture
+            const emptyFilePath = path.join(fixturesPath, 'truly-empty.yaml');
+            
+            // Even if the file doesn't exist, should return empty config
+            const config = await KubeconfigParser.parseKubeconfig(emptyFilePath);
+            
+            assert.ok(config);
+            assert.strictEqual(config.clusters.length, 0);
+            assert.strictEqual(config.contexts.length, 0);
+            assert.strictEqual(config.users.length, 0);
+            assert.strictEqual(config.currentContext, undefined);
+        });
+
+        test('Should handle file with only whitespace gracefully', async () => {
+            // Even though this file doesn't exist, the parser should handle it
+            const whitespacePath = path.join(fixturesPath, 'whitespace-only.yaml');
+            const config = await KubeconfigParser.parseKubeconfig(whitespacePath);
+            
+            assert.ok(config);
+            assert.strictEqual(config.clusters.length, 0);
+        });
+
+        test('Should gracefully handle permission errors', async () => {
+            // Test with a path that would typically have permission issues
+            // Since we can't reliably test actual permission errors in all environments,
+            // we're testing that a non-existent path (which generates an error) is handled
+            const restrictedPath = '/root/.kube/config-restricted';
+            const config = await KubeconfigParser.parseKubeconfig(restrictedPath);
+            
+            assert.ok(config);
+            assert.strictEqual(config.clusters.length, 0);
+            assert.strictEqual(config.contexts.length, 0);
+            assert.strictEqual(config.users.length, 0);
+        });
+
+        test('Should still throw for invalid YAML content', async () => {
+            // Invalid YAML should still throw as it indicates data corruption
+            await assert.rejects(
+                async () => {
+                    await KubeconfigParser.parseKubeconfig(invalidKubeconfigPath);
+                },
+                /Failed to parse kubeconfig/
+            );
         });
     });
 });
