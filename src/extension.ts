@@ -52,9 +52,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const kubeconfig = await KubeconfigParser.parseKubeconfig();
         console.log(`Kubeconfig parsing completed. Found ${kubeconfig.clusters.length} cluster(s).`);
         
-        // TODO: Store parsed kubeconfig for use by tree view and other components
-        // This will be implemented when creating the tree view provider
-        
         // Initialize and register tree view provider
         clusterTreeProvider = new ClusterTreeProvider();
         const treeViewDisposable = vscode.window.registerTreeDataProvider(
@@ -64,6 +61,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         context.subscriptions.push(treeViewDisposable);
         disposables.push(treeViewDisposable);
         console.log('Cluster tree view registered successfully.');
+        
+        // Pass parsed kubeconfig to tree provider to populate clusters
+        clusterTreeProvider.setKubeconfig(kubeconfig);
         
         // Register commands
         registerCommands();
@@ -96,14 +96,42 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
  * Commands are tracked in the disposables array for proper cleanup.
  */
 function registerCommands(): void {
-    // TODO: Register commands as they are implemented
-    // Example:
-    // const context = getExtensionContext();
-    // const myCommand = vscode.commands.registerCommand('kandy.myCommand', () => {
-    //     // Command implementation
-    // });
-    // context.subscriptions.push(myCommand);
-    // disposables.push(myCommand);
+    const context = getExtensionContext();
+    
+    // Register refresh clusters command
+    const refreshClustersCommand = vscode.commands.registerCommand('kandy.refreshClusters', async () => {
+        try {
+            console.log('Refreshing clusters from kubeconfig...');
+            
+            // Show progress indicator
+            await vscode.window.withProgress(
+                {
+                    location: vscode.ProgressLocation.Notification,
+                    title: 'Refreshing clusters...',
+                    cancellable: false
+                },
+                async () => {
+                    // Re-parse kubeconfig
+                    const kubeconfig = await KubeconfigParser.parseKubeconfig();
+                    console.log(`Kubeconfig refresh completed. Found ${kubeconfig.clusters.length} cluster(s).`);
+                    
+                    // Update tree provider with new data
+                    if (clusterTreeProvider) {
+                        clusterTreeProvider.setKubeconfig(kubeconfig);
+                    }
+                }
+            );
+            
+            vscode.window.showInformationMessage('Clusters refreshed successfully');
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to refresh clusters:', errorMessage);
+            vscode.window.showErrorMessage(`Failed to refresh clusters: ${errorMessage}`);
+        }
+    });
+    
+    context.subscriptions.push(refreshClustersCommand);
+    disposables.push(refreshClustersCommand);
 }
 
 /**

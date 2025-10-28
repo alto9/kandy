@@ -33,7 +33,23 @@
         }
       ]
     },
-    "commands": [],
+    "commands": [
+      {
+        "command": "kandy.refreshClusters",
+        "title": "Refresh Clusters",
+        "category": "Kandy",
+        "icon": "$(refresh)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "kandy.refreshClusters",
+          "when": "view == kandyClusterView",
+          "group": "navigation"
+        }
+      ]
+    },
     "configuration": {
       "title": "Kandy",
       "properties": {

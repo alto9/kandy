@@ -19,6 +19,7 @@ export class ClusterTreeItem extends vscode.TreeItem {
      * Optional metadata associated with this tree item.
      * Can contain Kubernetes resource data, cluster information, etc.
      */
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     public readonly resourceData?: any;
 
     /**
@@ -39,6 +40,7 @@ export class ClusterTreeItem extends vscode.TreeItem {
         label: string,
         type: TreeItemType,
         collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.None,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         resourceData?: any
     ) {
         super(label, collapsibleState);
