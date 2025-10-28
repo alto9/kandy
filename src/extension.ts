@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { GlobalState } from './state/GlobalState';
 import { WelcomeWebview } from './webview/WelcomeWebview';
 import { KubeconfigParser } from './kubernetes/KubeconfigParser';
+import { ClusterTreeProvider } from './tree/ClusterTreeProvider';
 
 /**
  * Global extension context accessible to all components.
@@ -13,6 +14,12 @@ let extensionContext: vscode.ExtensionContext | undefined;
  * Array to track all disposables for proper cleanup.
  */
 const disposables: vscode.Disposable[] = [];
+
+/**
+ * Global cluster tree provider instance.
+ * Accessible for refreshing the tree view when cluster data changes.
+ */
+let clusterTreeProvider: ClusterTreeProvider | undefined;
 
 /**
  * Get the extension context.
@@ -47,6 +54,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         
         // TODO: Store parsed kubeconfig for use by tree view and other components
         // This will be implemented when creating the tree view provider
+        
+        // Initialize and register tree view provider
+        clusterTreeProvider = new ClusterTreeProvider();
+        const treeViewDisposable = vscode.window.registerTreeDataProvider(
+            'kandyClusterView',
+            clusterTreeProvider
+        );
+        context.subscriptions.push(treeViewDisposable);
+        disposables.push(treeViewDisposable);
+        console.log('Cluster tree view registered successfully.');
         
         // Register commands
         registerCommands();
@@ -109,6 +126,9 @@ export async function deactivate(): Promise<void> {
         
         // Reset global state singleton
         GlobalState.reset();
+        
+        // Clear tree provider reference
+        clusterTreeProvider = undefined;
         
         // Clear extension context
         extensionContext = undefined;

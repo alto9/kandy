@@ -16,6 +16,23 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "kandyView",
+          "title": "Kandy",
+          "icon": "$(kubernetes)"
+        }
+      ]
+    },
+    "views": {
+      "kandyView": [
+        {
+          "id": "kandyClusterView",
+          "name": "Clusters"
+        }
+      ]
+    },
     "commands": [],
     "configuration": {
       "title": "Kandy",
