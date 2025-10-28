@@ -51,6 +51,7 @@
     "package": "vsce package"
   },
   "devDependencies": {
+    "@types/js-yaml": "^4.0.5",
     "@types/mocha": "^10.0.1",
     "@types/node": "^22.0.0",
     "@types/vscode": "^1.80.0",
@@ -63,7 +64,8 @@
     "typescript": "^5.1.6"
   },
   "dependencies": {
-    "@kubernetes/client-node": "^0.20.0"
+    "@kubernetes/client-node": "^0.20.0",
+    "js-yaml": "^4.1.0"
   }
 }
 
