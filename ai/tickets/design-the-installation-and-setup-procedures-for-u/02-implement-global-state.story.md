@@ -4,7 +4,7 @@ session_id: design-the-installation-and-setup-procedures-for-u
 feature_id: [initial-configuration]
 spec_id: []
 model_id: []
-status: pending
+status: completed
 priority: high
 estimated_minutes: 20
 ---
@@ -33,12 +33,12 @@ The extension needs to persist user preferences across VS Code sessions. The wel
 
 ## Acceptance Criteria
 
-- [ ] GlobalState class successfully wraps VS Code globalState API
-- [ ] getWelcomeScreenDismissed() returns false by default for new installations
-- [ ] setWelcomeScreenDismissed() persists value across extension reloads
-- [ ] State key uses consistent naming convention (kandy.welcomeScreen.dismissed)
-- [ ] Methods have proper TypeScript types
-- [ ] Unit tests pass for state management
+- [x] GlobalState class successfully wraps VS Code globalState API
+- [x] getWelcomeScreenDismissed() returns false by default for new installations
+- [x] setWelcomeScreenDismissed() persists value across extension reloads
+- [x] State key uses consistent naming convention (kandy.welcomeScreen.dismissed)
+- [x] Methods have proper TypeScript types
+- [x] Unit tests pass for state management
 
 ## Dependencies
 

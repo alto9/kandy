@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { GlobalState } from './state/GlobalState';
 
 /**
  * This method is called when the extension is activated.
@@ -6,6 +7,9 @@ import * as vscode from 'vscode';
  */
 export function activate(context: vscode.ExtensionContext) {
     console.log('Kandy extension is now active!');
+    
+    // Initialize global state management
+    GlobalState.initialize(context);
     
     // Display a message to the user
     vscode.window.showInformationMessage('Kandy - Kubernetes Cluster Manager is ready!');
