@@ -11,8 +11,6 @@ import { Settings } from '../config/Settings';
  * This provider manages the hierarchical display of:
  * - Clusters (top-level)
  * - Namespaces (under clusters)
- * - Resource types (under namespaces)
- * - Individual resources (under resource types)
  */
 export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeItem> {
     /**

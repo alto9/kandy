@@ -47,19 +47,20 @@ export class ClusterConnectivity {
             
             // If kubectl succeeds (exit code 0), cluster is connected
             return ClusterStatus.Connected;
-        } catch (error: any) {
+        } catch (error: unknown) {
             // kubectl failed - could be timeout, cluster unreachable, or kubectl not found
-            if (error.killed || error.signal === 'SIGTERM') {
+            const err = error as { killed?: boolean; signal?: string; code?: string; stderr?: Buffer; message?: string };
+            if (err.killed || err.signal === 'SIGTERM') {
                 console.log(`Cluster connectivity check timed out for context: ${contextName}`);
-            } else if (error.code === 'ENOENT') {
+            } else if (err.code === 'ENOENT') {
                 console.error('kubectl command not found in PATH. Please install kubectl to check cluster connectivity.');
             } else {
                 // Log stderr if available for debugging
-                const stderr = error.stderr ? error.stderr.toString().trim() : '';
+                const stderr = err.stderr ? err.stderr.toString().trim() : '';
                 if (stderr) {
                     console.log(`Cluster connectivity check failed for context ${contextName}: ${stderr}`);
                 } else {
-                    console.log(`Cluster connectivity check failed for context ${contextName}: ${error.message}`);
+                    console.log(`Cluster connectivity check failed for context ${contextName}: ${err.message || 'Unknown error'}`);
                 }
             }
             

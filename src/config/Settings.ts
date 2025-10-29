@@ -5,6 +5,7 @@ import * as vscode from 'vscode';
  * Provides type-safe access to VS Code workspace configuration.
  */
 export class Settings {
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     private static readonly CONFIGURATION_SECTION = 'kandy';
 
     /**

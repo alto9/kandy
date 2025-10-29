@@ -4,7 +4,7 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
 /**
  * Types of tree items that can appear in the cluster tree view.
  */
-export type TreeItemType = 'cluster' | 'namespace' | 'resourceType' | 'resource' | 'info';
+export type TreeItemType = 'cluster' | 'namespace' | 'allNamespaces' | 'info';
 
 /**
  * Re-export ClusterStatus for convenience.
@@ -17,7 +17,7 @@ export { ClusterStatus };
  */
 export class ClusterTreeItem extends vscode.TreeItem {
     /**
-     * The type of tree item (cluster, namespace, resourceType, or resource).
+     * The type of tree item (cluster, namespace, allNamespaces, or info).
      */
     public readonly type: TreeItemType;
 
