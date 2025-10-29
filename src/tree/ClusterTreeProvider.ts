@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { ClusterTreeItem, ClusterStatus } from './ClusterTreeItem';
 import { ParsedKubeconfig } from '../kubernetes/KubeconfigParser';
 import { ClusterConnectivity } from '../kubernetes/ClusterConnectivity';
+import { Settings } from '../config/Settings';
 
 /**
  * Tree data provider for displaying Kubernetes clusters in the VS Code sidebar.
@@ -147,7 +148,53 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         // Check connectivity for all clusters asynchronously
         this.checkAllClustersConnectivity(clusterItems);
 
+        // Add authentication status message at the bottom of the cluster list
+        const authStatusItem = this.createAuthStatusItem();
+        clusterItems.push(authStatusItem);
+
         return clusterItems;
+    }
+
+    /**
+     * Create an informational tree item showing authentication status.
+     * Provides users with context about API key requirements and easy access to configuration.
+     * 
+     * @returns A tree item with authentication status message and configuration link
+     */
+    private createAuthStatusItem(): ClusterTreeItem {
+        const hasApiKey = Settings.hasApiKey();
+        
+        if (hasApiKey) {
+            // Show authenticated status
+            const item = new ClusterTreeItem(
+                'AI features enabled',
+                'info',
+                vscode.TreeItemCollapsibleState.None
+            );
+            item.iconPath = new vscode.ThemeIcon('check', new vscode.ThemeColor('testing.iconPassed'));
+            item.tooltip = 'API key configured. AI-powered recommendations are available.';
+            item.contextValue = 'authStatus';
+            return item;
+        } else {
+            // Show message prompting API key configuration
+            const item = new ClusterTreeItem(
+                'Configure API key to enable AI recommendations',
+                'info',
+                vscode.TreeItemCollapsibleState.None
+            );
+            item.iconPath = new vscode.ThemeIcon('key');
+            item.tooltip = 'API key required for AI features only. Core cluster management works without authentication.\n\nClick to configure your API key.';
+            item.contextValue = 'authStatus';
+            
+            // Make the item clickable to open settings
+            item.command = {
+                command: 'kandy.configureApiKey',
+                title: 'Configure API Key',
+                arguments: []
+            };
+            
+            return item;
+        }
     }
 
     /**

@@ -39,6 +39,12 @@
         "title": "Refresh Clusters",
         "category": "Kandy",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "kandy.configureApiKey",
+        "title": "Configure API Key",
+        "category": "Kandy",
+        "icon": "$(key)"
       }
     ],
     "menus": {

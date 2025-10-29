@@ -4,7 +4,7 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
 /**
  * Types of tree items that can appear in the cluster tree view.
  */
-export type TreeItemType = 'cluster' | 'namespace' | 'resourceType' | 'resource';
+export type TreeItemType = 'cluster' | 'namespace' | 'resourceType' | 'resource' | 'info';
 
 /**
  * Re-export ClusterStatus for convenience.

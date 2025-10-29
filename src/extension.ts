@@ -3,6 +3,8 @@ import { GlobalState } from './state/GlobalState';
 import { WelcomeWebview } from './webview/WelcomeWebview';
 import { KubeconfigParser } from './kubernetes/KubeconfigParser';
 import { ClusterTreeProvider } from './tree/ClusterTreeProvider';
+import { Settings } from './config/Settings';
+import { configureApiKeyCommand } from './commands/ConfigureApiKey';
 
 /**
  * Global extension context accessible to all components.
@@ -20,6 +22,12 @@ const disposables: vscode.Disposable[] = [];
  * Accessible for refreshing the tree view when cluster data changes.
  */
 let clusterTreeProvider: ClusterTreeProvider | undefined;
+
+/**
+ * Status bar item showing authentication status.
+ * Displays API key configuration status for AI features.
+ */
+let authStatusBarItem: vscode.StatusBarItem | undefined;
 
 /**
  * Get the extension context.
@@ -72,6 +80,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // Register commands
         registerCommands();
         
+        // Create and show status bar item for authentication status
+        createAuthStatusBarItem();
+        
         // Show welcome screen on first activation
         const globalState = GlobalState.getInstance();
         if (!globalState.getWelcomeScreenDismissed()) {
@@ -96,11 +107,53 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 }
 
 /**
+ * Create and initialize the authentication status bar item.
+ * Shows current API key configuration status and provides quick access to settings.
+ */
+function createAuthStatusBarItem(): void {
+    const context = getExtensionContext();
+    const hasApiKey = Settings.hasApiKey();
+    
+    // Create status bar item on the right side
+    authStatusBarItem = vscode.window.createStatusBarItem(
+        vscode.StatusBarAlignment.Right,
+        100 // Priority - higher values appear more to the left
+    );
+    
+    // Set text and icon based on API key status
+    if (hasApiKey) {
+        authStatusBarItem.text = '$(check) Kandy: Authenticated';
+        authStatusBarItem.tooltip = 'API key configured. AI-powered recommendations are available.\n\nClick to manage API key settings.';
+    } else {
+        authStatusBarItem.text = '$(key) Kandy: No API Key';
+        authStatusBarItem.tooltip = 'No API key configured. AI features require authentication.\n\nCore cluster management works without an API key.\n\nClick to configure your API key.';
+    }
+    
+    // Make it clickable to open settings
+    authStatusBarItem.command = 'kandy.configureApiKey';
+    
+    // Show the status bar item
+    authStatusBarItem.show();
+    
+    // Add to disposables for cleanup
+    context.subscriptions.push(authStatusBarItem);
+    disposables.push(authStatusBarItem);
+}
+
+/**
  * Register all extension commands.
  * Commands are tracked in the disposables array for proper cleanup.
  */
 function registerCommands(): void {
     const context = getExtensionContext();
+    
+    // Register configure API key command
+    const configureApiKeyCmd = vscode.commands.registerCommand(
+        'kandy.configureApiKey',
+        configureApiKeyCommand
+    );
+    context.subscriptions.push(configureApiKeyCmd);
+    disposables.push(configureApiKeyCmd);
     
     // Register refresh clusters command
     const refreshClustersCommand = vscode.commands.registerCommand('kandy.refreshClusters', async () => {
@@ -164,8 +217,16 @@ export async function deactivate(): Promise<void> {
             clusterTreeProvider.dispose();
         }
         
+        // Dispose status bar item
+        if (authStatusBarItem) {
+            authStatusBarItem.dispose();
+        }
+        
         // Clear tree provider reference
         clusterTreeProvider = undefined;
+        
+        // Clear status bar item reference
+        authStatusBarItem = undefined;
         
         // Clear extension context
         extensionContext = undefined;
