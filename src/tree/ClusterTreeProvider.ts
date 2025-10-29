@@ -57,19 +57,79 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      * @param element The parent element to get children for. If undefined, get root elements.
      * @returns A promise resolving to an array of child tree items
      */
-    getChildren(element?: ClusterTreeItem): Thenable<ClusterTreeItem[]> {
+    async getChildren(element?: ClusterTreeItem): Promise<ClusterTreeItem[]> {
         // If no element is provided, we're getting the root level items (clusters)
         if (!element) {
-            return Promise.resolve(this.getClusters());
+            return this.getClusters();
+        }
+
+        // If element is a cluster, query its namespaces
+        if (element.type === 'cluster' && element.resourceData?.context?.name) {
+            return this.getNamespaces(element);
         }
 
         // If element has children, return them
         if (element.children) {
-            return Promise.resolve(element.children);
+            return element.children;
         }
 
         // No children for this element
-        return Promise.resolve([]);
+        return [];
+    }
+
+    /**
+     * Get namespace tree items for a cluster.
+     * Queries the cluster using kubectl to retrieve the list of namespaces.
+     * 
+     * @param clusterElement The cluster tree item to get namespaces for
+     * @returns Array of namespace tree items, or empty array on error
+     */
+    private async getNamespaces(clusterElement: ClusterTreeItem): Promise<ClusterTreeItem[]> {
+        // Ensure we have the required kubeconfig data
+        if (!this.kubeconfig) {
+            console.error('Cannot query namespaces: kubeconfig not loaded');
+            return [];
+        }
+
+        const contextName = clusterElement.resourceData.context.name;
+        
+        try {
+            // Query namespaces using kubectl
+            const namespaces = await ClusterConnectivity.getNamespaces(
+                this.kubeconfig.filePath,
+                contextName
+            );
+
+            // If no namespaces found (error or empty cluster), return empty array
+            if (namespaces.length === 0) {
+                return [];
+            }
+
+            // Create tree items for each namespace
+            const namespaceItems = namespaces.map(namespaceName => {
+                const item = new ClusterTreeItem(
+                    namespaceName,
+                    'namespace',
+                    vscode.TreeItemCollapsibleState.None,
+                    {
+                        namespace: namespaceName,
+                        context: clusterElement.resourceData.context,
+                        cluster: clusterElement.resourceData.cluster
+                    }
+                );
+
+                // Set icon for namespace
+                item.iconPath = new vscode.ThemeIcon('symbol-namespace');
+                item.tooltip = `Namespace: ${namespaceName}`;
+                
+                return item;
+            });
+
+            return namespaceItems;
+        } catch (error) {
+            console.error(`Error querying namespaces for context ${contextName}:`, error);
+            return [];
+        }
     }
 
     /**

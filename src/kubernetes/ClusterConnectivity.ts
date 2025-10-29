@@ -14,6 +14,22 @@ const CONNECTIVITY_TIMEOUT_MS = 5000;
 const execFileAsync = promisify(execFile);
 
 /**
+ * Interface for kubectl namespace response items.
+ */
+interface NamespaceItem {
+    metadata?: {
+        name?: string;
+    };
+}
+
+/**
+ * Interface for kubectl namespace list response.
+ */
+interface NamespaceListResponse {
+    items?: NamespaceItem[];
+}
+
+/**
  * Utility class for checking Kubernetes cluster connectivity using kubectl.
  */
 export class ClusterConnectivity {
@@ -84,6 +100,68 @@ export class ClusterConnectivity {
             this.checkConnectivity(kubeconfigPath, contextName)
         );
         return await Promise.all(promises);
+    }
+
+    /**
+     * Retrieves the list of namespaces from a cluster using kubectl.
+     * Uses kubectl get namespaces command with JSON output for parsing.
+     * 
+     * @param kubeconfigPath Path to the kubeconfig file
+     * @param contextName Name of the context to query
+     * @returns Array of namespace names sorted alphabetically, or empty array on error
+     */
+    public static async getNamespaces(
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<string[]> {
+        try {
+            // Execute kubectl get namespaces with JSON output
+            const { stdout } = await execFileAsync(
+                'kubectl',
+                [
+                    'get',
+                    'namespaces',
+                    '--output=json',
+                    `--kubeconfig=${kubeconfigPath}`,
+                    `--context=${contextName}`
+                ],
+                {
+                    timeout: CONNECTIVITY_TIMEOUT_MS,
+                    env: { ...process.env }
+                }
+            );
+
+            // Parse the JSON response
+            const response: NamespaceListResponse = JSON.parse(stdout);
+            
+            // Extract namespace names from the items array
+            const namespaces: string[] = response.items?.map((item: NamespaceItem) => item.metadata?.name).filter((name): name is string => Boolean(name)) || [];
+            
+            // Sort alphabetically
+            namespaces.sort((a, b) => a.localeCompare(b));
+            
+            return namespaces;
+        } catch (error: unknown) {
+            // kubectl failed - could be timeout, cluster unreachable, or kubectl not found
+            const err = error as { killed?: boolean; signal?: string; code?: string; stderr?: Buffer; message?: string };
+            
+            if (err.killed || err.signal === 'SIGTERM') {
+                console.log(`Namespace query timed out for context: ${contextName}`);
+            } else if (err.code === 'ENOENT') {
+                console.error('kubectl command not found in PATH. Please install kubectl to query namespaces.');
+            } else {
+                // Log stderr if available for debugging
+                const stderr = err.stderr ? err.stderr.toString().trim() : '';
+                if (stderr) {
+                    console.log(`Namespace query failed for context ${contextName}: ${stderr}`);
+                } else {
+                    console.log(`Namespace query failed for context ${contextName}: ${err.message || 'Unknown error'}`);
+                }
+            }
+            
+            // Return empty array on error - detailed error handling will come in story 08
+            return [];
+        }
     }
 }
 
