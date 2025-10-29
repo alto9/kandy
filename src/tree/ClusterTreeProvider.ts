@@ -105,8 +105,25 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 return [];
             }
 
+            // Create "All Namespaces" special item
+            const allNamespacesItem = new ClusterTreeItem(
+                'All Namespaces',
+                'allNamespaces',
+                vscode.TreeItemCollapsibleState.None,
+                {
+                    context: clusterElement.resourceData.context,
+                    cluster: clusterElement.resourceData.cluster
+                }
+            );
+            allNamespacesItem.iconPath = new vscode.ThemeIcon('globe');
+            const clusterName = clusterElement.resourceData.cluster?.name || contextName;
+            allNamespacesItem.tooltip = `View all namespaces in ${clusterName}`;
+
+            // Sort namespaces alphabetically
+            const sortedNamespaces = namespaces.sort((a, b) => a.localeCompare(b));
+
             // Create tree items for each namespace
-            const namespaceItems = namespaces.map(namespaceName => {
+            const namespaceItems = sortedNamespaces.map(namespaceName => {
                 const item = new ClusterTreeItem(
                     namespaceName,
                     'namespace',
@@ -125,7 +142,8 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 return item;
             });
 
-            return namespaceItems;
+            // Return "All Namespaces" first, followed by individual namespaces
+            return [allNamespacesItem, ...namespaceItems];
         } catch (error) {
             console.error(`Error querying namespaces for context ${contextName}:`, error);
             return [];
