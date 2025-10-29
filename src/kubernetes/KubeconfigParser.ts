@@ -46,6 +46,7 @@ export interface ParsedKubeconfig {
     contexts: KubeconfigContext[];
     users: KubeconfigUser[];
     currentContext?: string;
+    filePath: string;
 }
 
 /**
@@ -138,7 +139,8 @@ export class KubeconfigParser {
             clusters: [],
             contexts: [],
             users: [],
-            currentContext: undefined
+            currentContext: undefined,
+            filePath: configPath
         };
         
         try {
@@ -196,7 +198,8 @@ export class KubeconfigParser {
                 clusters: this.extractClusters(rawConfig),
                 contexts: this.extractContexts(rawConfig),
                 users: this.extractUsers(rawConfig),
-                currentContext: rawConfig['current-context']
+                currentContext: rawConfig['current-context'],
+                filePath: configPath
             };
             
             // Log helpful information about what was found

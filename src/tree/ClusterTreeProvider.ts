@@ -237,19 +237,22 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         // Filter out non-cluster items (like message items)
         const validClusters = clusterItems.filter(item => 
             item.type === 'cluster' && 
-            item.resourceData?.cluster?.server
+            item.resourceData?.context?.name
         );
 
-        if (validClusters.length === 0) {
+        if (validClusters.length === 0 || !this.kubeconfig) {
             return;
         }
 
-        // Extract server URLs
-        const serverUrls = validClusters.map(item => item.resourceData.cluster.server);
+        // Extract context names
+        const contextNames = validClusters.map(item => item.resourceData.context.name);
 
         try {
             // Check all clusters in parallel for better performance
-            const statuses = await ClusterConnectivity.checkMultipleConnectivity(serverUrls);
+            const statuses = await ClusterConnectivity.checkMultipleConnectivity(
+                this.kubeconfig.filePath,
+                contextNames
+            );
 
             // Update each cluster item with its connectivity status
             validClusters.forEach((item, index) => {

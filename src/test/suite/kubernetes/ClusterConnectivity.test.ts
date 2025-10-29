@@ -1,41 +1,47 @@
 import * as assert from 'assert';
+import * as path from 'path';
 import { ClusterConnectivity } from '../../../kubernetes/ClusterConnectivity';
 import { ClusterStatus } from '../../../kubernetes/ClusterTypes';
 
 suite('ClusterConnectivity Test Suite', () => {
-    test('checkConnectivity - returns Disconnected for invalid URL', async () => {
-        const result = await ClusterConnectivity.checkConnectivity('https://invalid-nonexistent-cluster-12345.example.com');
-        assert.strictEqual(result, ClusterStatus.Disconnected, 'Invalid cluster URL should return Disconnected status');
+    // Path to test kubeconfig fixture
+    const testKubeconfigPath = path.join(__dirname, '../../fixtures/valid-kubeconfig.yaml');
+
+    test('checkConnectivity - returns Disconnected for unreachable cluster', async () => {
+        // The 'production' context in the test fixture points to an unreachable cluster
+        const result = await ClusterConnectivity.checkConnectivity(testKubeconfigPath, 'production');
+        assert.strictEqual(result, ClusterStatus.Disconnected, 'Unreachable cluster should return Disconnected status');
     });
 
-    test('checkConnectivity - handles malformed URL gracefully', async () => {
-        const result = await ClusterConnectivity.checkConnectivity('not-a-valid-url');
-        assert.strictEqual(result, ClusterStatus.Disconnected, 'Malformed URL should return Disconnected status');
+    test('checkConnectivity - handles invalid context name', async () => {
+        // Non-existent context should fail
+        const result = await ClusterConnectivity.checkConnectivity(testKubeconfigPath, 'nonexistent-context');
+        assert.strictEqual(result, ClusterStatus.Disconnected, 'Invalid context should return Disconnected status');
     });
 
-    test('checkConnectivity - handles localhost unreachable', async () => {
-        // Use a port that's likely not in use
-        const result = await ClusterConnectivity.checkConnectivity('https://localhost:54321');
-        assert.strictEqual(result, ClusterStatus.Disconnected, 'Unreachable localhost should return Disconnected status');
+    test('checkConnectivity - handles invalid kubeconfig path', async () => {
+        // Non-existent kubeconfig file
+        const result = await ClusterConnectivity.checkConnectivity('/nonexistent/kubeconfig.yaml', 'minikube');
+        assert.strictEqual(result, ClusterStatus.Disconnected, 'Invalid kubeconfig path should return Disconnected status');
     });
 
     test('checkMultipleConnectivity - checks multiple clusters', async () => {
-        const urls = [
-            'https://invalid1.example.com',
-            'https://invalid2.example.com',
-            'https://localhost:54321'
+        const contextNames = [
+            'minikube',
+            'production',
+            'staging'
         ];
         
-        const results = await ClusterConnectivity.checkMultipleConnectivity(urls);
+        const results = await ClusterConnectivity.checkMultipleConnectivity(testKubeconfigPath, contextNames);
         
-        assert.strictEqual(results.length, 3, 'Should return results for all URLs');
-        assert.strictEqual(results[0], ClusterStatus.Disconnected, 'First URL should be disconnected');
-        assert.strictEqual(results[1], ClusterStatus.Disconnected, 'Second URL should be disconnected');
-        assert.strictEqual(results[2], ClusterStatus.Disconnected, 'Third URL should be disconnected');
+        assert.strictEqual(results.length, 3, 'Should return results for all contexts');
+        assert.strictEqual(results[0], ClusterStatus.Disconnected, 'First context should be disconnected');
+        assert.strictEqual(results[1], ClusterStatus.Disconnected, 'Second context should be disconnected');
+        assert.strictEqual(results[2], ClusterStatus.Disconnected, 'Third context should be disconnected');
     });
 
     test('checkMultipleConnectivity - handles empty array', async () => {
-        const results = await ClusterConnectivity.checkMultipleConnectivity([]);
+        const results = await ClusterConnectivity.checkMultipleConnectivity(testKubeconfigPath, []);
         assert.strictEqual(results.length, 0, 'Should return empty array for empty input');
     });
 });
