@@ -17,10 +17,11 @@ THEN study the VS Code TreeView API documentation
 AND review the Webview API documentation at https://code.visualstudio.com/api/extension-guides/webview
 AND examine how the Glam VS Code extension implements similar functionality
 
-GIVEN we need to handle real-time cluster data
-WHEN implementing data updates
-THEN use the Kubernetes API WebSocket connections
-AND implement efficient polling strategies for cluster state
+GIVEN we need to retrieve cluster data
+WHEN implementing data access
+THEN use kubectl commands to query cluster state
+AND avoid automatic polling or background refresh mechanisms
+AND require user to manually trigger refresh when needed
 AND consider using the VS Code OutputChannel for debugging information
 
 GIVEN we need to integrate with AI services

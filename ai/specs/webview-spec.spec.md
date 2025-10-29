@@ -7,18 +7,18 @@ feature_id: [tree-view-navigation, ai-recommendations]
 
 ## Overview
 
-Webview panels provide detailed, context-sensitive views for selected Kubernetes resources. Each resource type gets a tailored interface showing relevant information, YAML configuration, and AI-powered recommendations.
+Webview panels provide detailed views for navigating and managing Kubernetes resources. Webviews are opened when a user clicks on a namespace (or "All Namespaces") in the tree view. The webview provides resource navigation, detailed information, YAML configuration, and AI-powered recommendations.
 
 ## Architecture
 
 ```mermaid
 graph TD
-    A[Tree Selection] --> B[Webview Panel Factory]
-    B --> C[Resource-specific Webview]
+    A[Namespace Click in Tree] --> B[Webview Panel Factory]
+    B --> C[Namespace Webview]
     C --> D[HTML/CSS/JS Content]
-    D --> E[AI Recommendations Panel]
-    D --> F[YAML Display Panel]
-    D --> G[Resource Details Panel]
+    D --> E[Resource Navigation]
+    D --> F[AI Recommendations Panel]
+    D --> G[YAML Display Panel]
 
     H[Extension Host] --> I[Message Passing]
     I --> D
@@ -29,19 +29,18 @@ graph TD
 ## Component Responsibilities
 
 ### WebviewPanelFactory
-- **Purpose**: Creates appropriate webview panels based on resource type
+- **Purpose**: Creates webview panels for namespace navigation
 - **Responsibilities**:
-  - Determine webview type based on selected resource
+  - Create namespace-specific webview when namespace is clicked in tree
+  - Create "All Namespaces" webview for cluster-wide navigation
   - Initialize webview with appropriate HTML/CSS/JS
   - Set up message passing between extension and webview
   - Handle webview lifecycle (create, update, dispose)
 
-### Resource-Specific Webviews
-- **Pod Webview**: Container status, resource usage, logs, events
-- **Deployment Webview**: Scaling, update strategy, replica sets, pods
-- **Service Webview**: Endpoints, ports, network policies, traffic
-- **ConfigMap/Secret Webview**: Data preview, usage tracking
-- **Namespace Webview**: Resource quotas, limits, policies
+### Webview Types
+- **Namespace Webview**: Displays resources within a single namespace with navigation, filtering, and AI recommendations
+- **All Namespaces Webview**: Displays cluster-wide resource view with ability to browse across all namespaces
+- **Resource Detail View**: Within the namespace webview, users can drill down into specific resources (pods, deployments, services, etc.)
 
 ## Data Flow
 
@@ -50,16 +49,21 @@ sequenceDiagram
     participant User
     participant Tree
     participant Extension
-    participant Server
+    participant kubectl
     participant AI
 
-    User->>Tree: Click resource
-    Tree->>Extension: Resource selected
-    Extension->>Server: Request resource data + AI analysis
-    Server->>AI: Analyze resource context
-    AI-->>Server: AI recommendations
-    Server-->>Extension: Resource data + recommendations
-    Extension-->>User: Webview panel opens with data
+    User->>Tree: Click namespace
+    Tree->>Extension: Namespace selected
+    Extension->>kubectl: Get namespace resources
+    kubectl-->>Extension: Resource list
+    Extension->>AI: Analyze namespace context
+    AI-->>Extension: AI recommendations
+    Extension-->>User: Webview panel opens with navigation
+    
+    User->>Extension: Select resource in webview
+    Extension->>kubectl: Get resource details
+    kubectl-->>Extension: Resource data
+    Extension-->>User: Display resource details
 ```
 
 ## Implementation Details

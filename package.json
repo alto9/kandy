@@ -14,7 +14,7 @@
   "activationEvents": [
     "onStartupFinished"
   ],
-  "main": "./out/extension.js",
+  "main": "./dist/extension.js",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -82,8 +82,8 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./",
+    "compile": "webpack --mode production",
+    "watch": "webpack --mode development --watch",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "mocha --require source-map-support/register --ui tdd out/test/suite/**/*.test.js",
@@ -100,11 +100,13 @@
     "eslint": "^8.45.0",
     "mocha": "^10.2.0",
     "source-map-support": "^0.5.21",
-    "typescript": "^5.1.6"
+    "ts-loader": "^9.5.4",
+    "typescript": "^5.1.6",
+    "webpack": "^5.102.1",
+    "webpack-cli": "^6.0.1"
   },
   "dependencies": {
     "@kubernetes/client-node": "^0.20.0",
     "js-yaml": "^4.1.0"
   }
 }
-

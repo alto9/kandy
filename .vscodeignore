@@ -13,7 +13,7 @@ vsc-extension-quickstart.md
 
 # Build artifacts
 node_modules/**
-out/test/**
+out/**
 
 # Documentation and AI context
 ai/**

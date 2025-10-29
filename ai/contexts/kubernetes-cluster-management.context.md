@@ -10,17 +10,18 @@ THEN refer to the official Kubernetes API documentation at https://kubernetes.io
 AND use the Kubernetes client libraries for Node.js
 AND study the kubectl source code for API interaction patterns
 
-GIVEN we need to display cluster resources in a tree view
+GIVEN we need to display cluster namespaces in a tree view
 WHEN organizing the information hierarchy
-THEN follow this structure: Cluster → Namespace → Resource Type → Objects
-AND group resources by their Kubernetes API groups (apps, core, networking, etc.)
-AND provide filtering and search capabilities for large clusters
+THEN follow this structure: Cluster → Namespaces (with "All Namespaces" option first)
+AND use kubectl commands to query namespace lists
+AND open webviews for resource navigation when namespaces are clicked
 
-GIVEN we need to provide real-time cluster state information
-WHEN implementing data updates
-THEN use Kubernetes watch APIs for efficient real-time updates
-AND implement connection pooling for API server communication
-AND handle connection failures and reconnection gracefully
+GIVEN we need to verify cluster connectivity
+WHEN checking connection status
+THEN use kubectl commands (like `kubectl cluster-info`) to verify accessibility
+AND do NOT use HTTP-based connectivity checks
+AND do NOT implement automatic retry logic - require manual refresh from user
+AND handle kubectl connection failures gracefully with clear error messages
 
 GIVEN we need to analyze cluster performance and provide recommendations
 WHEN collecting metrics and analyzing patterns

@@ -7,7 +7,7 @@ feature_id: [tree-view-navigation]
 
 ## Overview
 
-The tree view provides hierarchical navigation of Kubernetes clusters, following the familiar pattern established by the VS Code Kubernetes extension. It displays clusters, namespaces, and resources in a collapsible tree structure.
+The tree view provides simplified navigation of Kubernetes clusters and namespaces. It displays a 2-level hierarchy: clusters at the top level, with namespaces listed underneath when expanded. Clicking on any namespace opens a webview for detailed resource navigation and management.
 
 ## Architecture
 
@@ -17,15 +17,14 @@ graph TD
     B --> C[Tree Items]
     C --> D[Cluster Item]
     D --> E[Namespace Items]
-    E --> F[Resource Type Items]
-    F --> G[Resource Items]
+    E --> F[Namespace Webview]
 
-    H[Webview Panels] --> I[Resource Detail Views]
-    I --> J[AI Recommendations]
-    J --> K[Quick Actions]
+    F --> G[Resource Navigation]
+    G --> H[AI Recommendations]
+    H --> I[Quick Actions]
 
-    L[Kubernetes API] --> M[Resource Watcher]
-    M --> B
+    J[kubectl CLI] --> K[Cluster Connection]
+    K --> B
 ```
 
 ## Component Responsibilities
@@ -34,16 +33,18 @@ graph TD
 - **Purpose**: Main tree data provider implementing `vscode.TreeDataProvider`
 - **Responsibilities**:
   - Parse kubeconfig files and extract cluster information
-  - Query Kubernetes API for current cluster state
-  - Build tree structure with appropriate grouping
-  - Handle real-time updates via watch mechanisms
+  - Use kubectl commands to verify cluster connectivity
+  - Query namespaces using kubectl
+  - Build simple 2-level tree structure (Clusters → Namespaces)
   - Manage tree item icons and status indicators
+  - Open webviews when namespaces are clicked
 
 ### Tree Items Hierarchy
 1. **Cluster Items**: Top-level nodes representing configured clusters
 2. **Namespace Items**: Child nodes under each cluster
-3. **Resource Type Items**: Grouped by Kubernetes API groups (Workloads, Network, etc.)
-4. **Resource Items**: Individual Kubernetes resources (pods, services, etc.)
+   - "All Namespaces" appears as the first option under each cluster
+   - Individual namespaces follow alphabetically
+   - Clicking any namespace opens a webview for navigation
 
 ## Data Flow
 
@@ -51,18 +52,21 @@ graph TD
 sequenceDiagram
     participant User
     participant Extension
-    participant K8sAPI
+    participant kubectl
 
-    User->>Extension: Connect to cluster
-    Extension->>K8sAPI: GET /api/v1/namespaces
-    K8sAPI-->>Extension: Namespace list
-    Extension->>K8sAPI: GET /apis/apps/v1/deployments
-    K8sAPI-->>Extension: Deployment list
+    User->>Extension: Expand cluster
+    Extension->>kubectl: kubectl get namespaces
+    kubectl-->>Extension: Namespace list
+    Extension-->>User: Tree view shows namespaces
+
+    User->>Extension: Click namespace
+    Extension-->>User: Open namespace webview
+    
+    Note over User,Extension: Manual refresh only
+    User->>Extension: Refresh command
+    Extension->>kubectl: kubectl cluster-info
+    kubectl-->>Extension: Connection status
     Extension-->>User: Tree view updates
-
-    Note over Extension,K8sAPI: Watch for changes
-    K8sAPI-->>Extension: Resource update events
-    Extension-->>User: Tree view refreshes
 ```
 
 ## Implementation Details
@@ -70,41 +74,26 @@ sequenceDiagram
 ### Tree Item Structure
 ```typescript
 interface TreeItemData {
-  type: 'cluster' | 'namespace' | 'resourceType' | 'resource';
+  type: 'cluster' | 'namespace' | 'allNamespaces';
   name: string;
-  status?: 'ready' | 'warning' | 'error';
-  metadata?: KubernetesMetadata;
-  children?: TreeItemData[];
+  status?: 'connected' | 'disconnected';
+  metadata?: {
+    context: string;
+    cluster: string;
+  };
 }
 ```
 
-### Resource Grouping Strategy
-```typescript
-const RESOURCE_GROUPS = {
-  workloads: [
-    'deployments', 'statefulsets', 'daemonsets',
-    'jobs', 'cronjobs', 'pods', 'replicasets'
-  ],
-  network: [
-    'services', 'ingresses', 'networkpolicies',
-    'endpoints', 'endpointSlices'
-  ],
-  storage: [
-    'persistentvolumes', 'persistentvolumeclaims',
-    'storageclasses', 'volumeattachments'
-  ],
-  configuration: [
-    'configmaps', 'secrets', 'serviceaccounts',
-    'roles', 'rolebindings', 'clusterroles', 'clusterrolebindings'
-  ]
-};
-```
+### Namespace Listing
+- Namespaces are queried using `kubectl get namespaces --output=json`
+- "All Namespaces" is a special tree item that appears first
+- Individual namespaces are sorted alphabetically
+- Clicking any namespace item triggers a webview to open
 
 ### Status Indicators
-- **Cluster Status**: Connected/disconnected indicators
-- **Resource Status**: Ready/Pending/Failed based on conditions
-- **Health Status**: Based on resource usage and events
-- **AI Status**: Indicates if AI recommendations are available
+- **Cluster Status**: Connected/disconnected indicators based on kubectl connectivity
+- **Connection Method**: Uses `kubectl cluster-info` to verify cluster accessibility
+- **No Automatic Retry**: If kubectl cannot connect, status shows disconnected and user must manually refresh
 
 ## User Experience
 
@@ -115,49 +104,53 @@ const RESOURCE_GROUPS = {
 - **Tooltips**: Display additional information on hover
 
 ### Interactions
-- **Click**: Select and open webview panel
-- **Right-click**: Context menu with relevant actions
-- **Double-click**: Expand/collapse tree nodes
-- **Search**: Filter tree view by resource name or type
+- **Click cluster**: Expand to show namespaces
+- **Click namespace**: Open webview panel for namespace navigation
+- **Click "All Namespaces"**: Open webview showing cluster-wide resource view
+- **Right-click**: Context menu with relevant actions (refresh, switch context)
+- **Manual Refresh**: User-triggered refresh command updates tree
 
 ## Performance Considerations
 
 ### Efficient Loading
-- **Lazy Loading**: Only load visible tree branches
-- **Pagination**: For clusters with many resources
-- **Caching**: Cache resource lists to avoid redundant API calls
-- **Background Updates**: Update tree without blocking UI
+- **Lazy Loading**: Namespaces loaded only when cluster is expanded
+- **Caching**: Cache namespace lists to avoid redundant kubectl calls
+- **Simple Structure**: 2-level tree minimizes memory overhead
 
 ### Memory Management
-- **Resource Cleanup**: Dispose of tree items when no longer visible
-- **Connection Pooling**: Reuse Kubernetes API connections
-- **Event Handling**: Efficient watch event processing
+- **Minimal Tree Data**: Only clusters and namespaces in tree
+- **kubectl Process Management**: Spawn kubectl processes only when needed
+- **No Background Polling**: No automatic periodic updates
 
 ## Error Handling
 
 ### Connection Issues
-- **Offline Mode**: Show cached data with offline indicators
-- **Reconnection**: Automatic reconnection with exponential backoff
-- **Partial Data**: Show available data even if some resources fail to load
+- **Failed kubectl Connection**: Show disconnected status immediately
+- **No Automatic Retry**: Extension does not cycle retry attempts
+- **Manual Refresh Only**: User must explicitly trigger refresh to reconnect
+- **Clear Error Messages**: Display helpful error message when kubectl fails
+- **Graceful Exit**: If kubectl unavailable, show appropriate message without crashing
 
-### Resource Access
-- **Permission Errors**: Show access denied indicators
-- **API Errors**: Display error states in tree view
-- **Fallback Display**: Graceful degradation when features unavailable
+### Namespace Access
+- **Permission Errors**: Show error in tree if namespaces cannot be listed
+- **kubectl Errors**: Display kubectl error messages to user
+- **Fallback Display**: Show "Unable to list namespaces" if kubectl fails
 
 ## Testing Strategy
 
 ### Unit Tests
 - Tree provider logic
-- Resource grouping algorithms
+- Namespace listing and sorting
+- kubectl command construction
 - Status calculation functions
 
 ### Integration Tests
 - kubeconfig parsing
-- Kubernetes API communication
-- Real-time update handling
+- kubectl command execution
+- Namespace retrieval from clusters
 
 ### E2E Tests
-- Complete tree navigation workflows
-- Webview panel opening and updates
-- AI recommendation integration
+- Tree navigation to namespaces
+- Webview panel opening from namespace clicks
+- Manual refresh behavior
+- Connection failure handling
