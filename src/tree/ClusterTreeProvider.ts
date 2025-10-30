@@ -3,6 +3,7 @@ import { ClusterTreeItem, ClusterStatus } from './ClusterTreeItem';
 import { ParsedKubeconfig } from '../kubernetes/KubeconfigParser';
 import { ClusterConnectivity } from '../kubernetes/ClusterConnectivity';
 import { Settings } from '../config/Settings';
+import { KubectlErrorType } from '../kubernetes/KubectlError';
 
 /**
  * Tree data provider for displaying Kubernetes clusters in the VS Code sidebar.
@@ -32,6 +33,12 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      * Updated when kubeconfig is parsed or refreshed.
      */
     private kubeconfig: ParsedKubeconfig | undefined;
+
+    /**
+     * Tracks which error types have been shown to the user during this session.
+     * Used to prevent repeatedly showing the same error (e.g., kubectl not found).
+     */
+    private shownErrorTypes: Set<KubectlErrorType> = new Set();
 
     /**
      * Get the UI representation of a tree element.
@@ -86,76 +93,77 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         }
 
         const contextName = clusterElement.resourceData.context.name;
+        const clusterName = clusterElement.resourceData.cluster?.name || contextName;
         
-        try {
-            // Query namespaces using kubectl
-            const namespaces = await ClusterConnectivity.getNamespaces(
-                this.kubeconfig.filePath,
-                contextName
-            );
+        // Query namespaces using kubectl
+        const result = await ClusterConnectivity.getNamespaces(
+            this.kubeconfig.filePath,
+            contextName
+        );
 
-            // If no namespaces found (error or empty cluster), return empty array
-            if (namespaces.length === 0) {
-                return [];
+        // Handle errors if they occurred
+        if (result.error) {
+            this.handleKubectlError(result.error, clusterName);
+            return [];
+        }
+
+        // If no namespaces found (empty cluster), return empty array
+        if (result.namespaces.length === 0) {
+            return [];
+        }
+
+        // Create "All Namespaces" special item
+        const allNamespacesItem = new ClusterTreeItem(
+            'All Namespaces',
+            'allNamespaces',
+            vscode.TreeItemCollapsibleState.None,
+            {
+                context: clusterElement.resourceData.context,
+                cluster: clusterElement.resourceData.cluster
             }
+        );
+        allNamespacesItem.iconPath = new vscode.ThemeIcon('globe');
+        allNamespacesItem.tooltip = `View all namespaces in ${clusterName}`;
+        
+        // Make "All Namespaces" clickable to open webview
+        allNamespacesItem.command = {
+            command: 'kandy.openNamespace',
+            title: 'Open All Namespaces',
+            arguments: [allNamespacesItem]
+        };
 
-            // Create "All Namespaces" special item
-            const allNamespacesItem = new ClusterTreeItem(
-                'All Namespaces',
-                'allNamespaces',
+        // Sort namespaces alphabetically
+        const sortedNamespaces = result.namespaces.sort((a, b) => a.localeCompare(b));
+
+        // Create tree items for each namespace
+        const namespaceItems = sortedNamespaces.map(namespaceName => {
+            const item = new ClusterTreeItem(
+                namespaceName,
+                'namespace',
                 vscode.TreeItemCollapsibleState.None,
                 {
+                    namespace: namespaceName,
                     context: clusterElement.resourceData.context,
                     cluster: clusterElement.resourceData.cluster
                 }
             );
-            allNamespacesItem.iconPath = new vscode.ThemeIcon('globe');
-            const clusterName = clusterElement.resourceData.cluster?.name || contextName;
-            allNamespacesItem.tooltip = `View all namespaces in ${clusterName}`;
+
+            // Set icon for namespace
+            item.iconPath = new vscode.ThemeIcon('symbol-namespace');
+            item.tooltip = `Namespace: ${namespaceName}`;
             
-            // Make "All Namespaces" clickable to open webview
-            allNamespacesItem.command = {
+            // Make namespace clickable to open webview
+            item.command = {
                 command: 'kandy.openNamespace',
-                title: 'Open All Namespaces',
-                arguments: [allNamespacesItem]
+                title: 'Open Namespace',
+                arguments: [item]
             };
+            
+            return item;
+        });
 
-            // Sort namespaces alphabetically
-            const sortedNamespaces = namespaces.sort((a, b) => a.localeCompare(b));
-
-            // Create tree items for each namespace
-            const namespaceItems = sortedNamespaces.map(namespaceName => {
-                const item = new ClusterTreeItem(
-                    namespaceName,
-                    'namespace',
-                    vscode.TreeItemCollapsibleState.None,
-                    {
-                        namespace: namespaceName,
-                        context: clusterElement.resourceData.context,
-                        cluster: clusterElement.resourceData.cluster
-                    }
-                );
-
-                // Set icon for namespace
-                item.iconPath = new vscode.ThemeIcon('symbol-namespace');
-                item.tooltip = `Namespace: ${namespaceName}`;
-                
-                // Make namespace clickable to open webview
-                item.command = {
-                    command: 'kandy.openNamespace',
-                    title: 'Open Namespace',
-                    arguments: [item]
-                };
-                
-                return item;
-            });
-
-            // Return "All Namespaces" first, followed by individual namespaces
-            return [allNamespacesItem, ...namespaceItems];
-        } catch (error) {
-            console.error(`Error querying namespaces for context ${contextName}:`, error);
-            return [];
-        }
+        // Return "All Namespaces" first, followed by individual namespaces
+        return [allNamespacesItem, ...namespaceItems];
     }
 
     /**
@@ -333,21 +341,27 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
 
         try {
             // Check all clusters in parallel for better performance
-            const statuses = await ClusterConnectivity.checkMultipleConnectivity(
+            const results = await ClusterConnectivity.checkMultipleConnectivity(
                 this.kubeconfig.filePath,
                 contextNames
             );
 
             // Update each cluster item with its connectivity status
             validClusters.forEach((item, index) => {
-                const status = statuses[index];
-                item.status = status;
+                const result = results[index];
+                item.status = result.status;
+
+                // Handle any errors that occurred during connectivity check
+                if (result.error) {
+                    const clusterName = item.resourceData.cluster?.name || item.resourceData.context.name;
+                    this.handleKubectlError(result.error, clusterName);
+                }
 
                 // Determine if this is the current context
                 const isCurrentContext = item.resourceData.context.name === this.kubeconfig?.currentContext;
 
                 // Update the item's appearance based on its status
-                this.updateTreeItemAppearance(item, isCurrentContext, status);
+                this.updateTreeItemAppearance(item, isCurrentContext, result.status);
             });
 
             // Refresh the tree view to show updated icons and tooltips
@@ -402,10 +416,54 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     }
 
     /**
+     * Handle kubectl errors by displaying appropriate user-facing messages.
+     * Implements smart error tracking to avoid spamming users with repeated messages.
+     * 
+     * @param error The kubectl error to handle
+     * @param clusterName Name of the cluster where the error occurred
+     */
+    private handleKubectlError(error: import('../kubernetes/KubectlError').KubectlError, clusterName: string): void {
+        // Determine whether to show a user-facing message based on error type
+        switch (error.type) {
+            case KubectlErrorType.BinaryNotFound:
+                // Only show this error once per session to avoid spam
+                if (!this.shownErrorTypes.has(KubectlErrorType.BinaryNotFound)) {
+                    vscode.window.showErrorMessage(error.getUserMessage());
+                    this.shownErrorTypes.add(KubectlErrorType.BinaryNotFound);
+                }
+                break;
+            
+            case KubectlErrorType.PermissionDenied:
+                // Show warning for permission errors (these are actionable by the user)
+                vscode.window.showWarningMessage(error.getUserMessage());
+                break;
+            
+            case KubectlErrorType.ConnectionFailed:
+                // Log but don't show notification - connection failures are expected
+                // for unreachable clusters and would be too noisy
+                console.log(`Connection failed to cluster ${clusterName}: ${error.getDetails()}`);
+                break;
+            
+            case KubectlErrorType.Timeout:
+                // Log but don't show notification - timeouts can be expected
+                // for slow or overloaded clusters
+                console.log(`Timeout connecting to cluster ${clusterName}: ${error.getDetails()}`);
+                break;
+            
+            case KubectlErrorType.Unknown:
+                // Log unknown errors but don't show notifications
+                // to avoid confusing users with unclear error messages
+                console.error(`Unknown error for cluster ${clusterName}: ${error.getDetails()}`);
+                break;
+        }
+    }
+
+    /**
      * Dispose of the tree provider and clean up resources.
      */
     dispose(): void {
-        // Clean up any resources if needed in the future
+        // Clean up error tracking
+        this.shownErrorTypes.clear();
     }
 }
 

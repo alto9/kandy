@@ -1,6 +1,7 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { ClusterStatus } from './ClusterTypes';
+import { KubectlError } from './KubectlError';
 
 /**
  * Timeout for connectivity checks in milliseconds.
@@ -30,6 +31,36 @@ interface NamespaceListResponse {
 }
 
 /**
+ * Result of a connectivity check operation.
+ */
+export interface ConnectivityResult {
+    /**
+     * The connection status of the cluster.
+     */
+    status: ClusterStatus;
+    
+    /**
+     * Error information if the connectivity check failed.
+     */
+    error?: KubectlError;
+}
+
+/**
+ * Result of a namespace query operation.
+ */
+export interface NamespaceResult {
+    /**
+     * Array of namespace names, empty if query failed.
+     */
+    namespaces: string[];
+    
+    /**
+     * Error information if the namespace query failed.
+     */
+    error?: KubectlError;
+}
+
+/**
  * Utility class for checking Kubernetes cluster connectivity using kubectl.
  */
 export class ClusterConnectivity {
@@ -39,12 +70,12 @@ export class ClusterConnectivity {
      * 
      * @param kubeconfigPath Path to the kubeconfig file
      * @param contextName Name of the context to check
-     * @returns ClusterStatus indicating if the cluster is reachable
+     * @returns ConnectivityResult with status and optional error information
      */
     public static async checkConnectivity(
         kubeconfigPath: string,
         contextName: string
-    ): Promise<ClusterStatus> {
+    ): Promise<ConnectivityResult> {
         try {
             // Execute kubectl cluster-info with explicit kubeconfig and context
             await execFileAsync(
@@ -62,25 +93,18 @@ export class ClusterConnectivity {
             );
             
             // If kubectl succeeds (exit code 0), cluster is connected
-            return ClusterStatus.Connected;
+            return { status: ClusterStatus.Connected };
         } catch (error: unknown) {
-            // kubectl failed - could be timeout, cluster unreachable, or kubectl not found
-            const err = error as { killed?: boolean; signal?: string; code?: string; stderr?: Buffer; message?: string };
-            if (err.killed || err.signal === 'SIGTERM') {
-                console.log(`Cluster connectivity check timed out for context: ${contextName}`);
-            } else if (err.code === 'ENOENT') {
-                console.error('kubectl command not found in PATH. Please install kubectl to check cluster connectivity.');
-            } else {
-                // Log stderr if available for debugging
-                const stderr = err.stderr ? err.stderr.toString().trim() : '';
-                if (stderr) {
-                    console.log(`Cluster connectivity check failed for context ${contextName}: ${stderr}`);
-                } else {
-                    console.log(`Cluster connectivity check failed for context ${contextName}: ${err.message || 'Unknown error'}`);
-                }
-            }
+            // kubectl failed - create structured error for detailed handling
+            const kubectlError = KubectlError.fromExecError(error, contextName);
             
-            return ClusterStatus.Disconnected;
+            // Log error details for debugging
+            console.log(`Cluster connectivity check failed for context ${contextName}: ${kubectlError.getDetails()}`);
+            
+            return { 
+                status: ClusterStatus.Disconnected,
+                error: kubectlError
+            };
         }
     }
 
@@ -90,12 +114,12 @@ export class ClusterConnectivity {
      * 
      * @param kubeconfigPath Path to the kubeconfig file
      * @param contextNames Array of context names to check
-     * @returns Array of ClusterStatus values in the same order as input
+     * @returns Array of ConnectivityResult values in the same order as input
      */
     public static async checkMultipleConnectivity(
         kubeconfigPath: string,
         contextNames: string[]
-    ): Promise<ClusterStatus[]> {
+    ): Promise<ConnectivityResult[]> {
         const promises = contextNames.map(contextName => 
             this.checkConnectivity(kubeconfigPath, contextName)
         );
@@ -108,12 +132,12 @@ export class ClusterConnectivity {
      * 
      * @param kubeconfigPath Path to the kubeconfig file
      * @param contextName Name of the context to query
-     * @returns Array of namespace names sorted alphabetically, or empty array on error
+     * @returns NamespaceResult with namespaces array and optional error information
      */
     public static async getNamespaces(
         kubeconfigPath: string,
         contextName: string
-    ): Promise<string[]> {
+    ): Promise<NamespaceResult> {
         try {
             // Execute kubectl get namespaces with JSON output
             const { stdout } = await execFileAsync(
@@ -140,27 +164,18 @@ export class ClusterConnectivity {
             // Sort alphabetically
             namespaces.sort((a, b) => a.localeCompare(b));
             
-            return namespaces;
+            return { namespaces };
         } catch (error: unknown) {
-            // kubectl failed - could be timeout, cluster unreachable, or kubectl not found
-            const err = error as { killed?: boolean; signal?: string; code?: string; stderr?: Buffer; message?: string };
+            // kubectl failed - create structured error for detailed handling
+            const kubectlError = KubectlError.fromExecError(error, contextName);
             
-            if (err.killed || err.signal === 'SIGTERM') {
-                console.log(`Namespace query timed out for context: ${contextName}`);
-            } else if (err.code === 'ENOENT') {
-                console.error('kubectl command not found in PATH. Please install kubectl to query namespaces.');
-            } else {
-                // Log stderr if available for debugging
-                const stderr = err.stderr ? err.stderr.toString().trim() : '';
-                if (stderr) {
-                    console.log(`Namespace query failed for context ${contextName}: ${stderr}`);
-                } else {
-                    console.log(`Namespace query failed for context ${contextName}: ${err.message || 'Unknown error'}`);
-                }
-            }
+            // Log error details for debugging
+            console.log(`Namespace query failed for context ${contextName}: ${kubectlError.getDetails()}`);
             
-            // Return empty array on error - detailed error handling will come in story 08
-            return [];
+            return {
+                namespaces: [],
+                error: kubectlError
+            };
         }
     }
 }
