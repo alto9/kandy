@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import { ClusterTreeItem, ClusterStatus } from './ClusterTreeItem';
+import { TreeItemType } from './TreeItemTypes';
+import { TreeItemFactory } from './TreeItemFactory';
 import { ParsedKubeconfig } from '../kubernetes/KubeconfigParser';
 import { ClusterConnectivity } from '../kubernetes/ClusterConnectivity';
 import { Settings } from '../config/Settings';
@@ -76,9 +78,14 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             return this.getClusters();
         }
 
-        // If element is a cluster, query its namespaces
-        if (element.type === 'cluster' && element.resourceData?.context?.name) {
-            return this.getNamespaces(element);
+        // If element is a cluster, return the 7 categories
+        if (element.type === 'cluster' && element.resourceData) {
+            return this.getCategories(element);
+        }
+
+        // If element is a category, return its children (placeholder for now)
+        if (this.isCategoryType(element.type)) {
+            return this.getCategoryChildren(element);
         }
 
         // If element has children, return them
@@ -91,8 +98,70 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     }
 
     /**
+     * Get the 7 resource categories for a cluster.
+     * Returns categories in the exact order: Nodes, Namespaces, Workloads, Storage, Helm, Configuration, Custom Resources.
+     * 
+     * @param clusterElement The cluster tree item to get categories for
+     * @returns Array of category tree items
+     */
+    private getCategories(clusterElement: ClusterTreeItem): ClusterTreeItem[] {
+        if (!clusterElement.resourceData) {
+            return [];
+        }
+
+        return [
+            TreeItemFactory.createNodesCategory(clusterElement.resourceData),
+            TreeItemFactory.createNamespacesCategory(clusterElement.resourceData),
+            TreeItemFactory.createWorkloadsCategory(clusterElement.resourceData),
+            TreeItemFactory.createStorageCategory(clusterElement.resourceData),
+            TreeItemFactory.createHelmCategory(clusterElement.resourceData),
+            TreeItemFactory.createConfigurationCategory(clusterElement.resourceData),
+            TreeItemFactory.createCustomResourcesCategory(clusterElement.resourceData)
+        ];
+    }
+
+    /**
+     * Check if a tree item type is a category type.
+     * 
+     * @param type The tree item type to check
+     * @returns True if the type is a category type
+     */
+    private isCategoryType(type: TreeItemType): boolean {
+        return type === 'nodes' || 
+               type === 'namespaces' || 
+               type === 'workloads' || 
+               type === 'storage' || 
+               type === 'helm' || 
+               type === 'configuration' || 
+               type === 'customResources';
+    }
+
+    /**
+     * Get children for a category tree item.
+     * TODO: This is a placeholder. Will be implemented in future stories to return actual resources.
+     * 
+     * @param categoryElement The category tree item to get children for
+     * @returns Empty array (placeholder)
+     */
+    private async getCategoryChildren(categoryElement: ClusterTreeItem): Promise<ClusterTreeItem[]> {
+        // Placeholder - will be implemented in future stories
+        // Each category will query different resources:
+        // - nodes: kubectl get nodes
+        // - namespaces: kubectl get namespaces
+        // - workloads: subcategories (Deployments, StatefulSets, DaemonSets, CronJobs)
+        // - storage: subcategories (PVs, PVCs, Storage Classes)
+        // - helm: helm list
+        // - configuration: subcategories (ConfigMaps, Secrets)
+        // - customResources: kubectl get crds
+        return [];
+    }
+
+    /**
      * Get namespace tree items for a cluster.
      * Queries the cluster using kubectl to retrieve the list of namespaces.
+     * 
+     * NOTE: This method is preserved for future use when the Namespaces category is implemented.
+     * It will be called from getCategoryChildren() when category type is 'namespaces'.
      * 
      * @param clusterElement The cluster tree item to get namespaces for
      * @returns Array of namespace tree items, or empty array on error

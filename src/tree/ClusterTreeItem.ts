@@ -1,33 +1,5 @@
 import * as vscode from 'vscode';
-import { ClusterStatus } from '../kubernetes/ClusterTypes';
-
-/**
- * Types of tree items that can appear in the cluster tree view.
- */
-export type TreeItemType = 'cluster' | 'namespace' | 'allNamespaces' | 'info';
-
-/**
- * Re-export ClusterStatus for convenience.
- */
-export { ClusterStatus };
-
-/**
- * Metadata structure for tree items.
- * Contains only cluster context information (no resource-specific data).
- */
-export interface TreeItemData {
-    /** Kubeconfig context information */
-    context: {
-        name: string;
-        cluster: string;
-        namespace?: string;
-    };
-    /** Cluster information */
-    cluster: {
-        name: string;
-        server: string;
-    };
-}
+import { TreeItemType, TreeItemData, ClusterStatus } from './TreeItemTypes';
 
 /**
  * Custom tree item class that extends VS Code's TreeItem with additional metadata.
