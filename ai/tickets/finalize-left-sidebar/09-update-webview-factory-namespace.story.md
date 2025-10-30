@@ -4,7 +4,7 @@ session_id: finalize-left-sidebar
 feature_id: [tree-view-navigation]
 spec_id: [webview-spec]
 model_id: []
-status: pending
+status: completed
 priority: high
 estimated_minutes: 30
 ---
@@ -28,12 +28,12 @@ Webviews should now be opened for namespaces rather than individual resources. T
 - Webview panel manager
 
 ## Acceptance Criteria
-- [ ] Factory accepts namespace context (namespace name, cluster context)
-- [ ] Factory creates namespace-specific webview panels
-- [ ] Factory creates "All Namespaces" webview for cluster-wide view
-- [ ] Webview panels receive correct namespace and cluster context
-- [ ] Existing webview panels are reused when same namespace is clicked
-- [ ] Webview templates are properly initialized
+- [x] Factory accepts namespace context (namespace name, cluster context)
+- [x] Factory creates namespace-specific webview panels
+- [x] Factory creates "All Namespaces" webview for cluster-wide view
+- [x] Webview panels receive correct namespace and cluster context
+- [x] Existing webview panels are reused when same namespace is clicked
+- [x] Webview templates are properly initialized
 
 ## Dependencies
 - None (can be developed in parallel with namespace-click-handler)
