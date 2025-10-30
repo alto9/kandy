@@ -12,6 +12,24 @@ export type TreeItemType = 'cluster' | 'namespace' | 'allNamespaces' | 'info';
 export { ClusterStatus };
 
 /**
+ * Metadata structure for tree items.
+ * Contains only cluster context information (no resource-specific data).
+ */
+export interface TreeItemData {
+    /** Kubeconfig context information */
+    context: {
+        name: string;
+        cluster: string;
+        namespace?: string;
+    };
+    /** Cluster information */
+    cluster: {
+        name: string;
+        server: string;
+    };
+}
+
+/**
  * Custom tree item class that extends VS Code's TreeItem with additional metadata.
  * This wrapper allows us to attach custom data to tree items for navigation and display.
  */
@@ -23,10 +41,9 @@ export class ClusterTreeItem extends vscode.TreeItem {
 
     /**
      * Optional metadata associated with this tree item.
-     * Can contain Kubernetes resource data, cluster information, etc.
+     * Contains cluster context information (context and cluster data).
      */
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    public readonly resourceData?: any;
+    public readonly resourceData?: TreeItemData;
 
     /**
      * Optional array of child items.
@@ -52,8 +69,7 @@ export class ClusterTreeItem extends vscode.TreeItem {
         label: string,
         type: TreeItemType,
         collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.None,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        resourceData?: any
+        resourceData?: TreeItemData
     ) {
         super(label, collapsibleState);
         this.type = type;

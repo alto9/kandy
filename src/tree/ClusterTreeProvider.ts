@@ -87,8 +87,8 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      */
     private async getNamespaces(clusterElement: ClusterTreeItem): Promise<ClusterTreeItem[]> {
         // Ensure we have the required kubeconfig data
-        if (!this.kubeconfig) {
-            console.error('Cannot query namespaces: kubeconfig not loaded');
+        if (!this.kubeconfig || !clusterElement.resourceData) {
+            console.error('Cannot query namespaces: kubeconfig not loaded or missing resource data');
             return [];
         }
 
@@ -118,8 +118,8 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             'allNamespaces',
             vscode.TreeItemCollapsibleState.None,
             {
-                context: clusterElement.resourceData.context,
-                cluster: clusterElement.resourceData.cluster
+                context: clusterElement.resourceData!.context,
+                cluster: clusterElement.resourceData!.cluster
             }
         );
         allNamespacesItem.iconPath = new vscode.ThemeIcon('globe');
@@ -142,9 +142,8 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 'namespace',
                 vscode.TreeItemCollapsibleState.None,
                 {
-                    namespace: namespaceName,
-                    context: clusterElement.resourceData.context,
-                    cluster: clusterElement.resourceData.cluster
+                    context: clusterElement.resourceData!.context,
+                    cluster: clusterElement.resourceData!.cluster
                 }
             );
 
@@ -203,6 +202,12 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             // Find the corresponding cluster data
             const cluster = this.kubeconfig!.clusters.find(c => c.name === context.cluster);
             
+            // Skip if cluster data is missing (invalid kubeconfig)
+            if (!cluster) {
+                console.warn(`Context ${context.name} references non-existent cluster ${context.cluster}`);
+                return null;
+            }
+            
             // Create the tree item with context name as the label
             const item = new ClusterTreeItem(
                 context.name,
@@ -235,7 +240,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             }
 
             return item;
-        });
+        }).filter((item): item is ClusterTreeItem => item !== null);
 
         // Check connectivity for all clusters asynchronously
         this.checkAllClustersConnectivity(clusterItems);
@@ -337,7 +342,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         }
 
         // Extract context names
-        const contextNames = validClusters.map(item => item.resourceData.context.name);
+        const contextNames = validClusters.map(item => item.resourceData!.context.name);
 
         try {
             // Check all clusters in parallel for better performance
@@ -353,12 +358,12 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
 
                 // Handle any errors that occurred during connectivity check
                 if (result.error) {
-                    const clusterName = item.resourceData.cluster?.name || item.resourceData.context.name;
+                    const clusterName = item.resourceData!.cluster?.name || item.resourceData!.context.name;
                     this.handleKubectlError(result.error, clusterName);
                 }
 
                 // Determine if this is the current context
-                const isCurrentContext = item.resourceData.context.name === this.kubeconfig?.currentContext;
+                const isCurrentContext = item.resourceData!.context.name === this.kubeconfig?.currentContext;
 
                 // Update the item's appearance based on its status
                 this.updateTreeItemAppearance(item, isCurrentContext, result.status);

@@ -209,7 +209,10 @@ function registerCommands(): void {
             
             const clusterName = resourceData.cluster.name;
             const contextName = resourceData.context.name;
-            const namespace = treeItem.type === 'allNamespaces' ? undefined : resourceData.namespace;
+            // Extract namespace from tree item label (label is either string or TreeItemLabel)
+            const namespace = treeItem.type === 'allNamespaces' 
+                ? undefined 
+                : typeof treeItem.label === 'string' ? treeItem.label : treeItem.label?.label;
             
             // Show the namespace webview
             NamespaceWebview.show(context, {
