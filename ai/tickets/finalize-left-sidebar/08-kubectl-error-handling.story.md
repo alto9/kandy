@@ -4,7 +4,7 @@ session_id: finalize-left-sidebar
 feature_id: [tree-view-navigation]
 spec_id: [tree-view-spec]
 model_id: []
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 25
 ---
