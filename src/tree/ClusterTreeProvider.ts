@@ -34,12 +34,6 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     private kubeconfig: ParsedKubeconfig | undefined;
 
     /**
-     * Timer for periodic connectivity checks.
-     * Refreshes cluster status every 30 seconds.
-     */
-    private refreshTimer: NodeJS.Timeout | undefined;
-
-    /**
      * Get the UI representation of a tree element.
      * This method is called by VS Code to render each tree item.
      * 
@@ -408,37 +402,10 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     }
 
     /**
-     * Start periodic refresh of cluster connectivity status.
-     * Checks connectivity every 30 seconds automatically.
-     */
-    startPeriodicRefresh(): void {
-        // Clear any existing timer
-        this.stopPeriodicRefresh();
-
-        // Set up new timer for 30-second intervals
-        this.refreshTimer = setInterval(() => {
-            console.log('Performing periodic cluster connectivity check...');
-            this.refresh();
-        }, 30000); // 30 seconds
-    }
-
-    /**
-     * Stop periodic refresh of cluster connectivity.
-     * Should be called when the tree provider is disposed.
-     */
-    stopPeriodicRefresh(): void {
-        if (this.refreshTimer) {
-            clearInterval(this.refreshTimer);
-            this.refreshTimer = undefined;
-        }
-    }
-
-    /**
      * Dispose of the tree provider and clean up resources.
-     * Stops periodic refresh timer.
      */
     dispose(): void {
-        this.stopPeriodicRefresh();
+        // Clean up any resources if needed in the future
     }
 }
 
