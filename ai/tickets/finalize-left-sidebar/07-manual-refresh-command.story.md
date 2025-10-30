@@ -4,7 +4,7 @@ session_id: finalize-left-sidebar
 feature_id: [tree-view-navigation]
 spec_id: [tree-view-spec]
 model_id: []
-status: pending
+status: completed
 priority: high
 estimated_minutes: 25
 ---
@@ -29,12 +29,12 @@ Since automatic updates are removed, users need a way to manually refresh the tr
 - Tree view toolbar configuration
 
 ## Acceptance Criteria
-- [ ] Refresh command is registered and callable
-- [ ] Command re-queries cluster connectivity using kubectl
-- [ ] Command re-queries namespaces for connected clusters
-- [ ] Refresh icon appears in tree view toolbar
-- [ ] User sees status message after refresh completes
-- [ ] Errors during refresh are displayed to user
+- [x] Refresh command is registered and callable
+- [x] Command re-queries cluster connectivity using kubectl
+- [x] Command re-queries namespaces for connected clusters
+- [x] Refresh icon appears in tree view toolbar
+- [x] User sees status message after refresh completes
+- [x] Errors during refresh are displayed to user
 
 ## Dependencies
 - kubectl-cluster-connectivity
