@@ -1,8 +1,10 @@
 import * as vscode from 'vscode';
 import { GlobalState } from './state/GlobalState';
 import { WelcomeWebview } from './webview/WelcomeWebview';
+import { NamespaceWebview } from './webview/NamespaceWebview';
 import { KubeconfigParser } from './kubernetes/KubeconfigParser';
 import { ClusterTreeProvider } from './tree/ClusterTreeProvider';
+import { ClusterTreeItem } from './tree/ClusterTreeItem';
 import { Settings } from './config/Settings';
 import { configureApiKeyCommand } from './commands/ConfigureApiKey';
 
@@ -189,6 +191,47 @@ function registerCommands(): void {
     
     context.subscriptions.push(refreshClustersCommand);
     disposables.push(refreshClustersCommand);
+    
+    // Register open namespace command
+    const openNamespaceCommand = vscode.commands.registerCommand('kandy.openNamespace', async (treeItem: ClusterTreeItem) => {
+        try {
+            console.log('Opening namespace webview for tree item:', treeItem.type, treeItem.label);
+            
+            // Validate tree item type
+            if (treeItem.type !== 'namespace' && treeItem.type !== 'allNamespaces') {
+                console.error('Invalid tree item type for namespace command:', treeItem.type);
+                return;
+            }
+            
+            // Extract context information from tree item
+            const resourceData = treeItem.resourceData;
+            if (!resourceData || !resourceData.context || !resourceData.cluster) {
+                console.error('Missing resource data in tree item');
+                vscode.window.showErrorMessage('Unable to open namespace: missing cluster information');
+                return;
+            }
+            
+            const clusterName = resourceData.cluster.name;
+            const contextName = resourceData.context.name;
+            const namespace = treeItem.type === 'allNamespaces' ? undefined : resourceData.namespace;
+            
+            // Show the namespace webview
+            NamespaceWebview.show(context, {
+                clusterName,
+                contextName,
+                namespace
+            });
+            
+            console.log(`Opened namespace webview: ${namespace || 'All Namespaces'} in ${clusterName}`);
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to open namespace webview:', errorMessage);
+            vscode.window.showErrorMessage(`Failed to open namespace: ${errorMessage}`);
+        }
+    });
+    
+    context.subscriptions.push(openNamespaceCommand);
+    disposables.push(openNamespaceCommand);
 }
 
 /**

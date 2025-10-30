@@ -118,6 +118,13 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             allNamespacesItem.iconPath = new vscode.ThemeIcon('globe');
             const clusterName = clusterElement.resourceData.cluster?.name || contextName;
             allNamespacesItem.tooltip = `View all namespaces in ${clusterName}`;
+            
+            // Make "All Namespaces" clickable to open webview
+            allNamespacesItem.command = {
+                command: 'kandy.openNamespace',
+                title: 'Open All Namespaces',
+                arguments: [allNamespacesItem]
+            };
 
             // Sort namespaces alphabetically
             const sortedNamespaces = namespaces.sort((a, b) => a.localeCompare(b));
@@ -138,6 +145,13 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 // Set icon for namespace
                 item.iconPath = new vscode.ThemeIcon('symbol-namespace');
                 item.tooltip = `Namespace: ${namespaceName}`;
+                
+                // Make namespace clickable to open webview
+                item.command = {
+                    command: 'kandy.openNamespace',
+                    title: 'Open Namespace',
+                    arguments: [item]
+                };
                 
                 return item;
             });

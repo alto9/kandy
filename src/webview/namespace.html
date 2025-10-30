@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+    <title>Namespace: {{NAMESPACE_NAME}}</title>
+    <style>
+        body {
+            font-family: var(--vscode-font-family);
+            font-size: var(--vscode-font-size);
+            color: var(--vscode-foreground);
+            background-color: var(--vscode-editor-background);
+            padding: 0;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            border-bottom: 1px solid var(--vscode-panel-border);
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            margin: 0 0 10px 0;
+            font-size: 24px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .icon {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            background-color: var(--vscode-symbolIcon-namespaceForeground);
+            mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="currentColor"/></svg>');
+            -webkit-mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="currentColor"/></svg>');
+        }
+
+        .icon.all-namespaces {
+            background-color: var(--vscode-symbolIcon-classForeground);
+            mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" stroke="currentColor" fill="none" stroke-width="1.5"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/></svg>');
+            -webkit-mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" stroke="currentColor" fill="none" stroke-width="1.5"/><circle cx="8" cy="8" r="1.5" fill="currentColor"/></svg>');
+        }
+
+        .metadata {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .metadata-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--vscode-descriptionForeground);
+            font-size: 13px;
+        }
+
+        .metadata-label {
+            font-weight: 600;
+            color: var(--vscode-foreground);
+        }
+
+        .content {
+            background-color: var(--vscode-editor-background);
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 4px;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .placeholder-icon {
+            font-size: 48px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .placeholder-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: var(--vscode-foreground);
+        }
+
+        .placeholder-message {
+            color: var(--vscode-descriptionForeground);
+            line-height: 1.6;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+            background-color: var(--vscode-badge-background);
+            color: var(--vscode-badge-foreground);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <span class="icon" id="namespace-icon"></span>
+                <span id="namespace-title">{{NAMESPACE_NAME}}</span>
+                <span class="badge" id="scope-badge">NAMESPACE</span>
+            </h1>
+            <div class="metadata">
+                <div class="metadata-item">
+                    <span class="metadata-label">Cluster:</span>
+                    <span>{{CLUSTER_NAME}}</span>
+                </div>
+                <div class="metadata-item">
+                    <span class="metadata-label">Context:</span>
+                    <span>{{CONTEXT_NAME}}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="placeholder-icon">📦</div>
+            <div class="placeholder-title">Resource Navigation</div>
+            <div class="placeholder-message">
+                Resource navigation and management features are coming soon. 
+                This panel will display pods, deployments, services, and other 
+                Kubernetes resources for this namespace.
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // Update UI based on whether this is "All Namespaces" view
+            const isAllNamespaces = {{IS_ALL_NAMESPACES}};
+            
+            if (isAllNamespaces) {
+                const icon = document.getElementById('namespace-icon');
+                const badge = document.getElementById('scope-badge');
+                
+                if (icon) {
+                    icon.classList.add('all-namespaces');
+                }
+                
+                if (badge) {
+                    badge.textContent = 'CLUSTER-WIDE';
+                }
+            }
+
+            // Set up message passing for future functionality
+            const vscode = acquireVsCodeApi();
+
+            // Example of how to send messages to the extension
+            function refresh() {
+                vscode.postMessage({
+                    command: 'refresh'
+                });
+            }
+
+            function openResource(resourceType, resourceName) {
+                vscode.postMessage({
+                    command: 'openResource',
+                    data: {
+                        type: resourceType,
+                        name: resourceName
+                    }
+                });
+            }
+
+            // Store functions in global scope for future use
+            window.kandyNamespace = {
+                refresh,
+                openResource
+            };
+        })();
+    </script>
+</body>
+</html>
+
