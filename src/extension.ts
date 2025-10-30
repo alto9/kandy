@@ -62,6 +62,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         const kubeconfig = await KubeconfigParser.parseKubeconfig();
         console.log(`Kubeconfig parsing completed. Found ${kubeconfig.clusters.length} cluster(s).`);
         
+        // Register commands first before populating the tree
+        // This ensures commands are available when tree items are clicked
+        registerCommands();
+        
         // Initialize and register tree view provider
         clusterTreeProvider = new ClusterTreeProvider();
         const treeViewDisposable = vscode.window.registerTreeDataProvider(
@@ -74,9 +78,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         
         // Pass parsed kubeconfig to tree provider to populate clusters
         clusterTreeProvider.setKubeconfig(kubeconfig);
-        
-        // Register commands
-        registerCommands();
         
         // Create and show status bar item for authentication status
         createAuthStatusBarItem();
@@ -189,45 +190,39 @@ function registerCommands(): void {
     disposables.push(refreshClustersCommand);
     
     // Register open namespace command
-    const openNamespaceCommand = vscode.commands.registerCommand('kandy.openNamespace', async (treeItem: ClusterTreeItem) => {
-        try {
-            console.log('Opening namespace webview for tree item:', treeItem.type, treeItem.label);
-            
-            // Validate tree item type
-            if (treeItem.type !== 'namespace' && treeItem.type !== 'allNamespaces') {
-                console.error('Invalid tree item type for namespace command:', treeItem.type);
-                return;
+    // Args: contextName, clusterName, namespace (undefined for "All Namespaces")
+    const openNamespaceCommand = vscode.commands.registerCommand(
+        'kandy.openNamespace', 
+        async (contextName: string, clusterName: string, namespace?: string) => {
+            try {
+                console.log('Opening namespace webview:', {
+                    contextName,
+                    clusterName,
+                    namespace: namespace || 'All Namespaces'
+                });
+                
+                // Validate required parameters
+                if (!contextName || !clusterName) {
+                    console.error('Missing required parameters for openNamespace command');
+                    vscode.window.showErrorMessage('Unable to open namespace: missing cluster information');
+                    return;
+                }
+                
+                // Show the namespace webview
+                NamespaceWebview.show(context, {
+                    clusterName,
+                    contextName,
+                    namespace
+                });
+                
+                console.log(`Opened namespace webview: ${namespace || 'All Namespaces'} in ${clusterName}`);
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to open namespace webview:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to open namespace: ${errorMessage}`);
             }
-            
-            // Extract context information from tree item
-            const resourceData = treeItem.resourceData;
-            if (!resourceData || !resourceData.context || !resourceData.cluster) {
-                console.error('Missing resource data in tree item');
-                vscode.window.showErrorMessage('Unable to open namespace: missing cluster information');
-                return;
-            }
-            
-            const clusterName = resourceData.cluster.name;
-            const contextName = resourceData.context.name;
-            // Extract namespace from tree item label (label is either string or TreeItemLabel)
-            const namespace = treeItem.type === 'allNamespaces' 
-                ? undefined 
-                : typeof treeItem.label === 'string' ? treeItem.label : treeItem.label?.label;
-            
-            // Show the namespace webview
-            NamespaceWebview.show(context, {
-                clusterName,
-                contextName,
-                namespace
-            });
-            
-            console.log(`Opened namespace webview: ${namespace || 'All Namespaces'} in ${clusterName}`);
-        } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            console.error('Failed to open namespace webview:', errorMessage);
-            vscode.window.showErrorMessage(`Failed to open namespace: ${errorMessage}`);
         }
-    });
+    );
     
     context.subscriptions.push(openNamespaceCommand);
     disposables.push(openNamespaceCommand);

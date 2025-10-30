@@ -12,7 +12,8 @@
     "Other"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "onStartupFinished",
+    "onView:kandyClusterView"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -45,6 +46,11 @@
         "title": "Configure API Key",
         "category": "Kandy",
         "icon": "$(key)"
+      },
+      {
+        "command": "kandy.openNamespace",
+        "title": "Open Namespace",
+        "category": "Kandy"
       }
     ],
     "menus": {

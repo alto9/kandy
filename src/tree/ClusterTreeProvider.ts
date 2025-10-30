@@ -41,6 +41,18 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     private shownErrorTypes: Set<KubectlErrorType> = new Set();
 
     /**
+     * Cache of cluster connectivity status to persist between tree refreshes.
+     * Maps context name to its last known connectivity status.
+     */
+    private clusterStatusCache: Map<string, ClusterStatus> = new Map();
+
+    /**
+     * Timer for periodic connectivity checks.
+     * Checks cluster connectivity every 60 seconds automatically.
+     */
+    private refreshInterval: NodeJS.Timeout | undefined;
+
+    /**
      * Get the UI representation of a tree element.
      * This method is called by VS Code to render each tree item.
      * 
@@ -129,7 +141,11 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         allNamespacesItem.command = {
             command: 'kandy.openNamespace',
             title: 'Open All Namespaces',
-            arguments: [allNamespacesItem]
+            arguments: [
+                contextName,
+                clusterName,
+                undefined // undefined indicates "All Namespaces"
+            ]
         };
 
         // Sort namespaces alphabetically
@@ -155,7 +171,11 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             item.command = {
                 command: 'kandy.openNamespace',
                 title: 'Open Namespace',
-                arguments: [item]
+                arguments: [
+                    clusterElement.resourceData!.context.name,
+                    clusterElement.resourceData!.cluster.name,
+                    namespaceName
+                ]
             };
             
             return item;
@@ -242,6 +262,21 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             return item;
         }).filter((item): item is ClusterTreeItem => item !== null);
 
+        // Update cluster items with cached status
+        clusterItems.forEach(item => {
+            if (item.type === 'cluster' && item.resourceData?.context?.name) {
+                const contextName = item.resourceData.context.name;
+                const cachedStatus = this.clusterStatusCache.get(contextName);
+                
+                if (cachedStatus !== undefined) {
+                    // Use cached status if available
+                    item.status = cachedStatus;
+                    const isCurrentContext = contextName === this.kubeconfig!.currentContext;
+                    this.updateTreeItemAppearance(item, isCurrentContext, cachedStatus);
+                }
+            }
+        });
+
         // Check connectivity for all clusters asynchronously
         this.checkAllClustersConnectivity(clusterItems);
 
@@ -303,6 +338,9 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     setKubeconfig(kubeconfig: ParsedKubeconfig): void {
         this.kubeconfig = kubeconfig;
         this.refresh();
+        
+        // Start periodic connectivity checks
+        this.startPeriodicRefresh();
     }
 
     /**
@@ -312,6 +350,46 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      */
     refresh(): void {
         this._onDidChangeTreeData.fire();
+    }
+
+    /**
+     * Start periodic connectivity checks for all clusters.
+     * Checks cluster connectivity every 60 seconds automatically.
+     * Clears any existing interval before starting a new one.
+     */
+    private startPeriodicRefresh(): void {
+        // Clear existing interval if any
+        if (this.refreshInterval) {
+            clearInterval(this.refreshInterval);
+        }
+
+        // Set up new interval for 60-second periodic checks
+        this.refreshInterval = setInterval(() => {
+            console.log('Running periodic cluster connectivity check...');
+            
+            // Get current cluster items
+            if (this.kubeconfig && this.kubeconfig.contexts.length > 0) {
+                const clusterItems = this.kubeconfig.contexts
+                    .map(context => {
+                        const cluster = this.kubeconfig!.clusters.find(c => c.name === context.cluster);
+                        if (!cluster) {
+                            return null;
+                        }
+                        
+                        const item = new ClusterTreeItem(
+                            context.name,
+                            'cluster',
+                            vscode.TreeItemCollapsibleState.Collapsed,
+                            { context, cluster }
+                        );
+                        return item;
+                    })
+                    .filter((item): item is ClusterTreeItem => item !== null);
+                
+                // Run connectivity check (this will update cache and refresh tree)
+                this.checkAllClustersConnectivity(clusterItems);
+            }
+        }, 60000); // 60 seconds = 60000 milliseconds
     }
 
     /**
@@ -351,26 +429,45 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 contextNames
             );
 
+            // Track if any status changed to determine if refresh is needed
+            let statusChanged = false;
+
             // Update each cluster item with its connectivity status
             validClusters.forEach((item, index) => {
                 const result = results[index];
+                const contextName = item.resourceData!.context.name;
+                
+                // Check if status actually changed
+                const previousStatus = this.clusterStatusCache.get(contextName);
+                if (previousStatus !== result.status) {
+                    statusChanged = true;
+                }
+                
+                // Update item status
                 item.status = result.status;
+                
+                // Cache the status for future tree refreshes
+                this.clusterStatusCache.set(contextName, result.status);
 
                 // Handle any errors that occurred during connectivity check
                 if (result.error) {
-                    const clusterName = item.resourceData!.cluster?.name || item.resourceData!.context.name;
+                    const clusterName = item.resourceData!.cluster?.name || contextName;
                     this.handleKubectlError(result.error, clusterName);
                 }
 
                 // Determine if this is the current context
-                const isCurrentContext = item.resourceData!.context.name === this.kubeconfig?.currentContext;
+                const isCurrentContext = contextName === this.kubeconfig?.currentContext;
 
                 // Update the item's appearance based on its status
                 this.updateTreeItemAppearance(item, isCurrentContext, result.status);
             });
 
-            // Refresh the tree view to show updated icons and tooltips
-            this.refresh();
+            // Only refresh the tree view if status actually changed
+            // This prevents unnecessary tree rebuilds during periodic checks
+            if (statusChanged) {
+                console.log('Cluster status changed, refreshing tree view...');
+                this.refresh();
+            }
         } catch (error) {
             console.error('Error checking cluster connectivity:', error);
         }
@@ -405,10 +502,10 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             }
         } else { // Disconnected
             if (isCurrentContext) {
-                iconId = 'vm-outline'; // Outlined VM for current + disconnected
+                iconId = 'warning'; // Warning icon for current + disconnected
                 statusText = 'Current context (disconnected)';
             } else {
-                iconId = 'debug-disconnect'; // Disconnect icon
+                iconId = 'warning'; // Warning icon for disconnected clusters
                 statusText = 'Disconnected';
             }
         }
@@ -467,8 +564,17 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      * Dispose of the tree provider and clean up resources.
      */
     dispose(): void {
+        // Stop periodic connectivity checks
+        if (this.refreshInterval) {
+            clearInterval(this.refreshInterval);
+            this.refreshInterval = undefined;
+        }
+        
         // Clean up error tracking
         this.shownErrorTypes.clear();
+        
+        // Clear status cache
+        this.clusterStatusCache.clear();
     }
 }
 

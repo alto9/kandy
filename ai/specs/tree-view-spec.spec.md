@@ -62,7 +62,14 @@ sequenceDiagram
     User->>Extension: Click namespace
     Extension-->>User: Open namespace webview
     
-    Note over User,Extension: Manual refresh only
+    Note over Extension,kubectl: Automatic refresh every 60 seconds
+    loop Every 60 seconds
+        Extension->>kubectl: kubectl cluster-info
+        kubectl-->>Extension: Connection status
+        Extension-->>User: Tree view updates
+    end
+    
+    Note over User,Extension: Manual refresh also available
     User->>Extension: Refresh command
     Extension->>kubectl: kubectl cluster-info
     kubectl-->>Extension: Connection status
@@ -93,7 +100,11 @@ interface TreeItemData {
 ### Status Indicators
 - **Cluster Status**: Connected/disconnected indicators based on kubectl connectivity
 - **Connection Method**: Uses `kubectl cluster-info` to verify cluster accessibility
-- **No Automatic Retry**: If kubectl cannot connect, status shows disconnected and user must manually refresh
+- **Automatic Refresh**: Connectivity checks run automatically every 60 seconds
+- **Manual Refresh**: User can trigger immediate refresh via command
+- **Status Persistence**: Cluster status is cached between refreshes to prevent spinner flicker
+- **Warning Icons**: Disconnected clusters show a warning triangle icon (exclamation point in triangle)
+- **Spinner Behavior**: Spinner only shows during initial connection check or when status is truly unknown
 
 ## User Experience
 
@@ -120,16 +131,18 @@ interface TreeItemData {
 ### Memory Management
 - **Minimal Tree Data**: Only clusters and namespaces in tree
 - **kubectl Process Management**: Spawn kubectl processes only when needed
-- **No Background Polling**: No automatic periodic updates
+- **Periodic Connectivity Checks**: Automatic checks every 60 seconds with proper cleanup
+- **Status Caching**: Cluster connectivity status cached in memory to reduce redundant checks
 
 ## Error Handling
 
 ### Connection Issues
-- **Failed kubectl Connection**: Show disconnected status immediately
-- **No Automatic Retry**: Extension does not cycle retry attempts
-- **Manual Refresh Only**: User must explicitly trigger refresh to reconnect
+- **Failed kubectl Connection**: Show disconnected status with warning icon immediately
+- **Automatic Retry**: Extension checks connectivity every 60 seconds, whether pass or fail
+- **Manual Refresh Available**: User can trigger immediate refresh via command without waiting
 - **Clear Error Messages**: Display helpful error message when kubectl fails
 - **Graceful Exit**: If kubectl unavailable, show appropriate message without crashing
+- **Status Recovery**: Automatically updates icon when connection is restored on next check
 
 ### Namespace Access
 - **Permission Errors**: Show error in tree if namespaces cannot be listed
