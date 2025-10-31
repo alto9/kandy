@@ -9,6 +9,7 @@ import { KubectlErrorType } from '../kubernetes/KubectlError';
 import { NodesCategory } from './categories/NodesCategory';
 import { NamespacesCategory } from './categories/NamespacesCategory';
 import { WorkloadsCategory } from './categories/WorkloadsCategory';
+import { DeploymentsSubcategory } from './categories/workloads/DeploymentsSubcategory';
 
 /**
  * Tree data provider for displaying Kubernetes clusters in the VS Code sidebar.
@@ -137,6 +138,11 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                type === 'statefulsets' ||
                type === 'daemonsets' ||
                type === 'cronjobs' ||
+               type === 'deployment' ||
+               type === 'statefulset' ||
+               type === 'daemonset' ||
+               type === 'cronjob' ||
+               type === 'pod' ||
                type === 'storage' || 
                type === 'helm' || 
                type === 'configuration' || 
@@ -176,8 +182,25 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                     categoryElement.resourceData
                 );
             
+            case 'deployments':
+                return DeploymentsSubcategory.getDeploymentItems(
+                    categoryElement.resourceData,
+                    this.kubeconfig.filePath,
+                    (error, clusterName) => this.handleKubectlError(error, clusterName)
+                );
+            
+            case 'deployment':
+                // Get label selector from the tree item (stored during deployment creation)
+                const labelSelector = (categoryElement as any).labelSelector || '';
+                return DeploymentsSubcategory.getPodsForDeployment(
+                    categoryElement.resourceData,
+                    this.kubeconfig.filePath,
+                    labelSelector,
+                    (error, clusterName) => this.handleKubectlError(error, clusterName)
+                );
+            
             // Future categories and subcategories will be added here:
-            // - deployments, statefulsets, daemonsets, cronjobs: workload data fetching (stories 05-08)
+            // - statefulsets, daemonsets, cronjobs: workload data fetching (stories 06-08)
             // - storage: subcategories (PVs, PVCs, Storage Classes)
             // - helm: helm list
             // - configuration: subcategories (ConfigMaps, Secrets)

@@ -9,7 +9,7 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - allNamespaces: Special "All Namespaces" item
  * - info: Informational items (e.g., auth status)
  * 
- * Category types (appear under clusters, also used for individual items within that category):
+ * Category types (appear under clusters):
  * - nodes: Nodes category and individual node items
  * - namespaces: Namespaces category
  * - workloads: Workloads category
@@ -21,6 +21,13 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - helm: Helm category
  * - configuration: Configuration category
  * - customResources: Custom Resources category
+ * 
+ * Individual resource types (items within categories):
+ * - deployment: Individual deployment item
+ * - statefulset: Individual statefulset item
+ * - daemonset: Individual daemonset item
+ * - cronjob: Individual cronjob item
+ * - pod: Individual pod item
  */
 export type TreeItemType = 
     | 'cluster' 
@@ -34,6 +41,11 @@ export type TreeItemType =
     | 'statefulsets'
     | 'daemonsets'
     | 'cronjobs'
+    | 'deployment'
+    | 'statefulset'
+    | 'daemonset'
+    | 'cronjob'
+    | 'pod'
     | 'storage'
     | 'helm'
     | 'configuration'
@@ -46,7 +58,7 @@ export { ClusterStatus };
 
 /**
  * Metadata structure for tree items.
- * Contains only cluster context information (no resource-specific data).
+ * Contains cluster context information and optional resource-specific data.
  */
 export interface TreeItemData {
     /** Kubeconfig context information */
@@ -60,5 +72,9 @@ export interface TreeItemData {
         name: string;
         server: string;
     };
+    /** Optional resource name for individual resource items */
+    resourceName?: string;
+    /** Optional namespace for namespaced resources */
+    namespace?: string;
 }
 
