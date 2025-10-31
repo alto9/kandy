@@ -7,6 +7,7 @@ import { ClusterConnectivity } from '../kubernetes/ClusterConnectivity';
 import { Settings } from '../config/Settings';
 import { KubectlErrorType } from '../kubernetes/KubectlError';
 import { NodesCategory } from './categories/NodesCategory';
+import { NamespacesCategory } from './categories/NamespacesCategory';
 
 /**
  * Tree data provider for displaying Kubernetes clusters in the VS Code sidebar.
@@ -158,8 +159,14 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
             
+            case 'namespaces':
+                return NamespacesCategory.getNamespaceItems(
+                    categoryElement.resourceData,
+                    this.kubeconfig.filePath,
+                    (error, clusterName) => this.handleKubectlError(error, clusterName)
+                );
+            
             // Future categories will be added here:
-            // - namespaces: kubectl get namespaces
             // - workloads: subcategories (Deployments, StatefulSets, DaemonSets, CronJobs)
             // - storage: subcategories (PVs, PVCs, Storage Classes)
             // - helm: helm list

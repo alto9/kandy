@@ -1,0 +1,99 @@
+import * as vscode from 'vscode';
+import { ClusterTreeItem } from '../ClusterTreeItem';
+import { TreeItemData } from '../TreeItemTypes';
+import { NamespaceCommands } from '../../kubectl/NamespaceCommands';
+import { KubectlError } from '../../kubernetes/KubectlError';
+
+/**
+ * Type for error handler callback.
+ */
+type ErrorHandler = (error: KubectlError, clusterName: string) => void;
+
+/**
+ * Namespaces category handler.
+ * Provides functionality to fetch and display cluster namespaces.
+ */
+export class NamespacesCategory {
+    /**
+     * Retrieves namespace items for the Namespaces category.
+     * Queries kubectl to get all namespaces and creates tree items for display.
+     * 
+     * @param resourceData Cluster context and cluster information
+     * @param kubeconfigPath Path to the kubeconfig file
+     * @param errorHandler Callback to handle kubectl errors
+     * @returns Array of namespace tree items
+     */
+    public static async getNamespaceItems(
+        resourceData: TreeItemData,
+        kubeconfigPath: string,
+        errorHandler: ErrorHandler
+    ): Promise<ClusterTreeItem[]> {
+        const contextName = resourceData.context.name;
+        const clusterName = resourceData.cluster?.name || contextName;
+        
+        // Query namespaces using kubectl
+        const result = await NamespaceCommands.getNamespaces(
+            kubeconfigPath,
+            contextName
+        );
+
+        // Handle errors if they occurred
+        if (result.error) {
+            errorHandler(result.error, clusterName);
+            return [];
+        }
+
+        // If no namespaces found (empty cluster), return empty array
+        if (result.namespaces.length === 0) {
+            return [];
+        }
+
+        // Create tree items for each namespace
+        const namespaceItems = result.namespaces.map(namespaceInfo => {
+            const item = new ClusterTreeItem(
+                namespaceInfo.name,
+                'namespace',
+                vscode.TreeItemCollapsibleState.None,
+                resourceData
+            );
+
+            // Set icon based on namespace status
+            switch (namespaceInfo.status) {
+                case 'Active':
+                    item.iconPath = new vscode.ThemeIcon(
+                        'symbol-namespace',
+                        new vscode.ThemeColor('testing.iconPassed')
+                    );
+                    break;
+                case 'Terminating':
+                    item.iconPath = new vscode.ThemeIcon(
+                        'symbol-namespace',
+                        new vscode.ThemeColor('editorWarning.foreground')
+                    );
+                    break;
+                default: // Unknown
+                    item.iconPath = new vscode.ThemeIcon('symbol-namespace');
+                    break;
+            }
+
+            // Set tooltip with detailed information
+            item.tooltip = `Namespace: ${namespaceInfo.name}\nStatus: ${namespaceInfo.status}`;
+
+            // Make namespace clickable to open webview
+            item.command = {
+                command: 'kandy.openNamespace',
+                title: 'Open Namespace',
+                arguments: [
+                    contextName,
+                    clusterName,
+                    namespaceInfo.name
+                ]
+            };
+            
+            return item;
+        });
+
+        return namespaceItems;
+    }
+}
+

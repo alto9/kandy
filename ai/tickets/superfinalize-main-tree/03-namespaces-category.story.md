@@ -3,7 +3,7 @@ story_id: namespaces-category
 session_id: superfinalize-main-tree
 feature_id: [tree-view-navigation]
 spec_id: [tree-view-spec, webview-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 20
 ---
