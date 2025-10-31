@@ -104,7 +104,7 @@ export class PodTreeItem extends ClusterTreeItem {
      * @returns PodTreeItem instance
      */
     public static fromKubectlJson(
-        podData: any,
+        podData: { metadata?: { name?: string; namespace?: string }; status?: { phase?: string } },
         resourceData: TreeItemData,
         parentResource?: string
     ): PodTreeItem {

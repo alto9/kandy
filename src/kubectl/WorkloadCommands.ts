@@ -29,6 +29,22 @@ export interface DeploymentInfo {
 }
 
 /**
+ * Information about a Kubernetes statefulset.
+ */
+export interface StatefulSetInfo {
+    /** Name of the statefulset */
+    name: string;
+    /** Namespace of the statefulset */
+    namespace: string;
+    /** Number of ready replicas */
+    readyReplicas: number;
+    /** Total number of desired replicas */
+    replicas: number;
+    /** Label selector for finding pods */
+    selector: string;
+}
+
+/**
  * Information about a Kubernetes pod.
  */
 export interface PodInfo {
@@ -51,6 +67,21 @@ export interface DeploymentsResult {
     
     /**
      * Error information if the deployment query failed.
+     */
+    error?: KubectlError;
+}
+
+/**
+ * Result of a statefulset query operation.
+ */
+export interface StatefulSetsResult {
+    /**
+     * Array of statefulset information, empty if query failed.
+     */
+    statefulsets: StatefulSetInfo[];
+    
+    /**
+     * Error information if the statefulset query failed.
      */
     error?: KubectlError;
 }
@@ -110,6 +141,35 @@ interface PodItem {
     status?: {
         phase?: string;
     };
+}
+
+/**
+ * Interface for kubectl statefulset response items.
+ */
+interface StatefulSetItem {
+    metadata?: {
+        name?: string;
+        namespace?: string;
+    };
+    spec?: {
+        replicas?: number;
+        selector?: {
+            matchLabels?: {
+                [key: string]: string;
+            };
+        };
+    };
+    status?: {
+        readyReplicas?: number;
+        replicas?: number;
+    };
+}
+
+/**
+ * Interface for kubectl statefulset list response.
+ */
+interface StatefulSetListResponse {
+    items?: StatefulSetItem[];
 }
 
 /**
@@ -194,6 +254,160 @@ export class WorkloadCommands {
             
             return {
                 deployments: [],
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Retrieves the list of statefulsets from all namespaces using kubectl.
+     * Uses kubectl get statefulsets command with JSON output for parsing.
+     * 
+     * @param kubeconfigPath Path to the kubeconfig file
+     * @param contextName Name of the context to query
+     * @returns StatefulSetsResult with statefulsets array and optional error information
+     */
+    public static async getStatefulSets(
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<StatefulSetsResult> {
+        try {
+            // Execute kubectl get statefulsets with JSON output
+            const { stdout } = await execFileAsync(
+                'kubectl',
+                [
+                    'get',
+                    'statefulsets',
+                    '--all-namespaces',
+                    '--output=json',
+                    `--kubeconfig=${kubeconfigPath}`,
+                    `--context=${contextName}`
+                ],
+                {
+                    timeout: KUBECTL_TIMEOUT_MS,
+                    env: { ...process.env }
+                }
+            );
+
+            // Parse the JSON response
+            const response: StatefulSetListResponse = JSON.parse(stdout);
+            
+            // Extract statefulset information from the items array
+            const statefulsets: StatefulSetInfo[] = response.items?.map((item: StatefulSetItem) => {
+                const name = item.metadata?.name || 'Unknown';
+                const namespace = item.metadata?.namespace || 'default';
+                const replicas = item.spec?.replicas || 0;
+                const readyReplicas = item.status?.readyReplicas || 0;
+                
+                // Build label selector from matchLabels
+                const matchLabels = item.spec?.selector?.matchLabels || {};
+                const selector = Object.entries(matchLabels)
+                    .map(([key, value]) => `${key}=${value}`)
+                    .join(',');
+                
+                return {
+                    name,
+                    namespace,
+                    readyReplicas,
+                    replicas,
+                    selector
+                };
+            }) || [];
+            
+            // Sort statefulsets by namespace, then by name
+            statefulsets.sort((a, b) => {
+                const nsCompare = a.namespace.localeCompare(b.namespace);
+                return nsCompare !== 0 ? nsCompare : a.name.localeCompare(b.name);
+            });
+            
+            return { statefulsets };
+        } catch (error: unknown) {
+            // kubectl failed - create structured error for detailed handling
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            
+            // Log error details for debugging
+            console.log(`StatefulSet query failed for context ${contextName}: ${kubectlError.getDetails()}`);
+            
+            return {
+                statefulsets: [],
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Retrieves the list of pods for a specific statefulset using kubectl.
+     * Uses label selector to find pods belonging to the statefulset.
+     * 
+     * @param kubeconfigPath Path to the kubeconfig file
+     * @param contextName Name of the context to query
+     * @param statefulsetName Name of the statefulset
+     * @param namespace Namespace of the statefulset
+     * @param labelSelector Label selector for finding pods
+     * @returns PodsResult with pods array and optional error information
+     */
+    public static async getPodsForStatefulSet(
+        kubeconfigPath: string,
+        contextName: string,
+        statefulsetName: string,
+        namespace: string,
+        labelSelector: string
+    ): Promise<PodsResult> {
+        try {
+            // If no label selector provided, return empty array
+            if (!labelSelector) {
+                return { pods: [] };
+            }
+
+            // Execute kubectl get pods with label selector
+            const { stdout } = await execFileAsync(
+                'kubectl',
+                [
+                    'get',
+                    'pods',
+                    '-n',
+                    namespace,
+                    '--selector',
+                    labelSelector,
+                    '--output=json',
+                    `--kubeconfig=${kubeconfigPath}`,
+                    `--context=${contextName}`
+                ],
+                {
+                    timeout: KUBECTL_TIMEOUT_MS,
+                    env: { ...process.env }
+                }
+            );
+
+            // Parse the JSON response
+            const response: PodListResponse = JSON.parse(stdout);
+            
+            // Extract pod information from the items array
+            const pods: PodInfo[] = response.items?.map((item: PodItem) => {
+                const name = item.metadata?.name || 'Unknown';
+                const podNamespace = item.metadata?.namespace || namespace;
+                const phase = item.status?.phase || 'Unknown';
+                
+                return {
+                    name,
+                    namespace: podNamespace,
+                    phase
+                };
+            }) || [];
+            
+            // Sort pods alphabetically by name
+            pods.sort((a, b) => a.name.localeCompare(b.name));
+            
+            return { pods };
+        } catch (error: unknown) {
+            // kubectl failed - create structured error for detailed handling
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            
+            // Log error details for debugging
+            console.log(`Pod query failed for statefulset ${statefulsetName} in namespace ${namespace}: ${kubectlError.getDetails()}`);
+            
+            return {
+                pods: [],
                 error: kubectlError
             };
         }

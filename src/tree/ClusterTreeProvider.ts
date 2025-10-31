@@ -10,6 +10,7 @@ import { NodesCategory } from './categories/NodesCategory';
 import { NamespacesCategory } from './categories/NamespacesCategory';
 import { WorkloadsCategory } from './categories/WorkloadsCategory';
 import { DeploymentsSubcategory } from './categories/workloads/DeploymentsSubcategory';
+import { StatefulSetsSubcategory } from './categories/workloads/StatefulSetsSubcategory';
 
 /**
  * Tree data provider for displaying Kubernetes clusters in the VS Code sidebar.
@@ -189,18 +190,37 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
             
-            case 'deployment':
+            case 'deployment': {
                 // Get label selector from the tree item (stored during deployment creation)
-                const labelSelector = (categoryElement as any).labelSelector || '';
+                const labelSelector = (categoryElement as ClusterTreeItem & { labelSelector?: string }).labelSelector || '';
                 return DeploymentsSubcategory.getPodsForDeployment(
                     categoryElement.resourceData,
                     this.kubeconfig.filePath,
                     labelSelector,
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
+            }
+            
+            case 'statefulsets':
+                return StatefulSetsSubcategory.getStatefulSetItems(
+                    categoryElement.resourceData,
+                    this.kubeconfig.filePath,
+                    (error, clusterName) => this.handleKubectlError(error, clusterName)
+                );
+            
+            case 'statefulset': {
+                // Get label selector from the tree item (stored during statefulset creation)
+                const statefulSetLabelSelector = (categoryElement as ClusterTreeItem & { labelSelector?: string }).labelSelector || '';
+                return StatefulSetsSubcategory.getPodsForStatefulSet(
+                    categoryElement.resourceData,
+                    this.kubeconfig.filePath,
+                    statefulSetLabelSelector,
+                    (error, clusterName) => this.handleKubectlError(error, clusterName)
+                );
+            }
             
             // Future categories and subcategories will be added here:
-            // - statefulsets, daemonsets, cronjobs: workload data fetching (stories 06-08)
+            // - daemonsets, cronjobs: workload data fetching (stories 07-08)
             // - storage: subcategories (PVs, PVCs, Storage Classes)
             // - helm: helm list
             // - configuration: subcategories (ConfigMaps, Secrets)

@@ -11,20 +11,20 @@ import { KubectlError } from '../../../kubernetes/KubectlError';
 type ErrorHandler = (error: KubectlError, clusterName: string) => void;
 
 /**
- * Deployments subcategory handler.
- * Provides functionality to fetch and display deployments and their pods.
+ * StatefulSets subcategory handler.
+ * Provides functionality to fetch and display statefulsets and their pods.
  */
-export class DeploymentsSubcategory {
+export class StatefulSetsSubcategory {
     /**
-     * Retrieves deployment items for the Deployments subcategory.
-     * Queries kubectl to get all deployments across all namespaces and creates tree items for display.
+     * Retrieves statefulset items for the StatefulSets subcategory.
+     * Queries kubectl to get all statefulsets across all namespaces and creates tree items for display.
      * 
      * @param resourceData Cluster context and cluster information
      * @param kubeconfigPath Path to the kubeconfig file
      * @param errorHandler Callback to handle kubectl errors
-     * @returns Array of deployment tree items
+     * @returns Array of statefulset tree items
      */
-    public static async getDeploymentItems(
+    public static async getStatefulSetItems(
         resourceData: TreeItemData,
         kubeconfigPath: string,
         errorHandler: ErrorHandler
@@ -32,8 +32,8 @@ export class DeploymentsSubcategory {
         const contextName = resourceData.context.name;
         const clusterName = resourceData.cluster?.name || contextName;
         
-        // Query deployments using kubectl
-        const result = await WorkloadCommands.getDeployments(
+        // Query statefulsets using kubectl
+        const result = await WorkloadCommands.getStatefulSets(
             kubeconfigPath,
             contextName
         );
@@ -44,37 +44,37 @@ export class DeploymentsSubcategory {
             return [];
         }
 
-        // If no deployments found, return empty array
-        if (result.deployments.length === 0) {
+        // If no statefulsets found, return empty array
+        if (result.statefulsets.length === 0) {
             return [];
         }
 
-        // Create tree items for each deployment
-        const deploymentItems = result.deployments.map(deploymentInfo => {
-            // Create tree item with 'deployment' type for individual deployment
+        // Create tree items for each statefulset
+        const statefulsetItems = result.statefulsets.map(statefulsetInfo => {
+            // Create tree item with 'statefulset' type for individual statefulset
             const item = new ClusterTreeItem(
-                deploymentInfo.name,
-                'deployment',
+                statefulsetInfo.name,
+                'statefulset',
                 vscode.TreeItemCollapsibleState.Collapsed,
                 {
                     ...resourceData,
-                    resourceName: deploymentInfo.name,
-                    namespace: deploymentInfo.namespace
+                    resourceName: statefulsetInfo.name,
+                    namespace: statefulsetInfo.namespace
                 }
             );
 
             // Set description to show namespace and replica status
-            const replicaStatus = `${deploymentInfo.readyReplicas}/${deploymentInfo.replicas} ready`;
-            item.description = `${deploymentInfo.namespace} • ${replicaStatus}`;
+            const replicaStatus = `${statefulsetInfo.readyReplicas}/${statefulsetInfo.replicas} ready`;
+            item.description = `${statefulsetInfo.namespace} • ${replicaStatus}`;
 
             // Set icon based on replica status
-            if (deploymentInfo.readyReplicas === deploymentInfo.replicas && deploymentInfo.replicas > 0) {
+            if (statefulsetInfo.readyReplicas === statefulsetInfo.replicas && statefulsetInfo.replicas > 0) {
                 // All replicas ready
                 item.iconPath = new vscode.ThemeIcon(
                     'check-all',
                     new vscode.ThemeColor('testing.iconPassed')
                 );
-            } else if (deploymentInfo.readyReplicas > 0) {
+            } else if (statefulsetInfo.readyReplicas > 0) {
                 // Some replicas ready
                 item.iconPath = new vscode.ThemeIcon(
                     'sync',
@@ -89,21 +89,21 @@ export class DeploymentsSubcategory {
             }
 
             // Set tooltip with detailed information
-            item.tooltip = `Deployment: ${deploymentInfo.name}\nNamespace: ${deploymentInfo.namespace}\nReplicas: ${replicaStatus}`;
+            item.tooltip = `StatefulSet: ${statefulsetInfo.name}\nNamespace: ${statefulsetInfo.namespace}\nReplicas: ${replicaStatus}`;
 
             // Store label selector in contextValue for later pod retrieval
             // We'll pass this through the resourceData which is available in the tree provider
-            (item as ClusterTreeItem & { labelSelector: string }).labelSelector = deploymentInfo.selector;
+            (item as ClusterTreeItem & { labelSelector: string }).labelSelector = statefulsetInfo.selector;
 
             return item;
         });
 
-        return deploymentItems;
+        return statefulsetItems;
     }
 
     /**
-     * Retrieves pod items for a specific deployment.
-     * Queries kubectl to get pods matching the deployment's label selector.
+     * Retrieves pod items for a specific statefulset.
+     * Queries kubectl to get pods matching the statefulset's label selector.
      * 
      * @param resourceData Cluster context and cluster information (includes resourceName and namespace)
      * @param kubeconfigPath Path to the kubeconfig file
@@ -111,7 +111,7 @@ export class DeploymentsSubcategory {
      * @param errorHandler Callback to handle kubectl errors
      * @returns Array of pod tree items
      */
-    public static async getPodsForDeployment(
+    public static async getPodsForStatefulSet(
         resourceData: TreeItemData,
         kubeconfigPath: string,
         labelSelector: string,
@@ -119,14 +119,14 @@ export class DeploymentsSubcategory {
     ): Promise<PodTreeItem[]> {
         const contextName = resourceData.context.name;
         const clusterName = resourceData.cluster?.name || contextName;
-        const deploymentName = resourceData.resourceName || 'Unknown';
+        const statefulsetName = resourceData.resourceName || 'Unknown';
         const namespace = resourceData.namespace || 'default';
         
         // Query pods using kubectl with label selector
-        const result = await WorkloadCommands.getPodsForDeployment(
+        const result = await WorkloadCommands.getPodsForStatefulSet(
             kubeconfigPath,
             contextName,
-            deploymentName,
+            statefulsetName,
             namespace,
             labelSelector
         );
@@ -156,7 +156,7 @@ export class DeploymentsSubcategory {
                     name: podInfo.name,
                     namespace: podInfo.namespace,
                     status,
-                    parentResource: deploymentName
+                    parentResource: statefulsetName
                 },
                 resourceData
             );
