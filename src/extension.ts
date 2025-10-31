@@ -4,7 +4,6 @@ import { WelcomeWebview } from './webview/WelcomeWebview';
 import { NamespaceWebview } from './webview/NamespaceWebview';
 import { KubeconfigParser } from './kubernetes/KubeconfigParser';
 import { ClusterTreeProvider } from './tree/ClusterTreeProvider';
-import { ClusterTreeItem } from './tree/ClusterTreeItem';
 import { Settings } from './config/Settings';
 import { configureApiKeyCommand } from './commands/ConfigureApiKey';
 

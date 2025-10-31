@@ -2,6 +2,11 @@ import * as vscode from 'vscode';
 import { TreeItemType, TreeItemData, ClusterStatus } from './TreeItemTypes';
 
 /**
+ * Re-export types for convenience.
+ */
+export { ClusterStatus, TreeItemType };
+
+/**
  * Custom tree item class that extends VS Code's TreeItem with additional metadata.
  * This wrapper allows us to attach custom data to tree items for navigation and display.
  */

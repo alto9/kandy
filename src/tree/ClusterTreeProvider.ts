@@ -6,6 +6,7 @@ import { ParsedKubeconfig } from '../kubernetes/KubeconfigParser';
 import { ClusterConnectivity } from '../kubernetes/ClusterConnectivity';
 import { Settings } from '../config/Settings';
 import { KubectlErrorType } from '../kubernetes/KubectlError';
+import { NodesCategory } from './categories/NodesCategory';
 
 /**
  * Tree data provider for displaying Kubernetes clusters in the VS Code sidebar.
@@ -138,22 +139,36 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
 
     /**
      * Get children for a category tree item.
-     * TODO: This is a placeholder. Will be implemented in future stories to return actual resources.
+     * Delegates to category-specific handlers for fetching and displaying resources.
      * 
      * @param categoryElement The category tree item to get children for
-     * @returns Empty array (placeholder)
+     * @returns Array of child tree items for the category
      */
     private async getCategoryChildren(categoryElement: ClusterTreeItem): Promise<ClusterTreeItem[]> {
-        // Placeholder - will be implemented in future stories
-        // Each category will query different resources:
-        // - nodes: kubectl get nodes
-        // - namespaces: kubectl get namespaces
-        // - workloads: subcategories (Deployments, StatefulSets, DaemonSets, CronJobs)
-        // - storage: subcategories (PVs, PVCs, Storage Classes)
-        // - helm: helm list
-        // - configuration: subcategories (ConfigMaps, Secrets)
-        // - customResources: kubectl get crds
-        return [];
+        if (!this.kubeconfig || !categoryElement.resourceData) {
+            return [];
+        }
+
+        // Delegate to category-specific handlers
+        switch (categoryElement.type) {
+            case 'nodes':
+                return NodesCategory.getNodeItems(
+                    categoryElement.resourceData,
+                    this.kubeconfig.filePath,
+                    (error, clusterName) => this.handleKubectlError(error, clusterName)
+                );
+            
+            // Future categories will be added here:
+            // - namespaces: kubectl get namespaces
+            // - workloads: subcategories (Deployments, StatefulSets, DaemonSets, CronJobs)
+            // - storage: subcategories (PVs, PVCs, Storage Classes)
+            // - helm: helm list
+            // - configuration: subcategories (ConfigMaps, Secrets)
+            // - customResources: kubectl get crds
+            
+            default:
+                return [];
+        }
     }
 
     /**

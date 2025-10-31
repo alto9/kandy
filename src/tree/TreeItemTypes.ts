@@ -1,4 +1,3 @@
-import * as vscode from 'vscode';
 import { ClusterStatus } from '../kubernetes/ClusterTypes';
 
 /**
@@ -10,8 +9,8 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - allNamespaces: Special "All Namespaces" item
  * - info: Informational items (e.g., auth status)
  * 
- * Category types (appear under clusters):
- * - nodes: Nodes category
+ * Category types (appear under clusters, also used for individual items within that category):
+ * - nodes: Nodes category and individual node items
  * - namespaces: Namespaces category
  * - workloads: Workloads category
  * - storage: Storage category
