@@ -13,6 +13,10 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - nodes: Nodes category and individual node items
  * - namespaces: Namespaces category
  * - workloads: Workloads category
+ * - deployments: Deployments subcategory (under Workloads)
+ * - statefulsets: StatefulSets subcategory (under Workloads)
+ * - daemonsets: DaemonSets subcategory (under Workloads)
+ * - cronjobs: CronJobs subcategory (under Workloads)
  * - storage: Storage category
  * - helm: Helm category
  * - configuration: Configuration category
@@ -26,6 +30,10 @@ export type TreeItemType =
     | 'nodes'
     | 'namespaces'
     | 'workloads'
+    | 'deployments'
+    | 'statefulsets'
+    | 'daemonsets'
+    | 'cronjobs'
     | 'storage'
     | 'helm'
     | 'configuration'

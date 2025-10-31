@@ -8,6 +8,7 @@ import { Settings } from '../config/Settings';
 import { KubectlErrorType } from '../kubernetes/KubectlError';
 import { NodesCategory } from './categories/NodesCategory';
 import { NamespacesCategory } from './categories/NamespacesCategory';
+import { WorkloadsCategory } from './categories/WorkloadsCategory';
 
 /**
  * Tree data provider for displaying Kubernetes clusters in the VS Code sidebar.
@@ -132,6 +133,10 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         return type === 'nodes' || 
                type === 'namespaces' || 
                type === 'workloads' || 
+               type === 'deployments' ||
+               type === 'statefulsets' ||
+               type === 'daemonsets' ||
+               type === 'cronjobs' ||
                type === 'storage' || 
                type === 'helm' || 
                type === 'configuration' || 
@@ -166,8 +171,13 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
             
-            // Future categories will be added here:
-            // - workloads: subcategories (Deployments, StatefulSets, DaemonSets, CronJobs)
+            case 'workloads':
+                return WorkloadsCategory.getWorkloadSubcategories(
+                    categoryElement.resourceData
+                );
+            
+            // Future categories and subcategories will be added here:
+            // - deployments, statefulsets, daemonsets, cronjobs: workload data fetching (stories 05-08)
             // - storage: subcategories (PVs, PVCs, Storage Classes)
             // - helm: helm list
             // - configuration: subcategories (ConfigMaps, Secrets)
