@@ -12,6 +12,7 @@ import { WorkloadsCategory } from './categories/WorkloadsCategory';
 import { DeploymentsSubcategory } from './categories/workloads/DeploymentsSubcategory';
 import { StatefulSetsSubcategory } from './categories/workloads/StatefulSetsSubcategory';
 import { DaemonSetsSubcategory } from './categories/workloads/DaemonSetsSubcategory';
+import { CronJobsSubcategory } from './categories/workloads/CronJobsSubcategory';
 
 /**
  * Tree data provider for displaying Kubernetes clusters in the VS Code sidebar.
@@ -238,8 +239,21 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 );
             }
             
+            case 'cronjobs':
+                return CronJobsSubcategory.getCronJobItems(
+                    categoryElement.resourceData,
+                    this.kubeconfig.filePath,
+                    (error, clusterName) => this.handleKubectlError(error, clusterName)
+                );
+            
+            case 'cronjob':
+                return CronJobsSubcategory.getPodsForCronJob(
+                    categoryElement.resourceData,
+                    this.kubeconfig.filePath,
+                    (error, clusterName) => this.handleKubectlError(error, clusterName)
+                );
+            
             // Future categories and subcategories will be added here:
-            // - cronjobs: workload data fetching (story 08)
             // - storage: subcategories (PVs, PVCs, Storage Classes)
             // - helm: helm list
             // - configuration: subcategories (ConfigMaps, Secrets)

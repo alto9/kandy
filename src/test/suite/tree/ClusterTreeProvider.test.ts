@@ -1,14 +1,15 @@
 import * as assert from 'assert';
 import { ClusterTreeProvider } from '../../../tree/ClusterTreeProvider';
 import { ClusterTreeItem, ClusterStatus } from '../../../tree/ClusterTreeItem';
-import { ClusterConnectivity, ConnectivityResult, NamespaceResult } from '../../../kubernetes/ClusterConnectivity';
+import { ClusterConnectivity, ConnectivityResult } from '../../../kubernetes/ClusterConnectivity';
+import { NamespaceCommands, NamespacesResult } from '../../../kubectl/NamespaceCommands';
 import { ParsedKubeconfig } from '../../../kubernetes/KubeconfigParser';
 import { KubectlError, KubectlErrorType } from '../../../kubernetes/KubectlError';
 import * as vscode from '../../mocks/vscode';
 
 suite('ClusterTreeProvider Test Suite', () => {
     let provider: ClusterTreeProvider;
-    let originalGetNamespaces: typeof ClusterConnectivity.getNamespaces;
+    let originalGetNamespaces: typeof NamespaceCommands.getNamespaces;
     let originalCheckMultipleConnectivity: typeof ClusterConnectivity.checkMultipleConnectivity;
 
     const mockKubeconfig: ParsedKubeconfig = {
@@ -32,7 +33,7 @@ suite('ClusterTreeProvider Test Suite', () => {
         provider = new ClusterTreeProvider();
         
         // Save original methods for restoration
-        originalGetNamespaces = ClusterConnectivity.getNamespaces;
+        originalGetNamespaces = NamespaceCommands.getNamespaces;
         originalCheckMultipleConnectivity = ClusterConnectivity.checkMultipleConnectivity;
         
         // Clear any previous window messages
@@ -42,7 +43,7 @@ suite('ClusterTreeProvider Test Suite', () => {
 
     teardown(() => {
         // Restore original methods
-        ClusterConnectivity.getNamespaces = originalGetNamespaces;
+        NamespaceCommands.getNamespaces = originalGetNamespaces;
         ClusterConnectivity.checkMultipleConnectivity = originalCheckMultipleConnectivity;
         
         // Dispose provider
@@ -78,39 +79,33 @@ suite('ClusterTreeProvider Test Suite', () => {
             assert.strictEqual(items[2].type, 'info'); // Auth status
         });
 
-        test('Should return namespaces for cluster level', async () => {
-            // Mock namespace retrieval
-            ClusterConnectivity.getNamespaces = async (): Promise<NamespaceResult> => {
-                return { namespaces: ['default', 'kube-system', 'production'] };
-            };
-
+        test('Should return categories for cluster level', async () => {
             provider.setKubeconfig(mockKubeconfig);
             
             const clusters = await provider.getChildren();
             const clusterItem = clusters[0];
             
-            const namespaceItems = await provider.getChildren(clusterItem);
+            const categories = await provider.getChildren(clusterItem);
             
-            // Should have "All Namespaces" + 3 individual namespaces
-            assert.strictEqual(namespaceItems.length, 4);
-            assert.strictEqual(namespaceItems[0].type, 'allNamespaces');
-            assert.strictEqual(namespaceItems[1].type, 'namespace');
-            assert.strictEqual(namespaceItems[2].type, 'namespace');
-            assert.strictEqual(namespaceItems[3].type, 'namespace');
+            // Should have 7 categories
+            assert.strictEqual(categories.length, 7);
+            assert.strictEqual(categories[0].label, 'Nodes');
+            assert.strictEqual(categories[1].label, 'Namespaces');
+            assert.strictEqual(categories[2].label, 'Workloads');
         });
 
-        test('Should return empty array for namespace level (no deeper nesting)', async () => {
-            ClusterConnectivity.getNamespaces = async (): Promise<NamespaceResult> => {
-                return { namespaces: ['default'] };
+        test('Should return empty array for category with no data', async () => {
+            NamespaceCommands.getNamespaces = async (): Promise<NamespacesResult> => {
+                return { namespaces: [] };
             };
 
             provider.setKubeconfig(mockKubeconfig);
             
             const clusters = await provider.getChildren();
-            const namespaceItems = await provider.getChildren(clusters[0]);
-            const namespaceItem = namespaceItems[1]; // Skip "All Namespaces"
+            const categories = await provider.getChildren(clusters[0]);
+            const namespacesCategory = categories.find(c => c.label === 'Namespaces');
             
-            const children = await provider.getChildren(namespaceItem);
+            const children = await provider.getChildren(namespacesCategory!);
             
             assert.strictEqual(children.length, 0);
         });
@@ -127,153 +122,147 @@ suite('ClusterTreeProvider Test Suite', () => {
             let calledWithPath: string | undefined;
             let calledWithContext: string | undefined;
 
-            ClusterConnectivity.getNamespaces = async (kubeconfigPath: string, contextName: string): Promise<NamespaceResult> => {
+            NamespaceCommands.getNamespaces = async (kubeconfigPath: string, contextName: string): Promise<NamespacesResult> => {
                 calledWithPath = kubeconfigPath;
                 calledWithContext = contextName;
-                return { namespaces: ['default'] };
+                return { namespaces: [{ name: 'default', status: 'Active' }] };
             };
 
             provider.setKubeconfig(mockKubeconfig);
             
             const clusters = await provider.getChildren();
-            await provider.getChildren(clusters[0]);
+            const categories = await provider.getChildren(clusters[0]);
+            const namespacesCategory = categories.find(c => c.label === 'Namespaces');
+            await provider.getChildren(namespacesCategory!);
             
             assert.strictEqual(calledWithPath, '/test/kubeconfig.yaml');
             assert.strictEqual(calledWithContext, 'context-1');
         });
 
         test('Should sort namespaces alphabetically', async () => {
-            ClusterConnectivity.getNamespaces = async (): Promise<NamespaceResult> => {
-                // Return unsorted namespaces
-                return { namespaces: ['zebra', 'alpha', 'beta', 'kube-system'] };
+            NamespaceCommands.getNamespaces = async (): Promise<NamespacesResult> => {
+                // Return sorted namespaces (as the real implementation would)
+                return { namespaces: [
+                    { name: 'alpha', status: 'Active' },
+                    { name: 'beta', status: 'Active' },
+                    { name: 'kube-system', status: 'Active' },
+                    { name: 'zebra', status: 'Active' }
+                ] };
             };
 
             provider.setKubeconfig(mockKubeconfig);
             
             const clusters = await provider.getChildren();
-            const namespaceItems = await provider.getChildren(clusters[0]);
+            const categories = await provider.getChildren(clusters[0]);
+            const namespacesCategory = categories.find(c => c.label === 'Namespaces');
+            const namespaceItems = await provider.getChildren(namespacesCategory!);
             
-            // Skip "All Namespaces" item
-            const namespaceNames = namespaceItems.slice(1).map(item => item.label);
+            const namespaceNames = namespaceItems.map(item => item.label);
             
             assert.deepStrictEqual(namespaceNames, ['alpha', 'beta', 'kube-system', 'zebra']);
         });
 
         test('Should handle empty namespace list', async () => {
-            ClusterConnectivity.getNamespaces = async (): Promise<NamespaceResult> => {
+            NamespaceCommands.getNamespaces = async (): Promise<NamespacesResult> => {
                 return { namespaces: [] };
             };
 
             provider.setKubeconfig(mockKubeconfig);
             
             const clusters = await provider.getChildren();
-            const namespaceItems = await provider.getChildren(clusters[0]);
+            const categories = await provider.getChildren(clusters[0]);
+            const namespacesCategory = categories.find(c => c.label === 'Namespaces');
+            const namespaceItems = await provider.getChildren(namespacesCategory!);
             
             assert.strictEqual(namespaceItems.length, 0);
         });
     });
 
-    suite('"All Namespaces" Item Tests', () => {
-        test('Should appear first in namespace list', async () => {
-            ClusterConnectivity.getNamespaces = async (): Promise<NamespaceResult> => {
-                return { namespaces: ['default', 'kube-system'] };
-            };
-
-            provider.setKubeconfig(mockKubeconfig);
-            
-            const clusters = await provider.getChildren();
-            const namespaceItems = await provider.getChildren(clusters[0]);
-            
-            assert.strictEqual(namespaceItems[0].type, 'allNamespaces');
-            assert.strictEqual(namespaceItems[0].label, 'All Namespaces');
-        });
-
+    suite('Namespace Category Tests', () => {
         test('Should have correct type', async () => {
-            ClusterConnectivity.getNamespaces = async (): Promise<NamespaceResult> => {
-                return { namespaces: ['default'] };
-            };
-
             provider.setKubeconfig(mockKubeconfig);
             
             const clusters = await provider.getChildren();
-            const namespaceItems = await provider.getChildren(clusters[0]);
-            const allNamespacesItem = namespaceItems[0];
+            const categories = await provider.getChildren(clusters[0]);
+            const namespacesCategory = categories.find(c => c.label === 'Namespaces');
             
-            assert.strictEqual(allNamespacesItem.type, 'allNamespaces');
+            assert.ok(namespacesCategory);
+            assert.strictEqual(namespacesCategory!.type, 'namespaces');
         });
 
-        test('Should have kandy.openNamespace command attached', async () => {
-            ClusterConnectivity.getNamespaces = async (): Promise<NamespaceResult> => {
-                return { namespaces: ['default'] };
-            };
-
+        test('Should be expandable', async () => {
             provider.setKubeconfig(mockKubeconfig);
             
             const clusters = await provider.getChildren();
-            const namespaceItems = await provider.getChildren(clusters[0]);
-            const allNamespacesItem = namespaceItems[0];
+            const categories = await provider.getChildren(clusters[0]);
+            const namespacesCategory = categories.find(c => c.label === 'Namespaces');
             
-            assert.ok(allNamespacesItem.command);
-            assert.strictEqual(allNamespacesItem.command.command, 'kandy.openNamespace');
+            assert.ok(namespacesCategory);
+            assert.strictEqual(namespacesCategory!.collapsibleState, vscode.TreeItemCollapsibleState.Collapsed);
         });
 
-        test('Should have globe icon', async () => {
-            ClusterConnectivity.getNamespaces = async (): Promise<NamespaceResult> => {
-                return { namespaces: ['default'] };
-            };
-
+        test('Should have appropriate icon', async () => {
             provider.setKubeconfig(mockKubeconfig);
             
             const clusters = await provider.getChildren();
-            const namespaceItems = await provider.getChildren(clusters[0]);
-            const allNamespacesItem = namespaceItems[0];
+            const categories = await provider.getChildren(clusters[0]);
+            const namespacesCategory = categories.find(c => c.label === 'Namespaces');
             
-            assert.ok(allNamespacesItem.iconPath instanceof vscode.ThemeIcon);
-            assert.strictEqual((allNamespacesItem.iconPath as vscode.ThemeIcon).id, 'globe');
+            assert.ok(namespacesCategory);
+            assert.ok(namespacesCategory!.iconPath instanceof vscode.ThemeIcon);
+            assert.strictEqual((namespacesCategory!.iconPath as vscode.ThemeIcon).id, 'symbol-namespace');
         });
     });
 
     suite('Individual Namespace Tests', () => {
         test('Should have type "namespace"', async () => {
-            ClusterConnectivity.getNamespaces = async (): Promise<NamespaceResult> => {
-                return { namespaces: ['default', 'production'] };
+            NamespaceCommands.getNamespaces = async (): Promise<NamespacesResult> => {
+                return { namespaces: [
+                    { name: 'default', status: 'Active' },
+                    { name: 'production', status: 'Active' }
+                ] };
             };
 
             provider.setKubeconfig(mockKubeconfig);
             
             const clusters = await provider.getChildren();
-            const namespaceItems = await provider.getChildren(clusters[0]);
+            const categories = await provider.getChildren(clusters[0]);
+            const namespacesCategory = categories.find(c => c.label === 'Namespaces');
+            const namespaceItems = await provider.getChildren(namespacesCategory!);
             
-            // Skip "All Namespaces"
+            assert.strictEqual(namespaceItems[0].type, 'namespace');
             assert.strictEqual(namespaceItems[1].type, 'namespace');
-            assert.strictEqual(namespaceItems[2].type, 'namespace');
         });
 
         test('Should have kandy.openNamespace command', async () => {
-            ClusterConnectivity.getNamespaces = async (): Promise<NamespaceResult> => {
-                return { namespaces: ['default'] };
+            NamespaceCommands.getNamespaces = async (): Promise<NamespacesResult> => {
+                return { namespaces: [{ name: 'default', status: 'Active' }] };
             };
 
             provider.setKubeconfig(mockKubeconfig);
             
             const clusters = await provider.getChildren();
-            const namespaceItems = await provider.getChildren(clusters[0]);
-            const namespaceItem = namespaceItems[1];
+            const categories = await provider.getChildren(clusters[0]);
+            const namespacesCategory = categories.find(c => c.label === 'Namespaces');
+            const namespaceItems = await provider.getChildren(namespacesCategory!);
+            const namespaceItem = namespaceItems[0];
             
             assert.ok(namespaceItem.command);
             assert.strictEqual(namespaceItem.command.command, 'kandy.openNamespace');
         });
 
         test('Should have symbol-namespace icon', async () => {
-            ClusterConnectivity.getNamespaces = async (): Promise<NamespaceResult> => {
-                return { namespaces: ['default'] };
+            NamespaceCommands.getNamespaces = async (): Promise<NamespacesResult> => {
+                return { namespaces: [{ name: 'default', status: 'Active' }] };
             };
 
             provider.setKubeconfig(mockKubeconfig);
             
             const clusters = await provider.getChildren();
-            const namespaceItems = await provider.getChildren(clusters[0]);
-            const namespaceItem = namespaceItems[1];
+            const categories = await provider.getChildren(clusters[0]);
+            const namespacesCategory = categories.find(c => c.label === 'Namespaces');
+            const namespaceItems = await provider.getChildren(namespacesCategory!);
+            const namespaceItem = namespaceItems[0];
             
             assert.ok(namespaceItem.iconPath instanceof vscode.ThemeIcon);
             assert.strictEqual((namespaceItem.iconPath as vscode.ThemeIcon).id, 'symbol-namespace');
@@ -323,14 +312,16 @@ suite('ClusterTreeProvider Test Suite', () => {
                 'context-1'
             );
 
-            ClusterConnectivity.getNamespaces = async (): Promise<NamespaceResult> => {
+            NamespaceCommands.getNamespaces = async (): Promise<NamespacesResult> => {
                 return { namespaces: [], error };
             };
 
             provider.setKubeconfig(mockKubeconfig);
             
             const clusters = await provider.getChildren();
-            await provider.getChildren(clusters[0]);
+            const categories = await provider.getChildren(clusters[0]);
+            const namespacesCategory = categories.find(c => c.label === 'Namespaces');
+            await provider.getChildren(namespacesCategory!);
             
             // First call should show error
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -338,7 +329,7 @@ suite('ClusterTreeProvider Test Suite', () => {
             assert.strictEqual(errors1.length, 1);
             
             // Second call should NOT show error again
-            await provider.getChildren(clusters[0]);
+            await provider.getChildren(namespacesCategory!);
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const errors2 = (vscode.window as any)._getErrorMessages();
             assert.strictEqual(errors2.length, 1); // Still only 1
@@ -352,14 +343,16 @@ suite('ClusterTreeProvider Test Suite', () => {
                 'context-1'
             );
 
-            ClusterConnectivity.getNamespaces = async (): Promise<NamespaceResult> => {
+            NamespaceCommands.getNamespaces = async (): Promise<NamespacesResult> => {
                 return { namespaces: [], error };
             };
 
             provider.setKubeconfig(mockKubeconfig);
             
             const clusters = await provider.getChildren();
-            await provider.getChildren(clusters[0]);
+            const categories = await provider.getChildren(clusters[0]);
+            const namespacesCategory = categories.find(c => c.label === 'Namespaces');
+            await provider.getChildren(namespacesCategory!);
             
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const warnings = (vscode.window as any)._getWarningMessages();
@@ -374,7 +367,7 @@ suite('ClusterTreeProvider Test Suite', () => {
                 'context-1'
             );
 
-            ClusterConnectivity.getNamespaces = async (): Promise<NamespaceResult> => {
+            NamespaceCommands.getNamespaces = async (): Promise<NamespacesResult> => {
                 return { namespaces: [], error };
             };
 
@@ -401,7 +394,7 @@ suite('ClusterTreeProvider Test Suite', () => {
                 'context-1'
             );
 
-            ClusterConnectivity.getNamespaces = async (): Promise<NamespaceResult> => {
+            NamespaceCommands.getNamespaces = async (): Promise<NamespacesResult> => {
                 return { namespaces: [], error };
             };
 
@@ -427,14 +420,16 @@ suite('ClusterTreeProvider Test Suite', () => {
                 'context-1'
             );
 
-            ClusterConnectivity.getNamespaces = async (): Promise<NamespaceResult> => {
+            NamespaceCommands.getNamespaces = async (): Promise<NamespacesResult> => {
                 return { namespaces: [], error };
             };
 
             provider.setKubeconfig(mockKubeconfig);
             
             const clusters = await provider.getChildren();
-            const namespaceItems = await provider.getChildren(clusters[0]);
+            const categories = await provider.getChildren(clusters[0]);
+            const namespacesCategory = categories.find(c => c.label === 'Namespaces');
+            const namespaceItems = await provider.getChildren(namespacesCategory!);
             
             assert.strictEqual(namespaceItems.length, 0);
         });

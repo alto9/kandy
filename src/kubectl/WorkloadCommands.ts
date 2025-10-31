@@ -61,6 +61,26 @@ export interface DaemonSetInfo {
 }
 
 /**
+ * Information about a Kubernetes cronjob.
+ */
+export interface CronJobInfo {
+    name: string;
+    namespace: string;
+    schedule: string;
+    suspended: boolean;
+    lastScheduleTime?: string;
+}
+
+/**
+ * Information about a Kubernetes job.
+ */
+export interface JobInfo {
+    name: string;
+    namespace: string;
+    selector: string;
+}
+
+/**
  * Information about a Kubernetes pod.
  */
 export interface PodInfo {
@@ -113,6 +133,36 @@ export interface DaemonSetsResult {
     
     /**
      * Error information if the daemonset query failed.
+     */
+    error?: KubectlError;
+}
+
+/**
+ * Result of a cronjob query operation.
+ */
+export interface CronJobsResult {
+    /**
+     * Array of cronjob information, empty if query failed.
+     */
+    cronjobs: CronJobInfo[];
+    
+    /**
+     * Error information if the cronjob query failed.
+     */
+    error?: KubectlError;
+}
+
+/**
+ * Result of a job query operation.
+ */
+export interface JobsResult {
+    /**
+     * Array of job information, empty if query failed.
+     */
+    jobs: JobInfo[];
+    
+    /**
+     * Error information if the job query failed.
      */
     error?: KubectlError;
 }
@@ -236,6 +286,59 @@ interface DaemonSetListResponse {
  */
 interface PodListResponse {
     items?: PodItem[];
+}
+
+/**
+ * Interface for kubectl cronjob response items.
+ */
+interface CronJobItem {
+    metadata?: {
+        name?: string;
+        namespace?: string;
+    };
+    spec?: {
+        schedule?: string;
+        suspend?: boolean;
+    };
+    status?: {
+        lastScheduleTime?: string;
+    };
+}
+
+/**
+ * Interface for kubectl cronjob list response.
+ */
+interface CronJobListResponse {
+    items?: CronJobItem[];
+}
+
+/**
+ * Interface for kubectl job response items.
+ */
+interface JobItem {
+    metadata?: {
+        name?: string;
+        namespace?: string;
+        ownerReferences?: Array<{
+            kind?: string;
+            name?: string;
+            uid?: string;
+        }>;
+    };
+    spec?: {
+        selector?: {
+            matchLabels?: {
+                [key: string]: string;
+            };
+        };
+    };
+}
+
+/**
+ * Interface for kubectl job list response.
+ */
+interface JobListResponse {
+    items?: JobItem[];
 }
 
 /**
@@ -696,6 +799,234 @@ export class WorkloadCommands {
             
             // Log error details for debugging
             console.log(`Pod query failed for daemonset ${daemonsetName} in namespace ${namespace}: ${kubectlError.getDetails()}`);
+            
+            return {
+                pods: [],
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Retrieves the list of cronjobs from all namespaces using kubectl.
+     * Uses kubectl get cronjobs command with JSON output for parsing.
+     * 
+     * @param kubeconfigPath Path to the kubeconfig file
+     * @param contextName Name of the context to query
+     * @returns CronJobsResult with cronjobs array and optional error information
+     */
+    public static async getCronJobs(
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<CronJobsResult> {
+        try {
+            // Execute kubectl get cronjobs with JSON output
+            const { stdout } = await execFileAsync(
+                'kubectl',
+                [
+                    'get',
+                    'cronjobs',
+                    '--all-namespaces',
+                    '--output=json',
+                    `--kubeconfig=${kubeconfigPath}`,
+                    `--context=${contextName}`
+                ],
+                {
+                    timeout: KUBECTL_TIMEOUT_MS,
+                    env: { ...process.env }
+                }
+            );
+
+            // Parse the JSON response
+            const response: CronJobListResponse = JSON.parse(stdout);
+            
+            // Extract cronjob information from the items array
+            const cronjobs: CronJobInfo[] = response.items?.map((item: CronJobItem) => {
+                const name = item.metadata?.name || 'Unknown';
+                const namespace = item.metadata?.namespace || 'default';
+                const schedule = item.spec?.schedule || 'Unknown';
+                const suspended = item.spec?.suspend || false;
+                const lastScheduleTime = item.status?.lastScheduleTime;
+                
+                return {
+                    name,
+                    namespace,
+                    schedule,
+                    suspended,
+                    lastScheduleTime
+                };
+            }) || [];
+            
+            // Sort cronjobs by namespace, then by name
+            cronjobs.sort((a, b) => {
+                const nsCompare = a.namespace.localeCompare(b.namespace);
+                return nsCompare !== 0 ? nsCompare : a.name.localeCompare(b.name);
+            });
+            
+            return { cronjobs };
+        } catch (error: unknown) {
+            // kubectl failed - create structured error for detailed handling
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            
+            // Log error details for debugging
+            console.log(`CronJob query failed for context ${contextName}: ${kubectlError.getDetails()}`);
+            
+            return {
+                cronjobs: [],
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Retrieves the list of jobs owned by a specific cronjob using kubectl.
+     * Queries all jobs in the namespace and filters by owner reference.
+     * 
+     * @param kubeconfigPath Path to the kubeconfig file
+     * @param contextName Name of the context to query
+     * @param cronjobName Name of the cronjob
+     * @param namespace Namespace of the cronjob
+     * @returns JobsResult with jobs array and optional error information
+     */
+    public static async getJobsForCronJob(
+        kubeconfigPath: string,
+        contextName: string,
+        cronjobName: string,
+        namespace: string
+    ): Promise<JobsResult> {
+        try {
+            // Execute kubectl get jobs in the namespace
+            const { stdout } = await execFileAsync(
+                'kubectl',
+                [
+                    'get',
+                    'jobs',
+                    '-n',
+                    namespace,
+                    '--output=json',
+                    `--kubeconfig=${kubeconfigPath}`,
+                    `--context=${contextName}`
+                ],
+                {
+                    timeout: KUBECTL_TIMEOUT_MS,
+                    env: { ...process.env }
+                }
+            );
+
+            // Parse the JSON response
+            const response: JobListResponse = JSON.parse(stdout);
+            
+            // Filter jobs that are owned by this cronjob
+            const jobs: JobInfo[] = response.items?.filter((item: JobItem) => {
+                const ownerRefs = item.metadata?.ownerReferences || [];
+                return ownerRefs.some(ref => 
+                    ref.kind === 'CronJob' && ref.name === cronjobName
+                );
+            }).map((item: JobItem) => {
+                const name = item.metadata?.name || 'Unknown';
+                const jobNamespace = item.metadata?.namespace || namespace;
+                
+                // Build label selector from matchLabels
+                const matchLabels = item.spec?.selector?.matchLabels || {};
+                const selector = Object.entries(matchLabels)
+                    .map(([key, value]) => `${key}=${value}`)
+                    .join(',');
+                
+                return {
+                    name,
+                    namespace: jobNamespace,
+                    selector
+                };
+            }) || [];
+            
+            // Sort jobs alphabetically by name
+            jobs.sort((a, b) => a.name.localeCompare(b.name));
+            
+            return { jobs };
+        } catch (error: unknown) {
+            // kubectl failed - create structured error for detailed handling
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            
+            // Log error details for debugging
+            console.log(`Job query failed for cronjob ${cronjobName} in namespace ${namespace}: ${kubectlError.getDetails()}`);
+            
+            return {
+                jobs: [],
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Retrieves the list of pods for a specific job using kubectl.
+     * Uses label selector to find pods belonging to the job.
+     * 
+     * @param kubeconfigPath Path to the kubeconfig file
+     * @param contextName Name of the context to query
+     * @param jobName Name of the job
+     * @param namespace Namespace of the job
+     * @param labelSelector Label selector for finding pods
+     * @returns PodsResult with pods array and optional error information
+     */
+    public static async getPodsForJob(
+        kubeconfigPath: string,
+        contextName: string,
+        jobName: string,
+        namespace: string,
+        labelSelector: string
+    ): Promise<PodsResult> {
+        try {
+            // If no label selector provided, return empty array
+            if (!labelSelector) {
+                return { pods: [] };
+            }
+
+            // Execute kubectl get pods with label selector
+            const { stdout } = await execFileAsync(
+                'kubectl',
+                [
+                    'get',
+                    'pods',
+                    '-n',
+                    namespace,
+                    '--selector',
+                    labelSelector,
+                    '--output=json',
+                    `--kubeconfig=${kubeconfigPath}`,
+                    `--context=${contextName}`
+                ],
+                {
+                    timeout: KUBECTL_TIMEOUT_MS,
+                    env: { ...process.env }
+                }
+            );
+
+            // Parse the JSON response
+            const response: PodListResponse = JSON.parse(stdout);
+            
+            // Extract pod information from the items array
+            const pods: PodInfo[] = response.items?.map((item: PodItem) => {
+                const name = item.metadata?.name || 'Unknown';
+                const podNamespace = item.metadata?.namespace || namespace;
+                const phase = item.status?.phase || 'Unknown';
+                
+                return {
+                    name,
+                    namespace: podNamespace,
+                    phase
+                };
+            }) || [];
+            
+            // Sort pods alphabetically by name
+            pods.sort((a, b) => a.name.localeCompare(b.name));
+            
+            return { pods };
+        } catch (error: unknown) {
+            // kubectl failed - create structured error for detailed handling
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            
+            // Log error details for debugging
+            console.log(`Pod query failed for job ${jobName} in namespace ${namespace}: ${kubectlError.getDetails()}`);
             
             return {
                 pods: [],
