@@ -45,6 +45,22 @@ export interface StatefulSetInfo {
 }
 
 /**
+ * Information about a Kubernetes daemonset.
+ */
+export interface DaemonSetInfo {
+    /** Name of the daemonset */
+    name: string;
+    /** Namespace of the daemonset */
+    namespace: string;
+    /** Number of nodes with ready daemon pods */
+    readyNodes: number;
+    /** Total number of nodes where daemon should run */
+    desiredNodes: number;
+    /** Label selector for finding pods */
+    selector: string;
+}
+
+/**
  * Information about a Kubernetes pod.
  */
 export interface PodInfo {
@@ -82,6 +98,21 @@ export interface StatefulSetsResult {
     
     /**
      * Error information if the statefulset query failed.
+     */
+    error?: KubectlError;
+}
+
+/**
+ * Result of a daemonset query operation.
+ */
+export interface DaemonSetsResult {
+    /**
+     * Array of daemonset information, empty if query failed.
+     */
+    daemonsets: DaemonSetInfo[];
+    
+    /**
+     * Error information if the daemonset query failed.
      */
     error?: KubectlError;
 }
@@ -170,6 +201,34 @@ interface StatefulSetItem {
  */
 interface StatefulSetListResponse {
     items?: StatefulSetItem[];
+}
+
+/**
+ * Interface for kubectl daemonset response items.
+ */
+interface DaemonSetItem {
+    metadata?: {
+        name?: string;
+        namespace?: string;
+    };
+    spec?: {
+        selector?: {
+            matchLabels?: {
+                [key: string]: string;
+            };
+        };
+    };
+    status?: {
+        desiredNumberScheduled?: number;
+        numberReady?: number;
+    };
+}
+
+/**
+ * Interface for kubectl daemonset list response.
+ */
+interface DaemonSetListResponse {
+    items?: DaemonSetItem[];
 }
 
 /**
@@ -483,6 +542,160 @@ export class WorkloadCommands {
             
             // Log error details for debugging
             console.log(`Pod query failed for deployment ${deploymentName} in namespace ${namespace}: ${kubectlError.getDetails()}`);
+            
+            return {
+                pods: [],
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Retrieves the list of daemonsets from all namespaces using kubectl.
+     * Uses kubectl get daemonsets command with JSON output for parsing.
+     * 
+     * @param kubeconfigPath Path to the kubeconfig file
+     * @param contextName Name of the context to query
+     * @returns DaemonSetsResult with daemonsets array and optional error information
+     */
+    public static async getDaemonSets(
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<DaemonSetsResult> {
+        try {
+            // Execute kubectl get daemonsets with JSON output
+            const { stdout } = await execFileAsync(
+                'kubectl',
+                [
+                    'get',
+                    'daemonsets',
+                    '--all-namespaces',
+                    '--output=json',
+                    `--kubeconfig=${kubeconfigPath}`,
+                    `--context=${contextName}`
+                ],
+                {
+                    timeout: KUBECTL_TIMEOUT_MS,
+                    env: { ...process.env }
+                }
+            );
+
+            // Parse the JSON response
+            const response: DaemonSetListResponse = JSON.parse(stdout);
+            
+            // Extract daemonset information from the items array
+            const daemonsets: DaemonSetInfo[] = response.items?.map((item: DaemonSetItem) => {
+                const name = item.metadata?.name || 'Unknown';
+                const namespace = item.metadata?.namespace || 'default';
+                const desiredNodes = item.status?.desiredNumberScheduled || 0;
+                const readyNodes = item.status?.numberReady || 0;
+                
+                // Build label selector from matchLabels
+                const matchLabels = item.spec?.selector?.matchLabels || {};
+                const selector = Object.entries(matchLabels)
+                    .map(([key, value]) => `${key}=${value}`)
+                    .join(',');
+                
+                return {
+                    name,
+                    namespace,
+                    readyNodes,
+                    desiredNodes,
+                    selector
+                };
+            }) || [];
+            
+            // Sort daemonsets by namespace, then by name
+            daemonsets.sort((a, b) => {
+                const nsCompare = a.namespace.localeCompare(b.namespace);
+                return nsCompare !== 0 ? nsCompare : a.name.localeCompare(b.name);
+            });
+            
+            return { daemonsets };
+        } catch (error: unknown) {
+            // kubectl failed - create structured error for detailed handling
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            
+            // Log error details for debugging
+            console.log(`DaemonSet query failed for context ${contextName}: ${kubectlError.getDetails()}`);
+            
+            return {
+                daemonsets: [],
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Retrieves the list of pods for a specific daemonset using kubectl.
+     * Uses label selector to find pods belonging to the daemonset.
+     * 
+     * @param kubeconfigPath Path to the kubeconfig file
+     * @param contextName Name of the context to query
+     * @param daemonsetName Name of the daemonset
+     * @param namespace Namespace of the daemonset
+     * @param labelSelector Label selector for finding pods
+     * @returns PodsResult with pods array and optional error information
+     */
+    public static async getPodsForDaemonSet(
+        kubeconfigPath: string,
+        contextName: string,
+        daemonsetName: string,
+        namespace: string,
+        labelSelector: string
+    ): Promise<PodsResult> {
+        try {
+            // If no label selector provided, return empty array
+            if (!labelSelector) {
+                return { pods: [] };
+            }
+
+            // Execute kubectl get pods with label selector
+            const { stdout } = await execFileAsync(
+                'kubectl',
+                [
+                    'get',
+                    'pods',
+                    '-n',
+                    namespace,
+                    '--selector',
+                    labelSelector,
+                    '--output=json',
+                    `--kubeconfig=${kubeconfigPath}`,
+                    `--context=${contextName}`
+                ],
+                {
+                    timeout: KUBECTL_TIMEOUT_MS,
+                    env: { ...process.env }
+                }
+            );
+
+            // Parse the JSON response
+            const response: PodListResponse = JSON.parse(stdout);
+            
+            // Extract pod information from the items array
+            const pods: PodInfo[] = response.items?.map((item: PodItem) => {
+                const name = item.metadata?.name || 'Unknown';
+                const podNamespace = item.metadata?.namespace || namespace;
+                const phase = item.status?.phase || 'Unknown';
+                
+                return {
+                    name,
+                    namespace: podNamespace,
+                    phase
+                };
+            }) || [];
+            
+            // Sort pods alphabetically by name
+            pods.sort((a, b) => a.name.localeCompare(b.name));
+            
+            return { pods };
+        } catch (error: unknown) {
+            // kubectl failed - create structured error for detailed handling
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            
+            // Log error details for debugging
+            console.log(`Pod query failed for daemonset ${daemonsetName} in namespace ${namespace}: ${kubectlError.getDetails()}`);
             
             return {
                 pods: [],

@@ -11,6 +11,7 @@ import { NamespacesCategory } from './categories/NamespacesCategory';
 import { WorkloadsCategory } from './categories/WorkloadsCategory';
 import { DeploymentsSubcategory } from './categories/workloads/DeploymentsSubcategory';
 import { StatefulSetsSubcategory } from './categories/workloads/StatefulSetsSubcategory';
+import { DaemonSetsSubcategory } from './categories/workloads/DaemonSetsSubcategory';
 
 /**
  * Tree data provider for displaying Kubernetes clusters in the VS Code sidebar.
@@ -219,8 +220,26 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 );
             }
             
+            case 'daemonsets':
+                return DaemonSetsSubcategory.getDaemonSetItems(
+                    categoryElement.resourceData,
+                    this.kubeconfig.filePath,
+                    (error, clusterName) => this.handleKubectlError(error, clusterName)
+                );
+            
+            case 'daemonset': {
+                // Get label selector from the tree item (stored during daemonset creation)
+                const daemonSetLabelSelector = (categoryElement as ClusterTreeItem & { labelSelector?: string }).labelSelector || '';
+                return DaemonSetsSubcategory.getPodsForDaemonSet(
+                    categoryElement.resourceData,
+                    this.kubeconfig.filePath,
+                    daemonSetLabelSelector,
+                    (error, clusterName) => this.handleKubectlError(error, clusterName)
+                );
+            }
+            
             // Future categories and subcategories will be added here:
-            // - daemonsets, cronjobs: workload data fetching (stories 07-08)
+            // - cronjobs: workload data fetching (story 08)
             // - storage: subcategories (PVs, PVCs, Storage Classes)
             // - helm: helm list
             // - configuration: subcategories (ConfigMaps, Secrets)
