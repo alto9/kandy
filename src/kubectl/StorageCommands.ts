@@ -41,6 +41,18 @@ export interface PersistentVolumeClaimInfo {
 }
 
 /**
+ * Information about a Kubernetes storage class.
+ */
+export interface StorageClassInfo {
+    /** Name of the storage class */
+    name: string;
+    /** Provisioner type (e.g., "kubernetes.io/aws-ebs") */
+    provisioner: string;
+    /** Whether this is the default storage class */
+    isDefault: boolean;
+}
+
+/**
  * Result of a persistent volume query operation.
  */
 export interface PersistentVolumesResult {
@@ -66,6 +78,21 @@ export interface PersistentVolumeClaimsResult {
     
     /**
      * Error information if the persistent volume claim query failed.
+     */
+    error?: KubectlError;
+}
+
+/**
+ * Result of a storage class query operation.
+ */
+export interface StorageClassesResult {
+    /**
+     * Array of storage class information, empty if query failed.
+     */
+    storageClasses: StorageClassInfo[];
+    
+    /**
+     * Error information if the storage class query failed.
      */
     error?: KubectlError;
 }
@@ -123,6 +150,26 @@ interface PersistentVolumeClaimItem {
  */
 interface PersistentVolumeClaimListResponse {
     items?: PersistentVolumeClaimItem[];
+}
+
+/**
+ * Interface for kubectl storage class response items.
+ */
+interface StorageClassItem {
+    metadata?: {
+        name?: string;
+        annotations?: {
+            [key: string]: string;
+        };
+    };
+    provisioner?: string;
+}
+
+/**
+ * Interface for kubectl storage class list response.
+ */
+interface StorageClassListResponse {
+    items?: StorageClassItem[];
 }
 
 /**
@@ -270,6 +317,72 @@ export class StorageCommands {
             
             return {
                 persistentVolumeClaims: [],
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Retrieves the list of storage classes from the cluster using kubectl.
+     * Uses kubectl get storageclass command with JSON output for parsing.
+     * 
+     * @param kubeconfigPath Path to the kubeconfig file
+     * @param contextName Name of the context to query
+     * @returns StorageClassesResult with storageClasses array and optional error information
+     */
+    public static async getStorageClasses(
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<StorageClassesResult> {
+        try {
+            // Execute kubectl get storageclass with JSON output
+            const { stdout } = await execFileAsync(
+                'kubectl',
+                [
+                    'get',
+                    'storageclass',
+                    '--output=json',
+                    `--kubeconfig=${kubeconfigPath}`,
+                    `--context=${contextName}`
+                ],
+                {
+                    timeout: KUBECTL_TIMEOUT_MS,
+                    env: { ...process.env }
+                }
+            );
+
+            // Parse the JSON response
+            const response: StorageClassListResponse = JSON.parse(stdout);
+            
+            // Extract storage class information from the items array
+            const storageClasses: StorageClassInfo[] = response.items?.map((item: StorageClassItem) => {
+                const name = item.metadata?.name || 'Unknown';
+                const provisioner = item.provisioner || 'Unknown';
+                
+                // Check if this is the default storage class
+                // The annotation key is "storageclass.kubernetes.io/is-default-class"
+                const isDefault = item.metadata?.annotations?.['storageclass.kubernetes.io/is-default-class'] === 'true';
+                
+                return {
+                    name,
+                    provisioner,
+                    isDefault
+                };
+            }) || [];
+            
+            // Sort storage classes alphabetically by name
+            storageClasses.sort((a, b) => a.name.localeCompare(b.name));
+            
+            return { storageClasses };
+        } catch (error: unknown) {
+            // kubectl failed - create structured error for detailed handling
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            
+            // Log error details for debugging
+            console.log(`Storage class query failed for context ${contextName}: ${kubectlError.getDetails()}`);
+            
+            return {
+                storageClasses: [],
                 error: kubectlError
             };
         }

@@ -33,6 +33,7 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - pod: Individual pod item
  * - persistentVolume: Individual persistent volume item
  * - persistentVolumeClaim: Individual persistent volume claim item
+ * - storageClass: Individual storage class item
  */
 export type TreeItemType = 
     | 'cluster' 
@@ -57,6 +58,7 @@ export type TreeItemType =
     | 'storageClasses'
     | 'persistentVolume'
     | 'persistentVolumeClaim'
+    | 'storageClass'
     | 'helm'
     | 'configuration'
     | 'customResources';

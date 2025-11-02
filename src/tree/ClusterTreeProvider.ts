@@ -16,6 +16,7 @@ import { CronJobsSubcategory } from './categories/workloads/CronJobsSubcategory'
 import { StorageCategory } from './categories/StorageCategory';
 import { PersistentVolumesSubcategory } from './categories/storage/PersistentVolumesSubcategory';
 import { PersistentVolumeClaimsSubcategory } from './categories/storage/PersistentVolumeClaimsSubcategory';
+import { StorageClassesSubcategory } from './categories/storage/StorageClassesSubcategory';
 
 /**
  * Tree data provider for displaying Kubernetes clusters in the VS Code sidebar.
@@ -280,8 +281,14 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
             
+            case 'storageClasses':
+                return StorageClassesSubcategory.getStorageClassItems(
+                    categoryElement.resourceData,
+                    this.kubeconfig.filePath,
+                    (error, clusterName) => this.handleKubectlError(error, clusterName)
+                );
+            
             // Future categories and subcategories will be added here:
-            // - storageClasses: fetch and display Storage Classes
             // - helm: helm list
             // - configuration: subcategories (ConfigMaps, Secrets)
             // - customResources: kubectl get crds
