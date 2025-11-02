@@ -13,6 +13,7 @@ import { DeploymentsSubcategory } from './categories/workloads/DeploymentsSubcat
 import { StatefulSetsSubcategory } from './categories/workloads/StatefulSetsSubcategory';
 import { DaemonSetsSubcategory } from './categories/workloads/DaemonSetsSubcategory';
 import { CronJobsSubcategory } from './categories/workloads/CronJobsSubcategory';
+import { StorageCategory } from './categories/StorageCategory';
 
 /**
  * Tree data provider for displaying Kubernetes clusters in the VS Code sidebar.
@@ -146,7 +147,10 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                type === 'daemonset' ||
                type === 'cronjob' ||
                type === 'pod' ||
-               type === 'storage' || 
+               type === 'storage' ||
+               type === 'persistentVolumes' ||
+               type === 'persistentVolumeClaims' ||
+               type === 'storageClasses' ||
                type === 'helm' || 
                type === 'configuration' || 
                type === 'customResources';
@@ -253,8 +257,15 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
             
+            case 'storage':
+                return StorageCategory.getStorageSubcategories(
+                    categoryElement.resourceData
+                );
+            
             // Future categories and subcategories will be added here:
-            // - storage: subcategories (PVs, PVCs, Storage Classes)
+            // - persistentVolumes: fetch and display PVs
+            // - persistentVolumeClaims: fetch and display PVCs
+            // - storageClasses: fetch and display Storage Classes
             // - helm: helm list
             // - configuration: subcategories (ConfigMaps, Secrets)
             // - customResources: kubectl get crds

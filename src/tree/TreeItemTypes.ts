@@ -18,6 +18,9 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - daemonsets: DaemonSets subcategory (under Workloads)
  * - cronjobs: CronJobs subcategory (under Workloads)
  * - storage: Storage category
+ * - persistentVolumes: Persistent Volumes subcategory (under Storage)
+ * - persistentVolumeClaims: Persistent Volume Claims subcategory (under Storage)
+ * - storageClasses: Storage Classes subcategory (under Storage)
  * - helm: Helm category
  * - configuration: Configuration category
  * - customResources: Custom Resources category
@@ -47,6 +50,9 @@ export type TreeItemType =
     | 'cronjob'
     | 'pod'
     | 'storage'
+    | 'persistentVolumes'
+    | 'persistentVolumeClaims'
+    | 'storageClasses'
     | 'helm'
     | 'configuration'
     | 'customResources';
