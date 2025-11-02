@@ -3,7 +3,7 @@ story_id: secrets
 session_id: superfinalize-main-tree
 feature_id: [tree-view-navigation]
 spec_id: [tree-view-spec, webview-spec]
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 20
 ---
