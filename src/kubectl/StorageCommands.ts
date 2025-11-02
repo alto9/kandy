@@ -27,6 +27,20 @@ export interface PersistentVolumeInfo {
 }
 
 /**
+ * Information about a Kubernetes persistent volume claim.
+ */
+export interface PersistentVolumeClaimInfo {
+    /** Name of the persistent volume claim */
+    name: string;
+    /** Namespace of the persistent volume claim */
+    namespace: string;
+    /** Storage capacity (e.g., "5Gi") */
+    capacity: string;
+    /** Status of the PVC (Pending, Bound, Lost) */
+    status: string;
+}
+
+/**
  * Result of a persistent volume query operation.
  */
 export interface PersistentVolumesResult {
@@ -37,6 +51,21 @@ export interface PersistentVolumesResult {
     
     /**
      * Error information if the persistent volume query failed.
+     */
+    error?: KubectlError;
+}
+
+/**
+ * Result of a persistent volume claim query operation.
+ */
+export interface PersistentVolumeClaimsResult {
+    /**
+     * Array of persistent volume claim information, empty if query failed.
+     */
+    persistentVolumeClaims: PersistentVolumeClaimInfo[];
+    
+    /**
+     * Error information if the persistent volume claim query failed.
      */
     error?: KubectlError;
 }
@@ -67,6 +96,33 @@ interface PersistentVolumeItem {
  */
 interface PersistentVolumeListResponse {
     items?: PersistentVolumeItem[];
+}
+
+/**
+ * Interface for kubectl persistent volume claim response items.
+ */
+interface PersistentVolumeClaimItem {
+    metadata?: {
+        name?: string;
+        namespace?: string;
+    };
+    spec?: {
+        resources?: {
+            requests?: {
+                storage?: string;
+            };
+        };
+    };
+    status?: {
+        phase?: string;
+    };
+}
+
+/**
+ * Interface for kubectl persistent volume claim list response.
+ */
+interface PersistentVolumeClaimListResponse {
+    items?: PersistentVolumeClaimItem[];
 }
 
 /**
@@ -142,6 +198,78 @@ export class StorageCommands {
             
             return {
                 persistentVolumes: [],
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Retrieves the list of persistent volume claims from the cluster using kubectl.
+     * Uses kubectl get pvc command with --all-namespaces and JSON output for parsing.
+     * 
+     * @param kubeconfigPath Path to the kubeconfig file
+     * @param contextName Name of the context to query
+     * @returns PersistentVolumeClaimsResult with persistentVolumeClaims array and optional error information
+     */
+    public static async getPersistentVolumeClaims(
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<PersistentVolumeClaimsResult> {
+        try {
+            // Execute kubectl get pvc with JSON output across all namespaces
+            const { stdout } = await execFileAsync(
+                'kubectl',
+                [
+                    'get',
+                    'pvc',
+                    '--all-namespaces',
+                    '--output=json',
+                    `--kubeconfig=${kubeconfigPath}`,
+                    `--context=${contextName}`
+                ],
+                {
+                    timeout: KUBECTL_TIMEOUT_MS,
+                    env: { ...process.env }
+                }
+            );
+
+            // Parse the JSON response
+            const response: PersistentVolumeClaimListResponse = JSON.parse(stdout);
+            
+            // Extract persistent volume claim information from the items array
+            const persistentVolumeClaims: PersistentVolumeClaimInfo[] = response.items?.map((item: PersistentVolumeClaimItem) => {
+                const name = item.metadata?.name || 'Unknown';
+                const namespace = item.metadata?.namespace || 'Unknown';
+                const capacity = item.spec?.resources?.requests?.storage || 'Unknown';
+                const status = item.status?.phase || 'Unknown';
+                
+                return {
+                    name,
+                    namespace,
+                    capacity,
+                    status
+                };
+            }) || [];
+            
+            // Sort persistent volume claims by namespace first, then by name
+            persistentVolumeClaims.sort((a, b) => {
+                const namespaceCompare = a.namespace.localeCompare(b.namespace);
+                if (namespaceCompare !== 0) {
+                    return namespaceCompare;
+                }
+                return a.name.localeCompare(b.name);
+            });
+            
+            return { persistentVolumeClaims };
+        } catch (error: unknown) {
+            // kubectl failed - create structured error for detailed handling
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            
+            // Log error details for debugging
+            console.log(`Persistent volume claim query failed for context ${contextName}: ${kubectlError.getDetails()}`);
+            
+            return {
+                persistentVolumeClaims: [],
                 error: kubectlError
             };
         }

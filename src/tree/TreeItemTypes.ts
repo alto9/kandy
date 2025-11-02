@@ -32,6 +32,7 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - cronjob: Individual cronjob item
  * - pod: Individual pod item
  * - persistentVolume: Individual persistent volume item
+ * - persistentVolumeClaim: Individual persistent volume claim item
  */
 export type TreeItemType = 
     | 'cluster' 
@@ -55,6 +56,7 @@ export type TreeItemType =
     | 'persistentVolumeClaims'
     | 'storageClasses'
     | 'persistentVolume'
+    | 'persistentVolumeClaim'
     | 'helm'
     | 'configuration'
     | 'customResources';
