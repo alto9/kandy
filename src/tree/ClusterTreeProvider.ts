@@ -20,6 +20,7 @@ import { StorageClassesSubcategory } from './categories/storage/StorageClassesSu
 import { ConfigurationCategory } from './categories/ConfigurationCategory';
 import { ConfigMapsSubcategory } from './categories/configuration/ConfigMapsSubcategory';
 import { SecretsSubcategory } from './categories/configuration/SecretsSubcategory';
+import { HelmCategory } from './categories/HelmCategory';
 
 /**
  * Tree data provider for displaying Kubernetes clusters in the VS Code sidebar.
@@ -313,8 +314,14 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
             
+            case 'helm':
+                return HelmCategory.getHelmReleaseItems(
+                    categoryElement.resourceData,
+                    this.kubeconfig.filePath,
+                    (error, clusterName) => this.handleKubectlError(error, clusterName)
+                );
+            
             // Future categories and subcategories will be added here:
-            // - helm: helm list
             // - customResources: kubectl get crds
             
             default:
