@@ -18,6 +18,7 @@ import { PersistentVolumesSubcategory } from './categories/storage/PersistentVol
 import { PersistentVolumeClaimsSubcategory } from './categories/storage/PersistentVolumeClaimsSubcategory';
 import { StorageClassesSubcategory } from './categories/storage/StorageClassesSubcategory';
 import { ConfigurationCategory } from './categories/ConfigurationCategory';
+import { ConfigMapsSubcategory } from './categories/configuration/ConfigMapsSubcategory';
 
 /**
  * Tree data provider for displaying Kubernetes clusters in the VS Code sidebar.
@@ -161,6 +162,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                type === 'configuration' || 
                type === 'configmaps' ||
                type === 'secrets' ||
+               type === 'configmap' ||
                type === 'customResources';
     }
 
@@ -296,8 +298,14 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                     categoryElement.resourceData
                 );
             
+            case 'configmaps':
+                return ConfigMapsSubcategory.getConfigMapItems(
+                    categoryElement.resourceData,
+                    this.kubeconfig.filePath,
+                    (error, clusterName) => this.handleKubectlError(error, clusterName)
+                );
+            
             // Future categories and subcategories will be added here:
-            // - configmaps: kubectl get configmaps
             // - secrets: kubectl get secrets
             // - helm: helm list
             // - customResources: kubectl get crds
