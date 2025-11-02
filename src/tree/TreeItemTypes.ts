@@ -23,6 +23,8 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - storageClasses: Storage Classes subcategory (under Storage)
  * - helm: Helm category
  * - configuration: Configuration category
+ * - configmaps: ConfigMaps subcategory (under Configuration)
+ * - secrets: Secrets subcategory (under Configuration)
  * - customResources: Custom Resources category
  * 
  * Individual resource types (items within categories):
@@ -61,6 +63,8 @@ export type TreeItemType =
     | 'storageClass'
     | 'helm'
     | 'configuration'
+    | 'configmaps'
+    | 'secrets'
     | 'customResources';
 
 /**
