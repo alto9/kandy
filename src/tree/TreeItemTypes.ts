@@ -38,6 +38,7 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - storageClass: Individual storage class item
  * - configmap: Individual configmap item
  * - secret: Individual secret item
+ * - crd: Individual Custom Resource Definition item
  */
 export type TreeItemType = 
     | 'cluster' 
@@ -69,7 +70,8 @@ export type TreeItemType =
     | 'secrets'
     | 'configmap'
     | 'secret'
-    | 'customResources';
+    | 'customResources'
+    | 'crd';
 
 /**
  * Re-export ClusterStatus for convenience.
