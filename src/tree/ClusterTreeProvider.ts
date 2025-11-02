@@ -14,6 +14,7 @@ import { StatefulSetsSubcategory } from './categories/workloads/StatefulSetsSubc
 import { DaemonSetsSubcategory } from './categories/workloads/DaemonSetsSubcategory';
 import { CronJobsSubcategory } from './categories/workloads/CronJobsSubcategory';
 import { StorageCategory } from './categories/StorageCategory';
+import { PersistentVolumesSubcategory } from './categories/storage/PersistentVolumesSubcategory';
 
 /**
  * Tree data provider for displaying Kubernetes clusters in the VS Code sidebar.
@@ -151,6 +152,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                type === 'persistentVolumes' ||
                type === 'persistentVolumeClaims' ||
                type === 'storageClasses' ||
+               type === 'persistentVolume' ||
                type === 'helm' || 
                type === 'configuration' || 
                type === 'customResources';
@@ -262,8 +264,14 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                     categoryElement.resourceData
                 );
             
+            case 'persistentVolumes':
+                return PersistentVolumesSubcategory.getPersistentVolumeItems(
+                    categoryElement.resourceData,
+                    this.kubeconfig.filePath,
+                    (error, clusterName) => this.handleKubectlError(error, clusterName)
+                );
+            
             // Future categories and subcategories will be added here:
-            // - persistentVolumes: fetch and display PVs
             // - persistentVolumeClaims: fetch and display PVCs
             // - storageClasses: fetch and display Storage Classes
             // - helm: helm list
