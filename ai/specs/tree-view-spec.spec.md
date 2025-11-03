@@ -45,6 +45,8 @@ graph TD
    - "All Namespaces" appears as the first option under each cluster
    - Individual namespaces follow alphabetically
    - Clicking any namespace opens a webview for navigation
+   - Active namespace shows checkmark icon indicator
+   - Right-click context menu provides namespace selection options
 
 ## Data Flow
 
@@ -57,7 +59,14 @@ sequenceDiagram
     User->>Extension: Expand cluster
     Extension->>kubectl: kubectl get namespaces
     kubectl-->>Extension: Namespace list
-    Extension-->>User: Tree view shows namespaces
+    Extension->>kubectl: kubectl config view --minify (get active namespace)
+    kubectl-->>Extension: Active namespace
+    Extension-->>User: Tree view shows namespaces with active indicator
+
+    User->>Extension: Right-click namespace, Set as Active
+    Extension->>kubectl: kubectl config set-context --current --namespace=<ns>
+    kubectl-->>Extension: Context updated
+    Extension-->>User: Tree refreshes, checkmark appears, status bar updates
 
     User->>Extension: Click namespace
     Extension-->>User: Open namespace webview
@@ -67,6 +76,13 @@ sequenceDiagram
         Extension->>kubectl: kubectl cluster-info
         kubectl-->>Extension: Connection status
         Extension-->>User: Tree view updates
+    end
+    
+    Note over Extension,kubectl: Check for external context changes
+    loop Every 30 seconds
+        Extension->>kubectl: kubectl config view --minify
+        kubectl-->>Extension: Current context state
+        Extension-->>User: Update tree if context changed externally
     end
     
     Note over User,Extension: Manual refresh also available
@@ -84,6 +100,7 @@ interface TreeItemData {
   type: 'cluster' | 'namespace' | 'allNamespaces';
   name: string;
   status?: 'connected' | 'disconnected';
+  isActiveNamespace?: boolean; // True if this namespace is set in kubectl context
   metadata?: {
     context: string;
     cluster: string;
@@ -96,6 +113,35 @@ interface TreeItemData {
 - "All Namespaces" is a special tree item that appears first
 - Individual namespaces are sorted alphabetically
 - Clicking any namespace item triggers a webview to open
+
+### Namespace Selection via kubectl Context
+
+#### Reading Active Namespace
+- Extension reads current namespace from kubectl context on startup
+- Command: `kubectl config view --minify --output=jsonpath='{..namespace}'`
+- Empty result means no namespace is set (cluster-wide view)
+- Cache result for 5 seconds to minimize kubectl calls
+- Poll for external changes every 30 seconds
+
+#### Setting Active Namespace
+- User right-clicks namespace in tree view
+- Selects "Set as Active Namespace" from context menu
+- Extension executes: `kubectl config set-context --current --namespace=<namespace-name>`
+- Tree view refreshes to show checkmark on active namespace
+- Status bar updates to show: "Namespace: <namespace-name>"
+
+#### Clearing Active Namespace
+- User right-clicks active namespace or uses command palette
+- Selects "Clear Active Namespace" from context menu
+- Extension executes: `kubectl config set-context --current --namespace=''`
+- Checkmark indicator removed from tree view
+- Status bar updates to show: "Namespace: All"
+
+#### Visual Indicators
+- **Active Namespace**: Shows checkmark icon (✓) next to namespace name
+- **Inactive Namespaces**: No special indicator
+- **Status Bar**: Displays current namespace name or "All" if none set
+- **Icon Theme**: Use VS Code's built-in "check" icon for active indicator
 
 ### Status Indicators
 - **Cluster Status**: Connected/disconnected indicators based on kubectl connectivity
@@ -118,8 +164,39 @@ interface TreeItemData {
 - **Click cluster**: Expand to show namespaces
 - **Click namespace**: Open webview panel for namespace navigation
 - **Click "All Namespaces"**: Open webview showing cluster-wide resource view
-- **Right-click**: Context menu with relevant actions (refresh, switch context)
+- **Right-click namespace**: Context menu with namespace selection actions
 - **Manual Refresh**: User-triggered refresh command updates tree
+
+### Context Menu Actions
+
+#### For Namespace Items (not active)
+- **Set as Active Namespace**: Sets this namespace in kubectl context
+- **Open in Webview**: Opens webview for this namespace
+- **Refresh**: Refreshes this namespace's data
+
+#### For Active Namespace Item
+- **Clear Active Namespace**: Removes namespace from kubectl context
+- **Open in Webview**: Opens webview for this namespace
+- **Refresh**: Refreshes this namespace's data
+
+#### Context Menu Registration
+```typescript
+// In package.json
+"menus": {
+  "view/item/context": [
+    {
+      "command": "kandy.setActiveNamespace",
+      "when": "view == kandyTreeView && viewItem == namespace && !isActiveNamespace",
+      "group": "namespace@1"
+    },
+    {
+      "command": "kandy.clearActiveNamespace",
+      "when": "view == kandyTreeView && viewItem == namespace && isActiveNamespace",
+      "group": "namespace@1"
+    }
+  ]
+}
+```
 
 ## Performance Considerations
 
@@ -133,6 +210,8 @@ interface TreeItemData {
 - **kubectl Process Management**: Spawn kubectl processes only when needed
 - **Periodic Connectivity Checks**: Automatic checks every 60 seconds with proper cleanup
 - **Status Caching**: Cluster connectivity status cached in memory to reduce redundant checks
+- **Context State Caching**: kubectl context state cached for 5 seconds to minimize config file reads
+- **External Change Detection**: Poll kubectl context every 30 seconds for external changes
 
 ## Error Handling
 
@@ -149,6 +228,13 @@ interface TreeItemData {
 - **kubectl Errors**: Display kubectl error messages to user
 - **Fallback Display**: Show "Unable to list namespaces" if kubectl fails
 
+### Namespace Context Errors
+- **Context Read Failure**: Use cached state if kubectl config read fails, show warning
+- **Context Write Failure**: Rollback UI state if kubectl config write fails, show error message
+- **Invalid Namespace**: Warn user if selected namespace doesn't exist, suggest clearing selection
+- **Permission Denied**: Show error if user lacks permission to modify kubeconfig
+- **External Conflicts**: Detect and notify if context changed externally during operation
+
 ## Testing Strategy
 
 ### Unit Tests
@@ -156,14 +242,25 @@ interface TreeItemData {
 - Namespace listing and sorting
 - kubectl command construction
 - Status calculation functions
+- Namespace context reading from kubectl config
+- Namespace context setting and clearing
+- Active namespace indicator logic
+- Context state caching and invalidation
 
 ### Integration Tests
 - kubeconfig parsing
 - kubectl command execution
 - Namespace retrieval from clusters
+- kubectl context modification and verification
+- Context state synchronization across operations
 
 ### E2E Tests
 - Tree navigation to namespaces
 - Webview panel opening from namespace clicks
 - Manual refresh behavior
 - Connection failure handling
+- Setting active namespace from context menu
+- Clearing active namespace selection
+- Visual indicator updates when context changes
+- External context change detection and UI update
+- Status bar namespace display updates

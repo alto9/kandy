@@ -162,4 +162,70 @@ Scenario: Manually refreshing a disconnected cluster
   Then the extension should attempt to reconnect using kubectl
   And update the cluster status based on the result
   And display an appropriate error message if kubectl cannot connect
+
+Scenario: Setting active namespace from context menu
+  Given a user has expanded a cluster showing namespaces
+  When they right-click on a namespace in the tree view
+  And select "Set as Active Namespace" from the context menu
+  Then the extension should execute kubectl config set-context --current --namespace=<namespace>
+  And the namespace should show an active indicator (checkmark icon)
+  And the status bar should display the active namespace
+  And subsequent kubectl commands should use this namespace by default
+
+Scenario: Visual indication of active namespace in tree
+  Given a user has set a namespace as active
+  When they view the tree view
+  Then the active namespace should display a checkmark icon
+  And other namespaces should not show the checkmark
+  And the status bar should show "Namespace: <namespace-name>"
+
+Scenario: Clearing active namespace selection
+  Given a user has set a namespace as active
+  When they right-click on the active namespace
+  And select "Clear Active Namespace" from the context menu
+  Then the extension should execute kubectl config set-context --current --namespace=''
+  And the checkmark indicator should be removed
+  And the status bar should show "Namespace: All"
+  And subsequent kubectl commands should show all namespaces
+
+Scenario: Setting namespace from "All Namespaces" option
+  Given a user has "All Namespaces" set as active
+  When they right-click on a specific namespace
+  And select "Set as Active Namespace"
+  Then the kubectl context should be updated to that namespace
+  And queries should be filtered to show only that namespace's resources
+
+Scenario: Viewing resources with active namespace context
+  Given a user has set "production" as the active namespace
+  When they expand the "Workloads" category
+  And expand "Deployments"
+  Then they should see only deployments in the "production" namespace
+  And deployments from other namespaces should not appear
+
+Scenario: Cluster-scoped resources ignore namespace context
+  Given a user has set "production" as the active namespace
+  When they expand the "Nodes" category
+  Then they should see all nodes in the cluster
+  And the namespace context should not filter nodes
+
+Scenario: Namespace context persists across sessions
+  Given a user has set "staging" as the active namespace
+  When they close and reopen VS Code
+  Then the extension should read the kubectl context
+  And "staging" should still be marked as the active namespace
+  And the status bar should show "Namespace: staging"
+
+Scenario: Detecting external namespace context changes
+  Given a user has set "production" as the active namespace in VS Code
+  When they change the namespace context externally using kubectl CLI
+  Then the extension should detect the change on next refresh
+  And update the tree view to show the new active namespace
+  And update the status bar with the new namespace
+
+Scenario: Handling invalid namespace in context
+  Given a user has set a namespace that no longer exists
+  When they try to query resources
+  Then kubectl should return a "namespace not found" error
+  And the extension should display the error to the user
+  And suggest clearing the namespace selection
 ```

@@ -48,6 +48,7 @@ graph TD
 sequenceDiagram
     participant User
     participant Tree
+    participant Webview
     participant Extension
     participant kubectl
     participant AI
@@ -56,14 +57,33 @@ sequenceDiagram
     Tree->>Extension: Namespace selected
     Extension->>kubectl: Get namespace resources
     kubectl-->>Extension: Resource list
+    Extension->>kubectl: kubectl config view --minify (get active namespace)
+    kubectl-->>Extension: Active namespace
     Extension->>AI: Analyze namespace context
     AI-->>Extension: AI recommendations
-    Extension-->>User: Webview panel opens with navigation
+    Extension-->>Webview: Open webview with resources and active namespace
+    Webview-->>User: Display namespace selector and resources
     
-    User->>Extension: Select resource in webview
+    User->>Webview: Select namespace from dropdown
+    Webview->>Extension: setActiveNamespace message
+    Extension->>kubectl: kubectl config set-context --current --namespace=<ns>
+    kubectl-->>Extension: Context updated
+    Extension->>kubectl: Get resources for new namespace
+    kubectl-->>Extension: Resource list
+    Extension-->>Webview: namespaceContextChanged notification
+    Webview-->>User: Update dropdown and refresh resources
+    
+    Note over Extension,kubectl: External context change detected
+    Extension->>kubectl: kubectl config view --minify (periodic check)
+    kubectl-->>Extension: Context changed externally
+    Extension-->>Webview: namespaceContextChanged notification
+    Webview-->>User: Update selector and show notification
+    
+    User->>Webview: Select resource in webview
     Extension->>kubectl: Get resource details
     kubectl-->>Extension: Resource data
-    Extension-->>User: Display resource details
+    Extension-->>Webview: Display resource details
+    Webview-->>User: Show resource information
 ```
 
 ## Implementation Details
@@ -85,14 +105,23 @@ interface WebviewContent {
 ```typescript
 // Extension to Webview
 interface ExtensionMessage {
-  command: 'updateResource' | 'updateRecommendations' | 'showYaml';
+  command: 'updateResource' | 'updateRecommendations' | 'showYaml' | 'namespaceContextChanged';
   data: any;
 }
 
 // Webview to Extension
 interface WebviewMessage {
-  command: 'applyRecommendation' | 'editYaml' | 'refreshData';
+  command: 'applyRecommendation' | 'editYaml' | 'refreshData' | 'setActiveNamespace' | 'clearActiveNamespace';
   data: any;
+}
+
+// Namespace context change notification
+interface NamespaceContextChangedMessage extends ExtensionMessage {
+  command: 'namespaceContextChanged';
+  data: {
+    namespace: string | null; // null means "All Namespaces"
+    source: 'extension' | 'external'; // Where the change came from
+  };
 }
 ```
 
@@ -101,6 +130,23 @@ interface WebviewMessage {
 ### Common Layout Structure
 ```html
 <div class="webview-container">
+  <!-- Namespace Selection Header -->
+  <div class="namespace-selector-bar">
+    <label for="namespace-select">Active Namespace:</label>
+    <select id="namespace-select" class="namespace-dropdown">
+      <option value="">All Namespaces</option>
+      <option value="default">default</option>
+      <option value="production" selected>production</option>
+      <option value="staging">staging</option>
+    </select>
+    <button id="clear-namespace" class="clear-btn" title="Clear namespace selection">
+      Clear
+    </button>
+    <span class="namespace-info">
+      (Changes kubectl context globally)
+    </span>
+  </div>
+
   <!-- Header Section -->
   <div class="resource-header">
     <h1>Pod: nginx-deployment-abc123</h1>
@@ -145,6 +191,64 @@ interface WebviewMessage {
     </div>
   </div>
 </div>
+```
+
+### Namespace Selector Behavior
+
+#### Selector State
+- **Dropdown**: Populated with all namespaces from current cluster
+- **Current Selection**: Shows namespace from kubectl context (or "All Namespaces" if none)
+- **Clear Button**: Enabled only when a specific namespace is selected
+- **Warning Label**: Shows "(Changes kubectl context globally)" to inform user
+
+#### User Interactions
+- **Select namespace from dropdown**: 
+  - Sends `setActiveNamespace` message to extension with namespace name
+  - Extension updates kubectl context
+  - Extension sends `namespaceContextChanged` notification back
+  - Webview refreshes resource data for selected namespace
+  
+- **Click Clear button**:
+  - Sends `clearActiveNamespace` message to extension
+  - Extension clears kubectl context namespace
+  - Extension sends `namespaceContextChanged` notification
+  - Webview refreshes to show all namespaces
+  
+- **Receive external context change**:
+  - Extension sends `namespaceContextChanged` message
+  - Webview updates dropdown selection to match
+  - Webview refreshes resource data if needed
+  - Show notification: "Namespace context changed externally to: <namespace>"
+
+#### CSS Styling
+```css
+.namespace-selector-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  background-color: var(--vscode-editor-background);
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+.namespace-dropdown {
+  padding: 5px 10px;
+  background-color: var(--vscode-dropdown-background);
+  color: var(--vscode-dropdown-foreground);
+  border: 1px solid var(--vscode-dropdown-border);
+}
+
+.clear-btn {
+  padding: 5px 15px;
+  background-color: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+}
+
+.namespace-info {
+  font-size: 0.9em;
+  color: var(--vscode-descriptionForeground);
+  font-style: italic;
+}
 ```
 
 ### Responsive Design
@@ -217,11 +321,18 @@ interface AIRecommendation {
 - Resource data loading and display
 - AI recommendation integration
 - YAML editing and validation
+- Namespace selection from webview dropdown
+- kubectl context updates from webview actions
+- Message passing between webview and extension for namespace changes
 
 ### E2E Tests
 - Complete workflows from tree selection to webview interaction
 - AI recommendation application and validation
 - Cross-resource navigation and context switching
+- Namespace selection from webview with context update
+- Clearing namespace selection from webview
+- External namespace context change detection and webview update
+- Namespace selector state synchronization across multiple webviews
 
 ## Security Considerations
 
