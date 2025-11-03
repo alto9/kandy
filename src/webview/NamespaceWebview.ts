@@ -4,6 +4,7 @@ import * as path from 'path';
 import { getContextInfo, setNamespace, clearNamespace } from '../utils/kubectlContext';
 import { NamespaceCommands } from '../kubectl/NamespaceCommands';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
+import { WebviewMessage } from '../types/webviewMessages';
 
 /**
  * Context information for namespace webviews.
@@ -85,7 +86,7 @@ export class NamespaceWebview {
 
         // Handle messages from the webview
         panel.webview.onDidReceiveMessage(
-            async (message) => {
+            async (message: WebviewMessage) => {
                 switch (message.command) {
                     case 'refresh':
                         // TODO: Refresh namespace data
@@ -179,6 +180,10 @@ export class NamespaceWebview {
             // Get the path to the HTML file
             const htmlPath = path.join(context.extensionPath, 'src', 'webview', 'namespace.html');
             
+            // Get the URI for the main.js script file
+            const scriptPath = vscode.Uri.joinPath(context.extensionUri, 'src', 'webview', 'main.js');
+            const scriptUri = webview.asWebviewUri(scriptPath);
+            
             // Read the HTML file
             let htmlContent = fs.readFileSync(htmlPath, 'utf8');
             
@@ -194,11 +199,11 @@ export class NamespaceWebview {
                 htmlContent = htmlContent.replace('{{IS_ALL_NAMESPACES}}', 'true');
             }
             
-            // Update CSP if needed
-            htmlContent = htmlContent.replace(
-                /content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';"/,
-                `content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src ${webview.cspSource} 'unsafe-inline';"`
-            );
+            // Replace script URI placeholder
+            htmlContent = htmlContent.replace('{{SCRIPT_URI}}', scriptUri.toString());
+            
+            // Replace CSP source placeholder
+            htmlContent = htmlContent.replace('{{CSP_SOURCE}}', webview.cspSource);
             
             return htmlContent;
         } catch (error) {
