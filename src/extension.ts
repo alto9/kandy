@@ -8,6 +8,7 @@ import { Settings } from './config/Settings';
 import { configureApiKeyCommand } from './commands/ConfigureApiKey';
 import { setActiveNamespaceCommand, clearActiveNamespaceCommand } from './commands/namespaceCommands';
 import { namespaceWatcher } from './services/namespaceCache';
+import { NamespaceStatusBar } from './ui/statusBar';
 
 /**
  * Global extension context accessible to all components.
@@ -31,6 +32,12 @@ let clusterTreeProvider: ClusterTreeProvider | undefined;
  * Displays API key configuration status for AI features.
  */
 let authStatusBarItem: vscode.StatusBarItem | undefined;
+
+/**
+ * Status bar item showing current kubectl namespace.
+ * Displays the active namespace or "All" if no namespace is set.
+ */
+let namespaceStatusBar: NamespaceStatusBar | undefined;
 
 /**
  * Get the extension context.
@@ -82,6 +89,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         
         // Create and show status bar item for authentication status
         createAuthStatusBarItem();
+        
+        // Create and show status bar item for namespace context
+        await createNamespaceStatusBarItem();
         
         // Show welcome screen on first activation
         const globalState = GlobalState.getInstance();
@@ -142,6 +152,26 @@ function createAuthStatusBarItem(): void {
     // Add to disposables for cleanup
     context.subscriptions.push(authStatusBarItem);
     disposables.push(authStatusBarItem);
+}
+
+/**
+ * Create and initialize the namespace status bar item.
+ * Shows current kubectl namespace context with automatic updates on context changes.
+ */
+async function createNamespaceStatusBarItem(): Promise<void> {
+    try {
+        const context = getExtensionContext();
+        
+        // Create and initialize the namespace status bar
+        namespaceStatusBar = new NamespaceStatusBar(context);
+        await namespaceStatusBar.initialize();
+        
+        console.log('Namespace status bar created successfully.');
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('Failed to create namespace status bar:', errorMessage);
+        // Don't throw - status bar is a non-critical feature
+    }
 }
 
 /**
@@ -279,16 +309,21 @@ export async function deactivate(): Promise<void> {
         namespaceWatcher.stopWatching();
         console.log('Namespace context watcher stopped.');
         
-        // Dispose status bar item
+        // Dispose status bar items
         if (authStatusBarItem) {
             authStatusBarItem.dispose();
+        }
+        
+        if (namespaceStatusBar) {
+            namespaceStatusBar.dispose();
         }
         
         // Clear tree provider reference
         clusterTreeProvider = undefined;
         
-        // Clear status bar item reference
+        // Clear status bar item references
         authStatusBarItem = undefined;
+        namespaceStatusBar = undefined;
         
         // Clear extension context
         extensionContext = undefined;
