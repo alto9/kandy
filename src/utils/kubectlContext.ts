@@ -2,6 +2,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { KubectlError } from '../kubernetes/KubectlError';
 import { KubectlContextState } from '../types/namespaceState';
+import { namespaceCache } from '../services/namespaceCache';
 
 /**
  * Timeout for kubectl commands in milliseconds.
@@ -87,10 +88,18 @@ export async function getCurrentNamespace(): Promise<string | null> {
  * information about the active context. It returns a structured object with
  * all context metadata needed for namespace selection.
  * 
+ * Uses caching with 5-second TTL to minimize kubectl command overhead.
+ * 
  * @returns Complete kubectl context state including namespace, context, and cluster
  * @throws {Error} If kubectl command fails, no context is set, or JSON is malformed
  */
 export async function getContextInfo(): Promise<KubectlContextState> {
+    // Check cache first
+    const cachedContext = namespaceCache.getCachedContext();
+    if (cachedContext) {
+        return cachedContext;
+    }
+
     try {
         // Execute kubectl config view with JSON output
         const { stdout } = await execFileAsync(
@@ -149,6 +158,9 @@ export async function getContextInfo(): Promise<KubectlContextState> {
             source: 'external' // Initial read, not set by extension
         };
 
+        // Update cache with fresh state
+        namespaceCache.setCachedContext(contextState);
+
         return contextState;
     } catch (error: unknown) {
         // Check if this is already our formatted error from validation
@@ -200,6 +212,9 @@ export async function setNamespace(namespace: string): Promise<boolean> {
             }
         );
 
+        // Invalidate cache since context was modified
+        namespaceCache.invalidateCache();
+
         // Command succeeded
         return true;
     } catch (error: unknown) {
@@ -238,6 +253,9 @@ export async function clearNamespace(): Promise<boolean> {
                 env: { ...process.env }
             }
         );
+
+        // Invalidate cache since context was modified
+        namespaceCache.invalidateCache();
 
         // Command succeeded
         return true;
