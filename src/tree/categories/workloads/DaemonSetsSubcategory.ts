@@ -59,7 +59,8 @@ export class DaemonSetsSubcategory {
                 {
                     ...resourceData,
                     resourceName: daemonsetInfo.name,
-                    namespace: daemonsetInfo.namespace
+                    namespace: daemonsetInfo.namespace,
+                    labelSelector: daemonsetInfo.selector
                 }
             );
 
@@ -90,10 +91,6 @@ export class DaemonSetsSubcategory {
 
             // Set tooltip with detailed information
             item.tooltip = `DaemonSet: ${daemonsetInfo.name}\nNamespace: ${daemonsetInfo.namespace}\nNodes: ${nodeStatus}`;
-
-            // Store label selector in contextValue for later pod retrieval
-            // We'll pass this through the resourceData which is available in the tree provider
-            (item as ClusterTreeItem & { labelSelector: string }).labelSelector = daemonsetInfo.selector;
 
             return item;
         });

@@ -5,7 +5,7 @@ import { KubectlError } from '../kubernetes/KubectlError';
 /**
  * Timeout for kubectl commands in milliseconds.
  */
-const KUBECTL_TIMEOUT_MS = 5000;
+const KUBECTL_TIMEOUT_MS = 30000;
 
 /**
  * Promisified version of execFile for async/await usage.
@@ -371,6 +371,7 @@ export class WorkloadCommands {
                 ],
                 {
                     timeout: KUBECTL_TIMEOUT_MS,
+                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
                     env: { ...process.env }
                 }
             );
@@ -408,11 +409,54 @@ export class WorkloadCommands {
             
             return { deployments };
         } catch (error: unknown) {
+            // Check if stdout contains valid JSON even though an error was thrown
+            // This can happen if kubectl writes warnings to stderr but valid data to stdout
+            const err = error as { stdout?: Buffer | string; stderr?: Buffer | string };
+            const stdout = err.stdout 
+                ? (Buffer.isBuffer(err.stdout) ? err.stdout.toString() : err.stdout).trim()
+                : '';
+            
+            if (stdout) {
+                try {
+                    // Try to parse stdout as valid JSON
+                    const response: DeploymentListResponse = JSON.parse(stdout);
+                    
+                    // Extract deployment information from the items array
+                    const deployments: DeploymentInfo[] = response.items?.map((item: DeploymentItem) => {
+                        const name = item.metadata?.name || 'Unknown';
+                        const namespace = item.metadata?.namespace || 'default';
+                        const replicas = item.spec?.replicas || 0;
+                        const readyReplicas = item.status?.readyReplicas || 0;
+                        
+                        // Build label selector from matchLabels
+                        const matchLabels = item.spec?.selector?.matchLabels || {};
+                        const selector = Object.entries(matchLabels)
+                            .map(([key, value]) => `${key}=${value}`)
+                            .join(',');
+                        
+                        return {
+                            name,
+                            namespace,
+                            readyReplicas,
+                            replicas,
+                            selector
+                        };
+                    }) || [];
+                    
+                    // Sort deployments by namespace, then by name
+                    deployments.sort((a, b) => {
+                        const nsCompare = a.namespace.localeCompare(b.namespace);
+                        return nsCompare !== 0 ? nsCompare : a.name.localeCompare(b.name);
+                    });
+                    
+                    return { deployments };
+                } catch (parseError) {
+                    // stdout is not valid JSON, treat as real error
+                }
+            }
+            
             // kubectl failed - create structured error for detailed handling
             const kubectlError = KubectlError.fromExecError(error, contextName);
-            
-            // Log error details for debugging
-            console.log(`Deployment query failed for context ${contextName}: ${kubectlError.getDetails()}`);
             
             return {
                 deployments: [],
@@ -447,6 +491,7 @@ export class WorkloadCommands {
                 ],
                 {
                     timeout: KUBECTL_TIMEOUT_MS,
+                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
                     env: { ...process.env }
                 }
             );
@@ -537,6 +582,7 @@ export class WorkloadCommands {
                 ],
                 {
                     timeout: KUBECTL_TIMEOUT_MS,
+                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
                     env: { ...process.env }
                 }
             );
@@ -615,6 +661,7 @@ export class WorkloadCommands {
                 ],
                 {
                     timeout: KUBECTL_TIMEOUT_MS,
+                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
                     env: { ...process.env }
                 }
             );
@@ -679,6 +726,7 @@ export class WorkloadCommands {
                 ],
                 {
                     timeout: KUBECTL_TIMEOUT_MS,
+                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
                     env: { ...process.env }
                 }
             );
@@ -769,6 +817,7 @@ export class WorkloadCommands {
                 ],
                 {
                     timeout: KUBECTL_TIMEOUT_MS,
+                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
                     env: { ...process.env }
                 }
             );
@@ -833,6 +882,7 @@ export class WorkloadCommands {
                 ],
                 {
                     timeout: KUBECTL_TIMEOUT_MS,
+                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
                     env: { ...process.env }
                 }
             );
@@ -909,6 +959,7 @@ export class WorkloadCommands {
                 ],
                 {
                     timeout: KUBECTL_TIMEOUT_MS,
+                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
                     env: { ...process.env }
                 }
             );
@@ -997,6 +1048,7 @@ export class WorkloadCommands {
                 ],
                 {
                     timeout: KUBECTL_TIMEOUT_MS,
+                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
                     env: { ...process.env }
                 }
             );

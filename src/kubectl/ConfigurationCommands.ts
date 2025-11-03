@@ -5,7 +5,7 @@ import { KubectlError } from '../kubernetes/KubectlError';
 /**
  * Timeout for kubectl commands in milliseconds.
  */
-const KUBECTL_TIMEOUT_MS = 5000;
+const KUBECTL_TIMEOUT_MS = 30000;
 
 /**
  * Promisified version of execFile for async/await usage.
@@ -134,6 +134,7 @@ export class ConfigurationCommands {
                 ],
                 {
                     timeout: KUBECTL_TIMEOUT_MS,
+                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
                     env: { ...process.env }
                 }
             );
@@ -167,11 +168,50 @@ export class ConfigurationCommands {
             
             return { configMaps };
         } catch (error: unknown) {
+            // Check if stdout contains valid JSON even though an error was thrown
+            // This can happen if kubectl writes warnings to stderr but valid data to stdout
+            const err = error as { stdout?: Buffer | string; stderr?: Buffer | string };
+            const stdout = err.stdout 
+                ? (Buffer.isBuffer(err.stdout) ? err.stdout.toString() : err.stdout).trim()
+                : '';
+            
+            if (stdout) {
+                try {
+                    // Try to parse stdout as valid JSON
+                    const response: ConfigMapListResponse = JSON.parse(stdout);
+                    
+                    // Extract configmap information from the items array
+                    const configMaps: ConfigMapInfo[] = response.items?.map((item: ConfigMapItem) => {
+                        const name = item.metadata?.name || 'Unknown';
+                        const namespace = item.metadata?.namespace || 'Unknown';
+                        
+                        // Count the number of data keys
+                        const dataKeys = item.data ? Object.keys(item.data).length : 0;
+                        
+                        return {
+                            name,
+                            namespace,
+                            dataKeys
+                        };
+                    }) || [];
+                    
+                    // Sort configmaps by namespace first, then by name
+                    configMaps.sort((a, b) => {
+                        const namespaceCompare = a.namespace.localeCompare(b.namespace);
+                        if (namespaceCompare !== 0) {
+                            return namespaceCompare;
+                        }
+                        return a.name.localeCompare(b.name);
+                    });
+                    
+                    return { configMaps };
+                } catch (parseError) {
+                    // stdout is not valid JSON, treat as real error
+                }
+            }
+            
             // kubectl failed - create structured error for detailed handling
             const kubectlError = KubectlError.fromExecError(error, contextName);
-            
-            // Log error details for debugging
-            console.log(`ConfigMap query failed for context ${contextName}: ${kubectlError.getDetails()}`);
             
             return {
                 configMaps: [],
@@ -192,6 +232,7 @@ export class ConfigurationCommands {
         kubeconfigPath: string,
         contextName: string
     ): Promise<SecretsResult> {
+        console.log(`[DEBUG SECRETS] getSecrets called for context: ${contextName}`);
         try {
             // Execute kubectl get secrets with JSON output across all namespaces
             const { stdout } = await execFileAsync(
@@ -206,12 +247,15 @@ export class ConfigurationCommands {
                 ],
                 {
                     timeout: KUBECTL_TIMEOUT_MS,
+                    maxBuffer: 100 * 1024 * 1024, // 100MB buffer for very large clusters with many secrets
                     env: { ...process.env }
                 }
             );
 
             // Parse the JSON response
+            console.log(`[DEBUG SECRETS] Successfully got stdout, length: ${stdout.length}`);
             const response: SecretListResponse = JSON.parse(stdout);
+            console.log(`[DEBUG SECRETS] Parsed ${response.items?.length || 0} secrets`);
             
             // Extract secret information from the items array
             const secrets: SecretInfo[] = response.items?.map((item: SecretItem) => {
@@ -237,11 +281,70 @@ export class ConfigurationCommands {
             
             return { secrets };
         } catch (error: unknown) {
+            console.log(`[DEBUG SECRETS] Error caught:`, error);
+            // Check if stdout contains valid JSON even though an error was thrown
+            // This can happen if kubectl writes warnings to stderr but valid data to stdout
+            // OR if maxBuffer was exceeded but we still have partial valid data
+            const err = error as { stdout?: Buffer | string; stderr?: Buffer | string; code?: string };
+            const stdout = err.stdout 
+                ? (Buffer.isBuffer(err.stdout) ? err.stdout.toString() : err.stdout).trim()
+                : '';
+            console.log(`[DEBUG SECRETS] Error code:`, err.code);
+            console.log(`[DEBUG SECRETS] stdout available:`, !!stdout, `length:`, stdout.length);
+            
+            // Special handling for maxBuffer exceeded - stdout will be truncated and likely invalid JSON
+            if (err.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') {
+                console.log(`[DEBUG SECRETS] maxBuffer exceeded even at 100MB! Secrets data is too large.`);
+                console.log(`[DEBUG SECRETS] Consider increasing buffer further or filtering secrets by namespace.`);
+                
+                // Return a helpful error instead of trying to parse truncated JSON
+                const bufferError = new KubectlError(
+                    'unknown' as any,
+                    `Too many secrets to display (>100MB of data). The cluster has an unusually large number of secrets. Consider viewing secrets by namespace instead.`,
+                    'maxBuffer exceeded',
+                    contextName
+                );
+                return {
+                    secrets: [],
+                    error: bufferError
+                };
+            }
+            
+            if (stdout) {
+                try {
+                    // Try to parse stdout as valid JSON
+                    const response: SecretListResponse = JSON.parse(stdout);
+                    
+                    // Extract secret information from the items array
+                    const secrets: SecretInfo[] = response.items?.map((item: SecretItem) => {
+                        const name = item.metadata?.name || 'Unknown';
+                        const namespace = item.metadata?.namespace || 'Unknown';
+                        const type = item.type || 'Unknown';
+                        
+                        return {
+                            name,
+                            namespace,
+                            type
+                        };
+                    }) || [];
+                    
+                    // Sort secrets by namespace first, then by name
+                    secrets.sort((a, b) => {
+                        const namespaceCompare = a.namespace.localeCompare(b.namespace);
+                        if (namespaceCompare !== 0) {
+                            return namespaceCompare;
+                        }
+                        return a.name.localeCompare(b.name);
+                    });
+                    
+                    return { secrets };
+                } catch (parseError) {
+                    // stdout is not valid JSON, treat as real error
+                }
+            }
+            
             // kubectl failed - create structured error for detailed handling
             const kubectlError = KubectlError.fromExecError(error, contextName);
-            
-            // Log error details for debugging
-            console.log(`Secret query failed for context ${contextName}: ${kubectlError.getDetails()}`);
             
             return {
                 secrets: [],

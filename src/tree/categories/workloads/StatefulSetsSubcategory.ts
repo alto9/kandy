@@ -59,7 +59,8 @@ export class StatefulSetsSubcategory {
                 {
                     ...resourceData,
                     resourceName: statefulsetInfo.name,
-                    namespace: statefulsetInfo.namespace
+                    namespace: statefulsetInfo.namespace,
+                    labelSelector: statefulsetInfo.selector
                 }
             );
 
@@ -90,10 +91,6 @@ export class StatefulSetsSubcategory {
 
             // Set tooltip with detailed information
             item.tooltip = `StatefulSet: ${statefulsetInfo.name}\nNamespace: ${statefulsetInfo.namespace}\nReplicas: ${replicaStatus}`;
-
-            // Store label selector in contextValue for later pod retrieval
-            // We'll pass this through the resourceData which is available in the tree provider
-            (item as ClusterTreeItem & { labelSelector: string }).labelSelector = statefulsetInfo.selector;
 
             return item;
         });

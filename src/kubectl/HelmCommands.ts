@@ -5,7 +5,7 @@ import { KubectlError } from '../kubernetes/KubectlError';
 /**
  * Timeout for helm commands in milliseconds.
  */
-const HELM_TIMEOUT_MS = 5000;
+const HELM_TIMEOUT_MS = 30000;
 
 /**
  * Promisified version of execFile for async/await usage.
@@ -70,6 +70,7 @@ export class HelmCommands {
         kubeconfigPath: string,
         contextName: string
     ): Promise<HelmReleasesResult> {
+        console.log(`[DEBUG HELM] getHelmReleases called for context: ${contextName}`);
         try {
             // Execute helm list with JSON output across all namespaces
             const { stdout } = await execFileAsync(
@@ -82,6 +83,7 @@ export class HelmCommands {
                 ],
                 {
                     timeout: HELM_TIMEOUT_MS,
+                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
                     env: { 
                         ...process.env,
                         KUBECONFIG: kubeconfigPath
@@ -90,7 +92,9 @@ export class HelmCommands {
             );
 
             // Parse the JSON response (helm returns an array directly)
+            console.log(`[DEBUG HELM] Successfully got stdout, length: ${stdout.length}`);
             const response: HelmReleaseItem[] = JSON.parse(stdout);
+            console.log(`[DEBUG HELM] Parsed ${response.length} releases`);
             
             // Extract helm release information from the array
             const releases: HelmReleaseInfo[] = response.map((item: HelmReleaseItem) => {
@@ -130,11 +134,82 @@ export class HelmCommands {
             
             return { releases };
         } catch (error: unknown) {
-            // helm CLI failed - create structured error for detailed handling
-            const kubectlError = KubectlError.fromExecError(error, contextName);
+            console.log(`[DEBUG HELM] Error caught:`, error);
+            // Check if stdout contains valid JSON even though an error was thrown
+            // This can happen if helm writes warnings to stderr but valid data to stdout
+            const err = error as { stdout?: Buffer | string; stderr?: Buffer | string; code?: string };
+            console.log(`[DEBUG HELM] Error code:`, err.code);
+            const stdout = err.stdout 
+                ? (Buffer.isBuffer(err.stdout) ? err.stdout.toString() : err.stdout).trim()
+                : '';
+            console.log(`[DEBUG HELM] stdout available:`, !!stdout, `length:`, stdout.length);
             
-            // Log error details for debugging
-            console.log(`Helm releases query failed for context ${contextName}: ${kubectlError.getDetails()}`);
+            if (stdout) {
+                try {
+                    // Try to parse stdout as valid JSON
+                    const response: HelmReleaseItem[] = JSON.parse(stdout);
+                    
+                    // Extract helm release information from the array
+                    const releases: HelmReleaseInfo[] = response.map((item: HelmReleaseItem) => {
+                        const name = item.name || 'Unknown';
+                        const namespace = item.namespace || 'default';
+                        const status = item.status || 'Unknown';
+                        
+                        // Parse chart name and version from the chart field
+                        // Chart field format is typically "chart-name-version"
+                        const chart = item.chart || 'Unknown';
+                        let chartName = chart;
+                        let version = '';
+                        
+                        // Try to extract version from chart string
+                        // Format is usually "chart-name-version" where version starts with a number
+                        const lastDashIndex = chart.lastIndexOf('-');
+                        if (lastDashIndex > 0) {
+                            const potentialVersion = chart.substring(lastDashIndex + 1);
+                            // Check if it looks like a version (starts with a digit)
+                            if (/^\d/.test(potentialVersion)) {
+                                chartName = chart.substring(0, lastDashIndex);
+                                version = potentialVersion;
+                            }
+                        }
+                        
+                        return {
+                            name,
+                            namespace,
+                            status,
+                            chart: chartName,
+                            version
+                        };
+                    });
+                    
+                    // Sort releases alphabetically by name
+                    releases.sort((a, b) => a.name.localeCompare(b.name));
+                    
+                    return { releases };
+                } catch (parseError) {
+                    // stdout is not valid JSON, treat as real error
+                }
+            }
+            
+            // helm CLI failed - handle helm-specific errors
+            // err is already declared above with code property
+            
+            // If helm is not installed, create a specific error for it
+            if (err.code === 'ENOENT') {
+                const helmError = new KubectlError(
+                    'binary_not_found' as any,
+                    'Helm is not installed or not in PATH. Install helm to view Helm releases.',
+                    'helm command not found',
+                    contextName
+                );
+                return {
+                    releases: [],
+                    error: helmError
+                };
+            }
+            
+            // For other errors, use the standard error handler
+            const kubectlError = KubectlError.fromExecError(error, contextName);
             
             return {
                 releases: [],

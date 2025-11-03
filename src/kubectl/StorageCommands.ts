@@ -201,6 +201,7 @@ export class StorageCommands {
                 ],
                 {
                     timeout: KUBECTL_TIMEOUT_MS,
+                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
                     env: { ...process.env }
                 }
             );
@@ -276,6 +277,7 @@ export class StorageCommands {
                 ],
                 {
                     timeout: KUBECTL_TIMEOUT_MS,
+                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
                     env: { ...process.env }
                 }
             );
@@ -347,6 +349,7 @@ export class StorageCommands {
                 ],
                 {
                     timeout: KUBECTL_TIMEOUT_MS,
+                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
                     env: { ...process.env }
                 }
             );

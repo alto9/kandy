@@ -210,8 +210,8 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 );
             
             case 'deployment': {
-                // Get label selector from the tree item (stored during deployment creation)
-                const labelSelector = (categoryElement as ClusterTreeItem & { labelSelector?: string }).labelSelector || '';
+                // Get label selector from resourceData
+                const labelSelector = categoryElement.resourceData.labelSelector || '';
                 return DeploymentsSubcategory.getPodsForDeployment(
                     categoryElement.resourceData,
                     this.kubeconfig.filePath,
@@ -228,8 +228,8 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 );
             
             case 'statefulset': {
-                // Get label selector from the tree item (stored during statefulset creation)
-                const statefulSetLabelSelector = (categoryElement as ClusterTreeItem & { labelSelector?: string }).labelSelector || '';
+                // Get label selector from resourceData
+                const statefulSetLabelSelector = categoryElement.resourceData.labelSelector || '';
                 return StatefulSetsSubcategory.getPodsForStatefulSet(
                     categoryElement.resourceData,
                     this.kubeconfig.filePath,
@@ -246,8 +246,8 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 );
             
             case 'daemonset': {
-                // Get label selector from the tree item (stored during daemonset creation)
-                const daemonSetLabelSelector = (categoryElement as ClusterTreeItem & { labelSelector?: string }).labelSelector || '';
+                // Get label selector from resourceData
+                const daemonSetLabelSelector = categoryElement.resourceData.labelSelector || '';
                 return DaemonSetsSubcategory.getPodsForDaemonSet(
                     categoryElement.resourceData,
                     this.kubeconfig.filePath,

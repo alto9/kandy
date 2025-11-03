@@ -59,7 +59,8 @@ export class DeploymentsSubcategory {
                 {
                     ...resourceData,
                     resourceName: deploymentInfo.name,
-                    namespace: deploymentInfo.namespace
+                    namespace: deploymentInfo.namespace,
+                    labelSelector: deploymentInfo.selector
                 }
             );
 
@@ -90,10 +91,6 @@ export class DeploymentsSubcategory {
 
             // Set tooltip with detailed information
             item.tooltip = `Deployment: ${deploymentInfo.name}\nNamespace: ${deploymentInfo.namespace}\nReplicas: ${replicaStatus}`;
-
-            // Store label selector in contextValue for later pod retrieval
-            // We'll pass this through the resourceData which is available in the tree provider
-            (item as ClusterTreeItem & { labelSelector: string }).labelSelector = deploymentInfo.selector;
 
             return item;
         });

@@ -98,5 +98,7 @@ export interface TreeItemData {
     resourceName?: string;
     /** Optional namespace for namespaced resources */
     namespace?: string;
+    /** Optional label selector for workload resources */
+    labelSelector?: string;
 }
 
