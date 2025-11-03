@@ -6,6 +6,7 @@ import { KubeconfigParser } from './kubernetes/KubeconfigParser';
 import { ClusterTreeProvider } from './tree/ClusterTreeProvider';
 import { Settings } from './config/Settings';
 import { configureApiKeyCommand } from './commands/ConfigureApiKey';
+import { setActiveNamespaceCommand, clearActiveNamespaceCommand } from './commands/namespaceCommands';
 import { namespaceWatcher } from './services/namespaceCache';
 
 /**
@@ -230,6 +231,22 @@ function registerCommands(): void {
     
     context.subscriptions.push(openNamespaceCommand);
     disposables.push(openNamespaceCommand);
+    
+    // Register set active namespace command
+    const setActiveNamespaceCmd = vscode.commands.registerCommand(
+        'kandy.setActiveNamespace',
+        setActiveNamespaceCommand
+    );
+    context.subscriptions.push(setActiveNamespaceCmd);
+    disposables.push(setActiveNamespaceCmd);
+    
+    // Register clear active namespace command
+    const clearActiveNamespaceCmd = vscode.commands.registerCommand(
+        'kandy.clearActiveNamespace',
+        clearActiveNamespaceCommand
+    );
+    context.subscriptions.push(clearActiveNamespaceCmd);
+    disposables.push(clearActiveNamespaceCmd);
 }
 
 /**

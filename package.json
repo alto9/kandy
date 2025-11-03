@@ -51,6 +51,16 @@
         "command": "kandy.openNamespace",
         "title": "Open Namespace",
         "category": "Kandy"
+      },
+      {
+        "command": "kandy.setActiveNamespace",
+        "title": "Set as Active Namespace",
+        "category": "Kandy"
+      },
+      {
+        "command": "kandy.clearActiveNamespace",
+        "title": "Clear Active Namespace",
+        "category": "Kandy"
       }
     ],
     "menus": {
@@ -59,6 +69,18 @@
           "command": "kandy.refreshClusters",
           "when": "view == kandyClusterView",
           "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "kandy.setActiveNamespace",
+          "when": "view == kandyClusterView && viewItem == namespace:inactive",
+          "group": "namespace@1"
+        },
+        {
+          "command": "kandy.clearActiveNamespace",
+          "when": "view == kandyClusterView && viewItem == namespace:active",
+          "group": "namespace@1"
         }
       ]
     },
