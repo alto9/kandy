@@ -109,10 +109,80 @@
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
+
+        .namespace-selector-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background-color: var(--vscode-editor-background);
+            border-bottom: 1px solid var(--vscode-panel-border);
+            margin-bottom: 20px;
+        }
+
+        .namespace-selector-bar label {
+            font-weight: 600;
+            color: var(--vscode-foreground);
+            white-space: nowrap;
+        }
+
+        .namespace-dropdown {
+            padding: 5px 10px;
+            background-color: var(--vscode-dropdown-background);
+            color: var(--vscode-dropdown-foreground);
+            border: 1px solid var(--vscode-dropdown-border);
+            border-radius: 2px;
+            min-width: 200px;
+            cursor: pointer;
+        }
+
+        .namespace-dropdown:hover {
+            background-color: var(--vscode-dropdown-listBackground);
+        }
+
+        .namespace-dropdown:focus {
+            outline: 1px solid var(--vscode-focusBorder);
+            outline-offset: -1px;
+        }
+
+        .clear-btn {
+            padding: 5px 15px;
+            background-color: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+            border: 1px solid var(--vscode-button-border);
+            border-radius: 2px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .clear-btn:hover:not(:disabled) {
+            background-color: var(--vscode-button-secondaryHoverBackground);
+        }
+
+        .clear-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .namespace-info {
+            font-size: 0.9em;
+            color: var(--vscode-descriptionForeground);
+            font-style: italic;
+            margin-left: auto;
+        }
     </style>
 </head>
 <body>
     <div class="container">
+        <div class="namespace-selector-bar">
+            <label for="namespace-select">Active Namespace:</label>
+            <select id="namespace-select" class="namespace-dropdown">
+                <option value="">All Namespaces</option>
+            </select>
+            <button id="clear-namespace" class="clear-btn" disabled>Clear</button>
+            <span class="namespace-info">(Changes kubectl context globally)</span>
+        </div>
+
         <div class="header">
             <h1>
                 <span class="icon" id="namespace-icon"></span>
@@ -163,6 +233,108 @@
             // Set up message passing for future functionality
             const vscode = acquireVsCodeApi();
 
+            // Get namespace selector elements
+            const namespaceSelect = document.getElementById('namespace-select');
+            const clearButton = document.getElementById('clear-namespace');
+
+            // Update the clear button state based on selection
+            function updateClearButtonState() {
+                const currentValue = namespaceSelect.value;
+                clearButton.disabled = !currentValue || currentValue === '';
+            }
+
+            // Populate the namespace dropdown with available namespaces
+            function populateNamespaces(namespaces, currentNamespace) {
+                // Clear existing options except "All Namespaces"
+                namespaceSelect.innerHTML = '<option value="">All Namespaces</option>';
+                
+                // Add namespace options
+                if (namespaces && Array.isArray(namespaces)) {
+                    namespaces.forEach(ns => {
+                        const option = document.createElement('option');
+                        option.value = ns.name;
+                        option.textContent = ns.name;
+                        namespaceSelect.appendChild(option);
+                    });
+                }
+
+                // Set current selection
+                if (currentNamespace) {
+                    namespaceSelect.value = currentNamespace;
+                } else {
+                    namespaceSelect.value = '';
+                }
+
+                // Update clear button state
+                updateClearButtonState();
+            }
+
+            // Set the current namespace selection
+            function setCurrentNamespace(namespace) {
+                if (namespace) {
+                    namespaceSelect.value = namespace;
+                } else {
+                    namespaceSelect.value = '';
+                }
+                updateClearButtonState();
+            }
+
+            // Handle namespace selection change
+            namespaceSelect.addEventListener('change', () => {
+                const selectedNamespace = namespaceSelect.value;
+                
+                if (selectedNamespace) {
+                    // Send setActiveNamespace message to extension
+                    vscode.postMessage({
+                        command: 'setActiveNamespace',
+                        data: {
+                            namespace: selectedNamespace
+                        }
+                    });
+                } else {
+                    // Selected "All Namespaces" - clear the namespace
+                    vscode.postMessage({
+                        command: 'clearActiveNamespace'
+                    });
+                }
+                
+                updateClearButtonState();
+            });
+
+            // Handle clear button click
+            clearButton.addEventListener('click', () => {
+                if (!clearButton.disabled) {
+                    namespaceSelect.value = '';
+                    vscode.postMessage({
+                        command: 'clearActiveNamespace'
+                    });
+                    updateClearButtonState();
+                }
+            });
+
+            // Handle incoming messages from extension
+            window.addEventListener('message', event => {
+                const message = event.data;
+                
+                switch (message.command) {
+                    case 'namespaceData':
+                        // Populate dropdown with namespace list
+                        populateNamespaces(message.data.namespaces, message.data.currentNamespace);
+                        break;
+                    
+                    case 'namespaceContextChanged':
+                        // Update selection when context changes
+                        setCurrentNamespace(message.data.namespace);
+                        
+                        // Show notification if the change was external
+                        if (message.data.source === 'external') {
+                            const namespaceName = message.data.namespace || 'All Namespaces';
+                            console.log(`Namespace context changed externally to: ${namespaceName}`);
+                        }
+                        break;
+                }
+            });
+
             // Example of how to send messages to the extension
             function refresh() {
                 vscode.postMessage({
@@ -183,8 +355,13 @@
             // Store functions in global scope for future use
             window.kandyNamespace = {
                 refresh,
-                openResource
+                openResource,
+                populateNamespaces,
+                setCurrentNamespace
             };
+
+            // Initialize clear button state
+            updateClearButtonState();
         })();
     </script>
 </body>

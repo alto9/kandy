@@ -1,6 +1,9 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
+import { getContextInfo, setNamespace, clearNamespace } from '../utils/kubectlContext';
+import { NamespaceCommands } from '../kubectl/NamespaceCommands';
+import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
 
 /**
  * Context information for namespace webviews.
@@ -77,6 +80,9 @@ export class NamespaceWebview {
             namespaceContext
         );
 
+        // Send initial namespace data to populate the selector
+        NamespaceWebview.sendNamespaceData(panel);
+
         // Handle messages from the webview
         panel.webview.onDidReceiveMessage(
             async (message) => {
@@ -90,6 +96,43 @@ export class NamespaceWebview {
                         // TODO: Open resource details
                         console.log('Open resource requested:', message.data);
                         break;
+                    
+                    case 'setActiveNamespace':
+                        // Set the active namespace in kubectl context
+                        if (message.data?.namespace) {
+                            const success = await setNamespace(message.data.namespace);
+                            if (success) {
+                                console.log(`Namespace set to: ${message.data.namespace}`);
+                                // Notify the webview of the context change
+                                NamespaceWebview.sendNamespaceContextChanged(
+                                    panel,
+                                    message.data.namespace,
+                                    'extension'
+                                );
+                            } else {
+                                vscode.window.showErrorMessage(
+                                    `Failed to set namespace to: ${message.data.namespace}`
+                                );
+                            }
+                        }
+                        break;
+                    
+                    case 'clearActiveNamespace': {
+                        // Clear the active namespace in kubectl context
+                        const success = await clearNamespace();
+                        if (success) {
+                            console.log('Namespace cleared (All Namespaces)');
+                            // Notify the webview of the context change
+                            NamespaceWebview.sendNamespaceContextChanged(
+                                panel,
+                                null,
+                                'extension'
+                            );
+                        } else {
+                            vscode.window.showErrorMessage('Failed to clear namespace');
+                        }
+                        break;
+                    }
                 }
             },
             undefined,
@@ -215,6 +258,82 @@ export class NamespaceWebview {
             </body>
             </html>
         `;
+    }
+
+    /**
+     * Send namespace data to a webview panel.
+     * This includes the list of available namespaces and the current namespace.
+     * 
+     * @param panel - The webview panel to send data to
+     */
+    public static async sendNamespaceData(panel: vscode.WebviewPanel): Promise<void> {
+        try {
+            // Get context information
+            const contextInfo = await getContextInfo();
+            
+            // Get kubeconfig path and namespace list
+            const kubeconfigPath = KubeconfigParser.getKubeconfigPath();
+            const namespacesResult = await NamespaceCommands.getNamespaces(
+                kubeconfigPath,
+                contextInfo.contextName
+            );
+
+            // Send data to webview
+            panel.webview.postMessage({
+                command: 'namespaceData',
+                data: {
+                    namespaces: namespacesResult.namespaces,
+                    currentNamespace: contextInfo.currentNamespace
+                }
+            });
+        } catch (error) {
+            console.error('Failed to send namespace data to webview:', error);
+            // Send empty data on error
+            panel.webview.postMessage({
+                command: 'namespaceData',
+                data: {
+                    namespaces: [],
+                    currentNamespace: null
+                }
+            });
+        }
+    }
+
+    /**
+     * Send a namespace context changed notification to a webview panel.
+     * 
+     * @param panel - The webview panel to notify
+     * @param namespace - The new namespace (null for "All Namespaces")
+     * @param source - The source of the change ('extension' or 'external')
+     */
+    public static sendNamespaceContextChanged(
+        panel: vscode.WebviewPanel,
+        namespace: string | null,
+        source: 'extension' | 'external'
+    ): void {
+        panel.webview.postMessage({
+            command: 'namespaceContextChanged',
+            data: {
+                namespace,
+                source
+            }
+        });
+    }
+
+    /**
+     * Send namespace context changed notification to all open webview panels.
+     * This is useful when the context changes externally or from another component.
+     * 
+     * @param namespace - The new namespace (null for "All Namespaces")
+     * @param source - The source of the change ('extension' or 'external')
+     */
+    public static notifyAllPanelsOfContextChange(
+        namespace: string | null,
+        source: 'extension' | 'external'
+    ): void {
+        for (const panel of NamespaceWebview.openPanels.values()) {
+            NamespaceWebview.sendNamespaceContextChanged(panel, namespace, source);
+        }
     }
 }
 

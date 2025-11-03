@@ -4,7 +4,7 @@ session_id: namespace-selection
 feature_id: [tree-view-navigation]
 spec_id: [webview-spec]
 model_id: [namespace-selection-state]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 30
 ---

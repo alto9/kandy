@@ -28,6 +28,7 @@ interface KubeconfigContext {
 
 interface KubeconfigResponse {
     contexts?: KubeconfigContext[];
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     'current-context'?: string;
 }
 
