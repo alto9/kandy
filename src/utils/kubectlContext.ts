@@ -167,3 +167,89 @@ export async function getContextInfo(): Promise<KubectlContextState> {
     }
 }
 
+/**
+ * Sets the active namespace in the kubectl context.
+ * 
+ * This function modifies the kubectl context to set a specific namespace as active.
+ * The change persists in the kubeconfig file and affects all kubectl commands until
+ * changed again or cleared.
+ * 
+ * @param namespace - The namespace to set as active (must be non-empty)
+ * @returns Promise<boolean> - true if successful, false if failed
+ */
+export async function setNamespace(namespace: string): Promise<boolean> {
+    // Validate namespace parameter
+    if (!namespace || namespace.trim().length === 0) {
+        console.error('Failed to set namespace: namespace parameter must be a non-empty string');
+        return false;
+    }
+
+    try {
+        // Execute kubectl config set-context to update namespace
+        await execFileAsync(
+            'kubectl',
+            [
+                'config',
+                'set-context',
+                '--current',
+                `--namespace=${namespace}`
+            ],
+            {
+                timeout: KUBECTL_TIMEOUT_MS,
+                env: { ...process.env }
+            }
+        );
+
+        // Command succeeded
+        return true;
+    } catch (error: unknown) {
+        // kubectl command failed - create structured error
+        const kubectlError = KubectlError.fromExecError(error, 'current');
+        
+        // Log error details for debugging
+        console.error(`Failed to set namespace '${namespace}': ${kubectlError.getDetails()}`);
+        
+        // Return failure status
+        return false;
+    }
+}
+
+/**
+ * Clears the active namespace from the kubectl context.
+ * 
+ * This function removes the namespace setting from the kubectl context, returning to
+ * a cluster-wide view. The change persists in the kubeconfig file.
+ * 
+ * @returns Promise<boolean> - true if successful, false if failed
+ */
+export async function clearNamespace(): Promise<boolean> {
+    try {
+        // Execute kubectl config set-context to clear namespace (set to empty string)
+        await execFileAsync(
+            'kubectl',
+            [
+                'config',
+                'set-context',
+                '--current',
+                '--namespace='
+            ],
+            {
+                timeout: KUBECTL_TIMEOUT_MS,
+                env: { ...process.env }
+            }
+        );
+
+        // Command succeeded
+        return true;
+    } catch (error: unknown) {
+        // kubectl command failed - create structured error
+        const kubectlError = KubectlError.fromExecError(error, 'current');
+        
+        // Log error details for debugging
+        console.error(`Failed to clear namespace: ${kubectlError.getDetails()}`);
+        
+        // Return failure status
+        return false;
+    }
+}
+
