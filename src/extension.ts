@@ -6,6 +6,7 @@ import { KubeconfigParser } from './kubernetes/KubeconfigParser';
 import { ClusterTreeProvider } from './tree/ClusterTreeProvider';
 import { Settings } from './config/Settings';
 import { configureApiKeyCommand } from './commands/ConfigureApiKey';
+import { namespaceWatcher } from './services/namespaceCache';
 
 /**
  * Global extension context accessible to all components.
@@ -86,6 +87,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         if (!globalState.getWelcomeScreenDismissed()) {
             WelcomeWebview.show(context);
         }
+        
+        // Start watching for external namespace context changes
+        namespaceWatcher.startWatching();
+        console.log('Namespace context watcher started.');
         
         console.log('Kandy extension activated successfully!');
         
@@ -252,6 +257,10 @@ export async function deactivate(): Promise<void> {
         if (clusterTreeProvider) {
             clusterTreeProvider.dispose();
         }
+        
+        // Stop watching for namespace context changes
+        namespaceWatcher.stopWatching();
+        console.log('Namespace context watcher stopped.');
         
         // Dispose status bar item
         if (authStatusBarItem) {

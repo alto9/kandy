@@ -22,6 +22,7 @@ import { ConfigMapsSubcategory } from './categories/configuration/ConfigMapsSubc
 import { SecretsSubcategory } from './categories/configuration/SecretsSubcategory';
 import { HelmCategory } from './categories/HelmCategory';
 import { CustomResourcesCategory } from './categories/CustomResourcesCategory';
+import { namespaceWatcher } from '../services/namespaceCache';
 
 /**
  * Tree data provider for displaying Kubernetes clusters in the VS Code sidebar.
@@ -69,6 +70,12 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      * Checks cluster connectivity every 60 seconds automatically.
      */
     private refreshInterval: NodeJS.Timeout | undefined;
+
+    /**
+     * Subscription to namespace context change events.
+     * Allows the tree to refresh when kubectl context changes externally.
+     */
+    private contextSubscription?: vscode.Disposable;
 
     /**
      * Get the UI representation of a tree element.
@@ -588,6 +595,14 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         
         // Start periodic connectivity checks
         this.startPeriodicRefresh();
+        
+        // Subscribe to namespace context changes
+        if (!this.contextSubscription) {
+            this.contextSubscription = namespaceWatcher.onDidChangeContext(() => {
+                console.log('Namespace context changed externally, refreshing tree view...');
+                this.refresh();
+            });
+        }
     }
 
     /**
@@ -815,6 +830,12 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         if (this.refreshInterval) {
             clearInterval(this.refreshInterval);
             this.refreshInterval = undefined;
+        }
+        
+        // Clean up namespace context watcher subscription
+        if (this.contextSubscription) {
+            this.contextSubscription.dispose();
+            this.contextSubscription = undefined;
         }
         
         // Clean up error tracking

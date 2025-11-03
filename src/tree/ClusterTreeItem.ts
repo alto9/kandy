@@ -35,6 +35,12 @@ export class ClusterTreeItem extends vscode.TreeItem {
     public status?: ClusterStatus;
 
     /**
+     * Whether this namespace is the active namespace in kubectl context.
+     * Only relevant for namespace-type tree items.
+     */
+    public isActiveNamespace?: boolean;
+
+    /**
      * Creates a new ClusterTreeItem.
      * 
      * @param label The display label for the tree item

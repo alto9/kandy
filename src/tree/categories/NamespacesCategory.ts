@@ -3,6 +3,7 @@ import { ClusterTreeItem } from '../ClusterTreeItem';
 import { TreeItemData } from '../TreeItemTypes';
 import { NamespaceCommands } from '../../kubectl/NamespaceCommands';
 import { KubectlError } from '../../kubernetes/KubectlError';
+import { getCurrentNamespace } from '../../utils/kubectlContext';
 
 /**
  * Type for error handler callback.
@@ -48,6 +49,15 @@ export class NamespacesCategory {
             return [];
         }
 
+        // Get the current active namespace from kubectl context
+        let activeNamespace: string | null = null;
+        try {
+            activeNamespace = await getCurrentNamespace();
+        } catch (error) {
+            // If we can't get the active namespace, just continue without it
+            console.warn('Failed to get active namespace:', error);
+        }
+
         // Create tree items for each namespace
         const namespaceItems = result.namespaces.map(namespaceInfo => {
             const item = new ClusterTreeItem(
@@ -57,27 +67,44 @@ export class NamespacesCategory {
                 resourceData
             );
 
-            // Set icon based on namespace status
-            switch (namespaceInfo.status) {
-                case 'Active':
-                    item.iconPath = new vscode.ThemeIcon(
-                        'symbol-namespace',
-                        new vscode.ThemeColor('testing.iconPassed')
-                    );
-                    break;
-                case 'Terminating':
-                    item.iconPath = new vscode.ThemeIcon(
-                        'symbol-namespace',
-                        new vscode.ThemeColor('editorWarning.foreground')
-                    );
-                    break;
-                default: // Unknown
-                    item.iconPath = new vscode.ThemeIcon('symbol-namespace');
-                    break;
+            // Check if this namespace is the active namespace
+            const isActive = activeNamespace === namespaceInfo.name;
+            item.isActiveNamespace = isActive;
+
+            // Set contextValue based on active state for menu conditions
+            item.contextValue = isActive ? 'namespace:active' : 'namespace:inactive';
+
+            // Set icon based on active state
+            if (isActive) {
+                // Active namespace gets a checkmark icon
+                item.iconPath = new vscode.ThemeIcon(
+                    'check',
+                    new vscode.ThemeColor('testing.iconPassed')
+                );
+            } else {
+                // Inactive namespaces use icon based on namespace status
+                switch (namespaceInfo.status) {
+                    case 'Active':
+                        item.iconPath = new vscode.ThemeIcon(
+                            'symbol-namespace',
+                            new vscode.ThemeColor('testing.iconPassed')
+                        );
+                        break;
+                    case 'Terminating':
+                        item.iconPath = new vscode.ThemeIcon(
+                            'symbol-namespace',
+                            new vscode.ThemeColor('editorWarning.foreground')
+                        );
+                        break;
+                    default: // Unknown
+                        item.iconPath = new vscode.ThemeIcon('symbol-namespace');
+                        break;
+                }
             }
 
             // Set tooltip with detailed information
-            item.tooltip = `Namespace: ${namespaceInfo.name}\nStatus: ${namespaceInfo.status}`;
+            const activeText = isActive ? ' (Active in kubectl context)' : '';
+            item.tooltip = `Namespace: ${namespaceInfo.name}${activeText}\nStatus: ${namespaceInfo.status}`;
 
             // Make namespace clickable to open webview
             item.command = {
