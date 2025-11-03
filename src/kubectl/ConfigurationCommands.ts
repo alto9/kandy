@@ -1,6 +1,6 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { KubectlError } from '../kubernetes/KubectlError';
+import { KubectlError, KubectlErrorType } from '../kubernetes/KubectlError';
 
 /**
  * Timeout for kubectl commands in milliseconds.
@@ -299,7 +299,7 @@ export class ConfigurationCommands {
                 
                 // Return a helpful error instead of trying to parse truncated JSON
                 const bufferError = new KubectlError(
-                    'unknown' as any,
+                    KubectlErrorType.Unknown,
                     `Too many secrets to display (>100MB of data). The cluster has an unusually large number of secrets. Consider viewing secrets by namespace instead.`,
                     'maxBuffer exceeded',
                     contextName

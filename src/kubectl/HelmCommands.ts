@@ -1,6 +1,6 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import { KubectlError } from '../kubernetes/KubectlError';
+import { KubectlError, KubectlErrorType } from '../kubernetes/KubectlError';
 
 /**
  * Timeout for helm commands in milliseconds.
@@ -45,12 +45,14 @@ export interface HelmReleasesResult {
 
 /**
  * Interface for helm list response items.
+ * Note: Property names match Helm's JSON output format.
  */
 interface HelmReleaseItem {
     name?: string;
     namespace?: string;
     status?: string;
     chart?: string;
+    // eslint-disable-next-line @typescript-eslint/naming-convention
     app_version?: string;
 }
 
@@ -86,6 +88,7 @@ export class HelmCommands {
                     maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
                     env: { 
                         ...process.env,
+                        // eslint-disable-next-line @typescript-eslint/naming-convention
                         KUBECONFIG: kubeconfigPath
                     }
                 }
@@ -197,7 +200,7 @@ export class HelmCommands {
             // If helm is not installed, create a specific error for it
             if (err.code === 'ENOENT') {
                 const helmError = new KubectlError(
-                    'binary_not_found' as any,
+                    KubectlErrorType.BinaryNotFound,
                     'Helm is not installed or not in PATH. Install helm to view Helm releases.',
                     'helm command not found',
                     contextName
