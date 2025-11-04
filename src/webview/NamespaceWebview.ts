@@ -5,6 +5,7 @@ import { getContextInfo, setNamespace, clearNamespace } from '../utils/kubectlCo
 import { NamespaceCommands } from '../kubectl/NamespaceCommands';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
 import { WebviewMessage } from '../types/webviewMessages';
+import { getClusterTreeProvider } from '../extension';
 
 /**
  * Context information for namespace webviews.
@@ -104,9 +105,18 @@ export class NamespaceWebview {
                             const success = await setNamespace(message.data.namespace);
                             if (success) {
                                 console.log(`Namespace set to: ${message.data.namespace}`);
-                                // Notify the webview of the context change
-                                NamespaceWebview.sendNamespaceContextChanged(
-                                    panel,
+                                
+                                // Refresh the tree view to filter resources by namespace
+                                try {
+                                    const treeProvider = getClusterTreeProvider();
+                                    treeProvider.refresh();
+                                    console.log('Tree view refreshed after namespace change');
+                                } catch (error) {
+                                    console.error('Failed to refresh tree view:', error);
+                                }
+                                
+                                // Notify all webview panels of the context change
+                                NamespaceWebview.notifyAllPanelsOfContextChange(
                                     message.data.namespace,
                                     'extension'
                                 );
@@ -123,9 +133,18 @@ export class NamespaceWebview {
                         const success = await clearNamespace();
                         if (success) {
                             console.log('Namespace cleared (All Namespaces)');
-                            // Notify the webview of the context change
-                            NamespaceWebview.sendNamespaceContextChanged(
-                                panel,
+                            
+                            // Refresh the tree view to show all resources
+                            try {
+                                const treeProvider = getClusterTreeProvider();
+                                treeProvider.refresh();
+                                console.log('Tree view refreshed after clearing namespace');
+                            } catch (error) {
+                                console.error('Failed to refresh tree view:', error);
+                            }
+                            
+                            // Notify all webview panels of the context change
+                            NamespaceWebview.notifyAllPanelsOfContextChange(
                                 null,
                                 'extension'
                             );

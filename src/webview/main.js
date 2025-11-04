@@ -27,7 +27,34 @@
 
     // Get namespace selector elements
     const namespaceSelect = document.getElementById('namespace-select');
+    const selectButton = document.getElementById('select-namespace');
     const clearButton = document.getElementById('clear-namespace');
+    
+    // Store the current webview namespace (from the page title/header)
+    const webviewNamespace = window.initialIsAllNamespaces ? null : document.getElementById('namespace-title')?.textContent;
+
+    /**
+     * Update the select button state based on current selection and active namespace.
+     * Button shows "Selected ✓" when this namespace is active, "Select" otherwise.
+     * Button is disabled when "All Namespaces" is selected or when already selected.
+     */
+    function updateSelectButtonState(activeNamespace) {
+        const currentValue = namespaceSelect.value;
+        const isAllNamespaces = !currentValue || currentValue === '';
+        const isCurrentlyActive = currentValue && currentValue === activeNamespace;
+        
+        // Disable if "All Namespaces" or already selected
+        selectButton.disabled = isAllNamespaces || isCurrentlyActive;
+        
+        // Update button text and style based on selection state
+        if (isCurrentlyActive) {
+            selectButton.textContent = 'Selected ✓';
+            selectButton.classList.add('selected');
+        } else {
+            selectButton.textContent = 'Select';
+            selectButton.classList.remove('selected');
+        }
+    }
 
     /**
      * Update the clear button state based on current selection.
@@ -65,8 +92,9 @@
             namespaceSelect.value = '';
         }
 
-        // Update clear button state
+        // Update button states
         updateClearButtonState();
+        updateSelectButtonState(currentNamespace);
     }
 
     /**
@@ -81,6 +109,7 @@
             namespaceSelect.value = '';
         }
         updateClearButtonState();
+        updateSelectButtonState(namespace);
     }
 
     /**
@@ -108,26 +137,31 @@
         });
     }
 
-    // Handle namespace selection change
+    // Handle namespace selection change from dropdown
     namespaceSelect.addEventListener('change', () => {
         const selectedNamespace = namespaceSelect.value;
         
-        if (selectedNamespace) {
-            // Send setActiveNamespace message to extension
-            vscode.postMessage({
-                command: 'setActiveNamespace',
-                data: {
-                    namespace: selectedNamespace
-                }
-            });
-        } else {
-            // Selected "All Namespaces" - clear the namespace
-            vscode.postMessage({
-                command: 'clearActiveNamespace'
-            });
-        }
-        
+        // Update select button state based on new selection
+        // We don't know the active namespace here, so we'll update it when we get the response
+        updateSelectButtonState(null);
         updateClearButtonState();
+    });
+
+    // Handle select button click
+    selectButton.addEventListener('click', () => {
+        if (!selectButton.disabled) {
+            const selectedNamespace = namespaceSelect.value;
+            
+            if (selectedNamespace) {
+                // Send setActiveNamespace message to extension
+                vscode.postMessage({
+                    command: 'setActiveNamespace',
+                    data: {
+                        namespace: selectedNamespace
+                    }
+                });
+            }
+        }
     });
 
     // Handle clear button click
@@ -155,6 +189,9 @@
                 // Update selection when context changes
                 setCurrentNamespace(message.data.namespace);
                 
+                // Update select button state with the new active namespace
+                updateSelectButtonState(message.data.namespace);
+                
                 // Show notification if the change was external
                 if (message.data.source === 'external') {
                     const namespaceName = message.data.namespace || 'All Namespaces';
@@ -172,7 +209,8 @@
         setCurrentNamespace
     };
 
-    // Initialize clear button state
+    // Initialize button states
     updateClearButtonState();
+    updateSelectButtonState(null);
 })();
 

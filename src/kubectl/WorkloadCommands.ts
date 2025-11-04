@@ -1,6 +1,7 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { KubectlError } from '../kubernetes/KubectlError';
+import { getCurrentNamespace } from '../utils/kubectlContext';
 
 /**
  * Timeout for kubectl commands in milliseconds.
@@ -358,17 +359,33 @@ export class WorkloadCommands {
         contextName: string
     ): Promise<DeploymentsResult> {
         try {
+            // Check if a namespace is set in kubectl context
+            let currentNamespace: string | null = null;
+            try {
+                currentNamespace = await getCurrentNamespace();
+            } catch (error) {
+                console.warn('Failed to get current namespace, defaulting to all namespaces:', error);
+            }
+
+            // Build kubectl command arguments
+            const args = ['get', 'deployments'];
+            
+            // If no namespace is set, use --all-namespaces flag
+            // Otherwise, kubectl will use the context namespace automatically
+            if (!currentNamespace) {
+                args.push('--all-namespaces');
+            }
+            
+            args.push(
+                '--output=json',
+                `--kubeconfig=${kubeconfigPath}`,
+                `--context=${contextName}`
+            );
+
             // Execute kubectl get deployments with JSON output
             const { stdout } = await execFileAsync(
                 'kubectl',
-                [
-                    'get',
-                    'deployments',
-                    '--all-namespaces',
-                    '--output=json',
-                    `--kubeconfig=${kubeconfigPath}`,
-                    `--context=${contextName}`
-                ],
+                args,
                 {
                     timeout: KUBECTL_TIMEOUT_MS,
                     maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
@@ -478,17 +495,33 @@ export class WorkloadCommands {
         contextName: string
     ): Promise<StatefulSetsResult> {
         try {
+            // Check if a namespace is set in kubectl context
+            let currentNamespace: string | null = null;
+            try {
+                currentNamespace = await getCurrentNamespace();
+            } catch (error) {
+                console.warn('Failed to get current namespace, defaulting to all namespaces:', error);
+            }
+
+            // Build kubectl command arguments
+            const args = ['get', 'statefulsets'];
+            
+            // If no namespace is set, use --all-namespaces flag
+            // Otherwise, kubectl will use the context namespace automatically
+            if (!currentNamespace) {
+                args.push('--all-namespaces');
+            }
+            
+            args.push(
+                '--output=json',
+                `--kubeconfig=${kubeconfigPath}`,
+                `--context=${contextName}`
+            );
+
             // Execute kubectl get statefulsets with JSON output
             const { stdout } = await execFileAsync(
                 'kubectl',
-                [
-                    'get',
-                    'statefulsets',
-                    '--all-namespaces',
-                    '--output=json',
-                    `--kubeconfig=${kubeconfigPath}`,
-                    `--context=${contextName}`
-                ],
+                args,
                 {
                     timeout: KUBECTL_TIMEOUT_MS,
                     maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
@@ -713,17 +746,33 @@ export class WorkloadCommands {
         contextName: string
     ): Promise<DaemonSetsResult> {
         try {
+            // Check if a namespace is set in kubectl context
+            let currentNamespace: string | null = null;
+            try {
+                currentNamespace = await getCurrentNamespace();
+            } catch (error) {
+                console.warn('Failed to get current namespace, defaulting to all namespaces:', error);
+            }
+
+            // Build kubectl command arguments
+            const args = ['get', 'daemonsets'];
+            
+            // If no namespace is set, use --all-namespaces flag
+            // Otherwise, kubectl will use the context namespace automatically
+            if (!currentNamespace) {
+                args.push('--all-namespaces');
+            }
+            
+            args.push(
+                '--output=json',
+                `--kubeconfig=${kubeconfigPath}`,
+                `--context=${contextName}`
+            );
+
             // Execute kubectl get daemonsets with JSON output
             const { stdout } = await execFileAsync(
                 'kubectl',
-                [
-                    'get',
-                    'daemonsets',
-                    '--all-namespaces',
-                    '--output=json',
-                    `--kubeconfig=${kubeconfigPath}`,
-                    `--context=${contextName}`
-                ],
+                args,
                 {
                     timeout: KUBECTL_TIMEOUT_MS,
                     maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
@@ -869,17 +918,33 @@ export class WorkloadCommands {
         contextName: string
     ): Promise<CronJobsResult> {
         try {
+            // Check if a namespace is set in kubectl context
+            let currentNamespace: string | null = null;
+            try {
+                currentNamespace = await getCurrentNamespace();
+            } catch (error) {
+                console.warn('Failed to get current namespace, defaulting to all namespaces:', error);
+            }
+
+            // Build kubectl command arguments
+            const args = ['get', 'cronjobs'];
+            
+            // If no namespace is set, use --all-namespaces flag
+            // Otherwise, kubectl will use the context namespace automatically
+            if (!currentNamespace) {
+                args.push('--all-namespaces');
+            }
+            
+            args.push(
+                '--output=json',
+                `--kubeconfig=${kubeconfigPath}`,
+                `--context=${contextName}`
+            );
+
             // Execute kubectl get cronjobs with JSON output
             const { stdout } = await execFileAsync(
                 'kubectl',
-                [
-                    'get',
-                    'cronjobs',
-                    '--all-namespaces',
-                    '--output=json',
-                    `--kubeconfig=${kubeconfigPath}`,
-                    `--context=${contextName}`
-                ],
+                args,
                 {
                     timeout: KUBECTL_TIMEOUT_MS,
                     maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters

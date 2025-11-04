@@ -1,6 +1,7 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { KubectlError, KubectlErrorType } from '../kubernetes/KubectlError';
+import { getCurrentNamespace } from '../utils/kubectlContext';
 
 /**
  * Timeout for kubectl commands in milliseconds.
@@ -121,17 +122,33 @@ export class ConfigurationCommands {
         contextName: string
     ): Promise<ConfigMapsResult> {
         try {
-            // Execute kubectl get configmaps with JSON output across all namespaces
+            // Check if a namespace is set in kubectl context
+            let currentNamespace: string | null = null;
+            try {
+                currentNamespace = await getCurrentNamespace();
+            } catch (error) {
+                console.warn('Failed to get current namespace, defaulting to all namespaces:', error);
+            }
+
+            // Build kubectl command arguments
+            const args = ['get', 'configmaps'];
+            
+            // If no namespace is set, use --all-namespaces flag
+            // Otherwise, kubectl will use the context namespace automatically
+            if (!currentNamespace) {
+                args.push('--all-namespaces');
+            }
+            
+            args.push(
+                '--output=json',
+                `--kubeconfig=${kubeconfigPath}`,
+                `--context=${contextName}`
+            );
+
+            // Execute kubectl get configmaps with JSON output
             const { stdout } = await execFileAsync(
                 'kubectl',
-                [
-                    'get',
-                    'configmaps',
-                    '--all-namespaces',
-                    '--output=json',
-                    `--kubeconfig=${kubeconfigPath}`,
-                    `--context=${contextName}`
-                ],
+                args,
                 {
                     timeout: KUBECTL_TIMEOUT_MS,
                     maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
@@ -234,17 +251,33 @@ export class ConfigurationCommands {
     ): Promise<SecretsResult> {
         console.log(`[DEBUG SECRETS] getSecrets called for context: ${contextName}`);
         try {
-            // Execute kubectl get secrets with JSON output across all namespaces
+            // Check if a namespace is set in kubectl context
+            let currentNamespace: string | null = null;
+            try {
+                currentNamespace = await getCurrentNamespace();
+            } catch (error) {
+                console.warn('Failed to get current namespace, defaulting to all namespaces:', error);
+            }
+
+            // Build kubectl command arguments
+            const args = ['get', 'secrets'];
+            
+            // If no namespace is set, use --all-namespaces flag
+            // Otherwise, kubectl will use the context namespace automatically
+            if (!currentNamespace) {
+                args.push('--all-namespaces');
+            }
+            
+            args.push(
+                '--output=json',
+                `--kubeconfig=${kubeconfigPath}`,
+                `--context=${contextName}`
+            );
+
+            // Execute kubectl get secrets with JSON output
             const { stdout } = await execFileAsync(
                 'kubectl',
-                [
-                    'get',
-                    'secrets',
-                    '--all-namespaces',
-                    '--output=json',
-                    `--kubeconfig=${kubeconfigPath}`,
-                    `--context=${contextName}`
-                ],
+                args,
                 {
                     timeout: KUBECTL_TIMEOUT_MS,
                     maxBuffer: 100 * 1024 * 1024, // 100MB buffer for very large clusters with many secrets

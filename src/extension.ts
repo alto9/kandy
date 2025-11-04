@@ -52,6 +52,18 @@ export function getExtensionContext(): vscode.ExtensionContext {
 }
 
 /**
+ * Get the cluster tree provider instance.
+ * @returns The cluster tree provider
+ * @throws Error if tree provider has not been initialized
+ */
+export function getClusterTreeProvider(): ClusterTreeProvider {
+    if (!clusterTreeProvider) {
+        throw new Error('Cluster tree provider has not been initialized');
+    }
+    return clusterTreeProvider;
+}
+
+/**
  * This method is called when the extension is activated.
  * The extension is activated when VS Code starts up (onStartupFinished).
  */

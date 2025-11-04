@@ -1,6 +1,7 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { KubectlError } from '../kubernetes/KubectlError';
+import { getCurrentNamespace } from '../utils/kubectlContext';
 
 /**
  * Timeout for kubectl commands in milliseconds.
@@ -264,17 +265,33 @@ export class StorageCommands {
         contextName: string
     ): Promise<PersistentVolumeClaimsResult> {
         try {
-            // Execute kubectl get pvc with JSON output across all namespaces
+            // Check if a namespace is set in kubectl context
+            let currentNamespace: string | null = null;
+            try {
+                currentNamespace = await getCurrentNamespace();
+            } catch (error) {
+                console.warn('Failed to get current namespace, defaulting to all namespaces:', error);
+            }
+
+            // Build kubectl command arguments
+            const args = ['get', 'pvc'];
+            
+            // If no namespace is set, use --all-namespaces flag
+            // Otherwise, kubectl will use the context namespace automatically
+            if (!currentNamespace) {
+                args.push('--all-namespaces');
+            }
+            
+            args.push(
+                '--output=json',
+                `--kubeconfig=${kubeconfigPath}`,
+                `--context=${contextName}`
+            );
+
+            // Execute kubectl get pvc with JSON output
             const { stdout } = await execFileAsync(
                 'kubectl',
-                [
-                    'get',
-                    'pvc',
-                    '--all-namespaces',
-                    '--output=json',
-                    `--kubeconfig=${kubeconfigPath}`,
-                    `--context=${contextName}`
-                ],
+                args,
                 {
                     timeout: KUBECTL_TIMEOUT_MS,
                     maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
