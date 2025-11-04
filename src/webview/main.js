@@ -137,6 +137,64 @@
         });
     }
 
+    // Notification management
+    let notificationTimeout = null;
+    const notificationElement = document.getElementById('context-notification');
+    const notificationMessageElement = document.getElementById('notification-message');
+    const notificationCloseButton = document.getElementById('notification-close');
+
+    /**
+     * Show a notification banner with a message.
+     * The notification will auto-dismiss after 5 seconds.
+     * 
+     * @param {string} message - The message to display in the notification
+     */
+    function showNotification(message) {
+        // Clear any existing timeout to prevent premature dismissal
+        if (notificationTimeout) {
+            clearTimeout(notificationTimeout);
+            notificationTimeout = null;
+        }
+
+        // Set the message text
+        notificationMessageElement.textContent = message;
+
+        // Remove hide class if present and add show class
+        notificationElement.classList.remove('hide');
+        notificationElement.classList.add('show');
+
+        // Set timeout to auto-dismiss after 5 seconds
+        notificationTimeout = setTimeout(() => {
+            hideNotification();
+        }, 5000);
+    }
+
+    /**
+     * Hide the notification banner.
+     * Adds fade-out animation before fully hiding.
+     */
+    function hideNotification() {
+        // Clear any pending timeout
+        if (notificationTimeout) {
+            clearTimeout(notificationTimeout);
+            notificationTimeout = null;
+        }
+
+        // Add hide class to trigger fade-out
+        notificationElement.classList.add('hide');
+
+        // After transition completes, remove show class
+        setTimeout(() => {
+            notificationElement.classList.remove('show');
+            notificationElement.classList.remove('hide');
+        }, 300); // Match the CSS transition duration
+    }
+
+    // Handle notification close button click
+    notificationCloseButton.addEventListener('click', () => {
+        hideNotification();
+    });
+
     // Handle namespace selection change from dropdown
     namespaceSelect.addEventListener('change', () => {
         const selectedNamespace = namespaceSelect.value;
@@ -194,8 +252,13 @@
                 
                 // Show notification if the change was external
                 if (message.data.source === 'external') {
-                    const namespaceName = message.data.namespace || 'All Namespaces';
-                    console.log(`Namespace context changed externally to: ${namespaceName}`);
+                    let notificationMessage;
+                    if (message.data.namespace) {
+                        notificationMessage = `Namespace context changed externally to: ${message.data.namespace}`;
+                    } else {
+                        notificationMessage = 'Namespace context cleared externally';
+                    }
+                    showNotification(notificationMessage);
                 }
                 break;
         }

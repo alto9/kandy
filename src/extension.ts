@@ -115,6 +115,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         namespaceWatcher.startWatching();
         console.log('Namespace context watcher started.');
         
+        // Subscribe to external context changes to notify webviews
+        const contextChangeSubscription = namespaceWatcher.onDidChangeContext((state) => {
+            console.log('External context change detected, notifying webviews...', state);
+            // Notify all open webview panels of the external change
+            NamespaceWebview.notifyAllPanelsOfContextChange(
+                state.currentNamespace || null,
+                'external'
+            );
+        });
+        context.subscriptions.push(contextChangeSubscription);
+        
         console.log('Kandy extension activated successfully!');
         
         // TODO: Initialize extension components
