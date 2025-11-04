@@ -7,7 +7,7 @@
       "ES2020"
     ],
     "sourceMap": true,
-    "rootDir": "src",
+    "rootDir": ".",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -16,7 +16,8 @@
     "moduleResolution": "node"
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "tests/**/*"
   ],
   "exclude": [
     "node_modules",

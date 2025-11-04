@@ -17,6 +17,21 @@ const originalRequire = Module.prototype.require;
 Module.prototype.require = function (this: any, id: string): any {
     // If the module being required is 'vscode', return our mock instead
     if (id === 'vscode') {
+        // Try both possible paths (old structure and new structure with rootDir=".")
+        const possiblePaths = [
+            path.join(__dirname, 'mocks', 'vscode'), // Old: out/test/mocks/vscode
+            path.join(__dirname, '..', 'src', 'test', 'mocks', 'vscode') // New: out/src/test/mocks/vscode
+        ];
+        
+        for (const mockPath of possiblePaths) {
+            try {
+                return originalRequire.call(this, mockPath);
+            } catch (e) {
+                // Try next path
+            }
+        }
+        
+        // Fallback to old path
         return originalRequire.call(this, path.join(__dirname, 'mocks', 'vscode'));
     }
     

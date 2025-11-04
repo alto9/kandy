@@ -114,7 +114,7 @@
     "watch": "webpack --mode development --watch",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
-    "test": "mocha --require source-map-support/register --require out/test/setup.js --ui tdd out/test/suite/**/*.test.js",
+    "test": "mocha --require source-map-support/register --require out/src/test/setup.js --ui tdd 'out/{src/test,tests}/**/*.test.js'",
     "package": "vsce package"
   },
   "devDependencies": {

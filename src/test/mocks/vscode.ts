@@ -23,6 +23,12 @@ export enum TreeItemCollapsibleState {
     Collapsed = 1,
     Expanded = 2
 }
+
+export enum ProgressLocation {
+    SourceControl = 1,
+    Window = 10,
+    Notification = 15
+}
 /* eslint-enable @typescript-eslint/naming-convention */
 
 export interface Memento {
@@ -170,6 +176,18 @@ export const window = {
         infoMessages.push(message);
         return Promise.resolve(items[0]);
     },
+    withProgress: async <R>(
+        options: { location: ProgressLocation; title?: string; cancellable?: boolean },
+        task: (progress: { report: (value: { increment?: number; message?: string }) => void }) => Promise<R>
+    ): Promise<R> => {
+        const progress = {
+            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+            report: (_value: { increment?: number; message?: string }) => {
+                // Mock progress reporting - no-op
+            }
+        };
+        return await task(progress);
+    },
     _getErrorMessages: () => [...errorMessages],
     _getWarningMessages: () => [...warningMessages],
     _getInfoMessages: () => [...infoMessages],
@@ -228,4 +246,46 @@ export const workspace = {
     },
     _getConfiguration: () => mockConfiguration
 };
+
+/**
+ * Module exports object that provides all vscode API components
+ * This allows code to access vscode.ProgressLocation.Notification etc.
+ * When using require('vscode'), this object structure is returned.
+ */
+/* eslint-disable @typescript-eslint/naming-convention */
+const vscodeModule = {
+    Uri,
+    ExtensionMode,
+    TreeItemCollapsibleState,
+    ProgressLocation,
+    ThemeColor,
+    ThemeIcon,
+    TreeItem,
+    EventEmitter,
+    window,
+    workspace
+};
+/* eslint-enable @typescript-eslint/naming-convention */
+
+// Export both as default and as module.exports for CommonJS compatibility
+export default vscodeModule;
+
+// For CommonJS require() compatibility
+if (typeof module !== 'undefined' && module.exports) {
+    // Copy all exports to module.exports
+    /* eslint-disable @typescript-eslint/naming-convention */
+    Object.assign(module.exports, {
+        Uri,
+        ExtensionMode,
+        TreeItemCollapsibleState,
+        ProgressLocation,
+        ThemeColor,
+        ThemeIcon,
+        TreeItem,
+        EventEmitter,
+        window,
+        workspace
+    });
+    /* eslint-enable @typescript-eslint/naming-convention */
+}
 
