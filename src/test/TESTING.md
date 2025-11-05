@@ -20,6 +20,21 @@ These tests run in a Node.js environment without requiring VS Code:
   - Error handling
   - Multi-context support
 
+- **Webview Message Types Tests** (`types/webviewMessages.test.ts`)
+  - Message interface type safety
+  - `isActive` flag verification in `NamespaceContextChangedMessage`
+  - `WebviewMessage` union type verification (excludes `clearActiveNamespace`)
+
+- **Webview Button State Tests** (`webview/buttonState.test.ts`)
+  - Button state logic (`updateButtonState` function behavior)
+  - Enabled/disabled state transitions
+  - Edge cases (null namespaces, missing DOM elements)
+
+- **Webview Message Handler Tests** (`webview/messageHandlers.test.ts`)
+  - `namespaceContextChanged` message handler
+  - `isActive` flag extraction and processing
+  - External context change notifications
+
 ### Dismiss Logic Test Coverage
 
 The welcome screen dismiss functionality is thoroughly tested in `GlobalState.test.ts`:
