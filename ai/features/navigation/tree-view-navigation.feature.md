@@ -1,6 +1,8 @@
 ---
 feature_id: tree-view-navigation
 spec_id: [tree-view-spec, webview-spec]
+model_id: [namespace-selection-state]
+context_id: [kubernetes-cluster-management]
 ---
 
 # Tree View Navigation Feature
@@ -47,6 +49,8 @@ Scenario: Viewing and selecting namespaces
   Then they should see a list of all namespaces in the cluster
   When they click on a specific namespace
   Then a webview panel should open for that namespace
+  And the webview title should display the namespace name
+  And the webview should show a "Set as Default Namespace" button
   And the webview should allow browsing resources within that namespace
 
 Scenario: Expanding Workloads category
@@ -228,4 +232,64 @@ Scenario: Handling invalid namespace in context
   Then kubectl should return a "namespace not found" error
   And the extension should display the error to the user
   And suggest clearing the namespace selection
+
+Scenario: Opening namespace webview shows namespace name as title
+  Given a user has expanded a cluster showing namespaces
+  When they click on the "production" namespace in the tree view
+  Then a webview panel should open
+  And the webview should display "production" as the title (h1)
+  And the webview should show namespace resources
+
+Scenario: Webview button enabled for non-active namespace
+  Given a user has "staging" set as the active namespace in kubectl context
+  When they click on the "production" namespace in the tree view
+  Then the webview should open with "production" as the title
+  And the "Set as Default Namespace" button should be enabled
+  And the button should not show a checkmark icon
+
+Scenario: Webview button disabled for active namespace
+  Given a user has "production" set as the active namespace in kubectl context
+  When they click on the "production" namespace in the tree view
+  Then the webview should open with "production" as the title
+  And the "Default Namespace" button should be disabled
+  And the button should show a checkmark icon indicating it is selected
+
+Scenario: Setting namespace as default from webview button
+  Given a user has opened a webview for the "staging" namespace
+  And the "Set as Default Namespace" button is enabled
+  When they click the "Set as Default Namespace" button
+  Then the extension should execute kubectl config set-context --current --namespace=staging
+  And the button should change to disabled state with checkmark icon
+  And the button text should change to "Default Namespace"
+  And the tree view should update to show checkmark on "staging" namespace
+  And the status bar should display "Namespace: staging"
+
+Scenario: Button state updates when context changes externally
+  Given a user has a webview open for "production" namespace
+  And the button is enabled because "staging" is the active namespace
+  When the namespace context is changed externally to "production" using kubectl CLI
+  Then the extension should detect the change
+  And the webview button should update to disabled/selected state
+  And the button should show a checkmark icon
+  And a notification should display "Namespace context changed externally to: production"
+
+Scenario: Button state updates when different namespace becomes active
+  Given a user has a webview open for "production" namespace
+  And the button is disabled because "production" is the active namespace
+  When the namespace context is changed externally to "staging" using kubectl CLI
+  Then the extension should detect the change
+  And the webview button should update to enabled state
+  And the checkmark icon should be hidden
+  And the button text should change to "Set as Default Namespace"
+
+Scenario: Multiple webviews show correct button states
+  Given a user has "production" set as the active namespace
+  When they open a webview for "production"
+  And they open a webview for "staging"
+  Then the "production" webview button should be disabled with checkmark
+  And the "staging" webview button should be enabled without checkmark
+  When they click "Set as Default Namespace" in the "staging" webview
+  Then both webviews should update their button states accordingly
+  And "staging" button becomes disabled with checkmark
+  And "production" button becomes enabled without checkmark
 ```

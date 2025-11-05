@@ -1,6 +1,8 @@
 ---
 spec_id: tree-view-spec
 feature_id: [tree-view-navigation]
+model_id: [namespace-selection-state]
+context_id: [kubernetes-cluster-management]
 ---
 
 # Tree View Specification

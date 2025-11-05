@@ -1,6 +1,8 @@
 ---
 spec_id: webview-spec
 feature_id: [tree-view-navigation, ai-recommendations]
+model_id: [namespace-selection-state]
+context_id: [kubernetes-cluster-management]
 ---
 
 # Webview Panel Specification
@@ -61,17 +63,17 @@ sequenceDiagram
     kubectl-->>Extension: Active namespace
     Extension->>AI: Analyze namespace context
     AI-->>Extension: AI recommendations
-    Extension-->>Webview: Open webview with resources and active namespace
-    Webview-->>User: Display namespace selector and resources
+    Extension-->>Webview: Open webview with namespace name as title
+    Webview-->>User: Display namespace title and resources with button state
     
-    User->>Webview: Select namespace from dropdown
+    User->>Webview: Click "Set as Default Namespace" button
     Webview->>Extension: setActiveNamespace message
     Extension->>kubectl: kubectl config set-context --current --namespace=<ns>
     kubectl-->>Extension: Context updated
-    Extension->>kubectl: Get resources for new namespace
+    Extension->>kubectl: Get resources for updated namespace
     kubectl-->>Extension: Resource list
     Extension-->>Webview: namespaceContextChanged notification
-    Webview-->>User: Update dropdown and refresh resources
+    Webview-->>User: Button changes to disabled/selected state
     
     Note over Extension,kubectl: External context change detected
     Extension->>kubectl: kubectl config view --minify (periodic check)
@@ -111,7 +113,7 @@ interface ExtensionMessage {
 
 // Webview to Extension
 interface WebviewMessage {
-  command: 'applyRecommendation' | 'editYaml' | 'refreshData' | 'setActiveNamespace' | 'clearActiveNamespace';
+  command: 'applyRecommendation' | 'editYaml' | 'refreshData' | 'setActiveNamespace';
   data: any;
 }
 
@@ -121,6 +123,7 @@ interface NamespaceContextChangedMessage extends ExtensionMessage {
   data: {
     namespace: string | null; // null means "All Namespaces"
     source: 'extension' | 'external'; // Where the change came from
+    isActive: boolean; // Whether the webview's namespace is now the active one
   };
 }
 ```
@@ -130,26 +133,21 @@ interface NamespaceContextChangedMessage extends ExtensionMessage {
 ### Common Layout Structure
 ```html
 <div class="webview-container">
-  <!-- Namespace Selection Header -->
-  <div class="namespace-selector-bar">
-    <label for="namespace-select">Active Namespace:</label>
-    <select id="namespace-select" class="namespace-dropdown">
-      <option value="">All Namespaces</option>
-      <option value="default">default</option>
-      <option value="production" selected>production</option>
-      <option value="staging">staging</option>
-    </select>
-    <button id="clear-namespace" class="clear-btn" title="Clear namespace selection">
-      Clear
+  <!-- Header Section with Namespace Title -->
+  <div class="namespace-header">
+    <h1 class="namespace-title">production</h1>
+    <button id="set-default-namespace" class="default-namespace-btn" disabled>
+      <span class="btn-icon">✓</span>
+      <span class="btn-text">Default Namespace</span>
     </button>
     <span class="namespace-info">
       (Changes kubectl context globally)
     </span>
   </div>
 
-  <!-- Header Section -->
+  <!-- Resource Navigation Section -->
   <div class="resource-header">
-    <h1>Pod: nginx-deployment-abc123</h1>
+    <h2>Pod: nginx-deployment-abc123</h2>
     <div class="status-badges">
       <span class="status running">Running</span>
       <span class="restart-count">Restarts: 0</span>
@@ -193,59 +191,83 @@ interface NamespaceContextChangedMessage extends ExtensionMessage {
 </div>
 ```
 
-### Namespace Selector Behavior
+### Namespace Button Behavior
 
-#### Selector State
-- **Dropdown**: Populated with all namespaces from current cluster
-- **Current Selection**: Shows namespace from kubectl context (or "All Namespaces" if none)
-- **Clear Button**: Enabled only when a specific namespace is selected
+#### Button State
+- **Namespace Title**: Displays the namespace name as the webview title (h1)
+- **Button Label**: "Set as Default Namespace" (when enabled) or "Default Namespace" (when disabled)
+- **Enabled State**: Button is clickable when viewing a namespace that is NOT the current kubectl context namespace
+- **Disabled/Selected State**: Button is disabled with checkmark icon when viewing the namespace that IS the current kubectl context namespace
 - **Warning Label**: Shows "(Changes kubectl context globally)" to inform user
 
 #### User Interactions
-- **Select namespace from dropdown**: 
+- **Click "Set as Default Namespace" button** (when enabled): 
   - Sends `setActiveNamespace` message to extension with namespace name
   - Extension updates kubectl context
   - Extension sends `namespaceContextChanged` notification back
-  - Webview refreshes resource data for selected namespace
-  
-- **Click Clear button**:
-  - Sends `clearActiveNamespace` message to extension
-  - Extension clears kubectl context namespace
-  - Extension sends `namespaceContextChanged` notification
-  - Webview refreshes to show all namespaces
+  - Button changes to disabled/selected state with checkmark
+  - Tree view updates to show checkmark on this namespace
   
 - **Receive external context change**:
-  - Extension sends `namespaceContextChanged` message
-  - Webview updates dropdown selection to match
-  - Webview refreshes resource data if needed
+  - Extension sends `namespaceContextChanged` message with isActive flag
+  - Webview updates button state based on isActive flag
+  - If this namespace is now active externally, button becomes disabled/selected
+  - If this namespace is no longer active, button becomes enabled
   - Show notification: "Namespace context changed externally to: <namespace>"
 
 #### CSS Styling
 ```css
-.namespace-selector-bar {
+.namespace-header {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px;
+  gap: 15px;
+  padding: 15px;
   background-color: var(--vscode-editor-background);
-  border-bottom: 1px solid var(--vscode-panel-border);
+  border-bottom: 2px solid var(--vscode-panel-border);
 }
 
-.namespace-dropdown {
-  padding: 5px 10px;
-  background-color: var(--vscode-dropdown-background);
-  color: var(--vscode-dropdown-foreground);
-  border: 1px solid var(--vscode-dropdown-border);
+.namespace-title {
+  flex: 1;
+  margin: 0;
+  font-size: 1.5em;
+  font-weight: 600;
+  color: var(--vscode-foreground);
 }
 
-.clear-btn {
-  padding: 5px 15px;
+.default-namespace-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.95em;
+}
+
+.default-namespace-btn:hover:not(:disabled) {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+.default-namespace-btn:disabled {
   background-color: var(--vscode-button-secondaryBackground);
   color: var(--vscode-button-secondaryForeground);
+  cursor: default;
+  opacity: 0.8;
+}
+
+.default-namespace-btn .btn-icon {
+  font-size: 1.1em;
+}
+
+.default-namespace-btn:not(:disabled) .btn-icon {
+  display: none;
 }
 
 .namespace-info {
-  font-size: 0.9em;
+  font-size: 0.85em;
   color: var(--vscode-descriptionForeground);
   font-style: italic;
 }
@@ -321,18 +343,21 @@ interface AIRecommendation {
 - Resource data loading and display
 - AI recommendation integration
 - YAML editing and validation
-- Namespace selection from webview dropdown
-- kubectl context updates from webview actions
+- Namespace button state based on kubectl context
+- kubectl context updates from webview button clicks
 - Message passing between webview and extension for namespace changes
+- Button state transitions (enabled ↔ disabled/selected)
 
 ### E2E Tests
 - Complete workflows from tree selection to webview interaction
 - AI recommendation application and validation
 - Cross-resource navigation and context switching
-- Namespace selection from webview with context update
-- Clearing namespace selection from webview
-- External namespace context change detection and webview update
-- Namespace selector state synchronization across multiple webviews
+- Clicking namespace in tree opens webview with namespace name as title
+- Button enabled state when viewing non-active namespace
+- Button disabled/selected state when viewing active namespace
+- Clicking enabled button sets namespace as active and updates button state
+- External namespace context change detection and webview button update
+- Button state synchronization across multiple webviews for same namespace
 
 ## Security Considerations
 

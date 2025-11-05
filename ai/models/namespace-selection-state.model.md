@@ -154,15 +154,18 @@ For "All Namespaces" view in UI:
 When namespace context changes:
 1. Read new context state from kubectl
 2. Update cache with new state
-3. Refresh tree view to show active namespace indicator
+3. Refresh tree view to show active namespace indicator (checkmark)
 4. Update status bar with current namespace
 
 ### Webview Updates
 
 When namespace context changes:
-1. Notify all open webviews of context change
-2. Webviews re-query resources with new context
-3. Update namespace selector dropdown to reflect current selection
+1. Notify all open webviews of context change with isActive flag
+2. Webviews update "Set as Default Namespace" button state:
+   - If webview's namespace matches active context: button becomes disabled with checkmark
+   - If webview's namespace doesn't match active context: button becomes enabled without checkmark
+3. Webviews re-query resources with new context if needed
+4. Button text updates: "Set as Default Namespace" (enabled) or "Default Namespace" (disabled)
 
 ## Error Handling
 

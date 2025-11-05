@@ -4,6 +4,10 @@
   "description": "An AI-powered VS Code extension for Kubernetes cluster management that makes DevOps workflows conversational and intelligent",
   "version": "0.1.0",
   "publisher": "alto9",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alto9/kandy"
+  },
   "engines": {
     "vscode": "^1.80.0",
     "node": ">=22.0.0"
