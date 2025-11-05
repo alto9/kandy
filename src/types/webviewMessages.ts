@@ -22,14 +22,6 @@ export interface SetActiveNamespaceMessage {
 }
 
 /**
- * Message sent when user clears the active namespace (selects "All Namespaces").
- * Instructs the extension to remove the namespace from kubectl context.
- */
-export interface ClearActiveNamespaceMessage {
-    command: 'clearActiveNamespace';
-}
-
-/**
  * Message sent when user requests a refresh of webview data.
  * Instructs the extension to reload namespace list and resources.
  */
@@ -56,7 +48,6 @@ export interface OpenResourceMessage {
  */
 export type WebviewMessage = 
     | SetActiveNamespaceMessage 
-    | ClearActiveNamespaceMessage
     | RefreshMessage
     | OpenResourceMessage;
 
@@ -93,6 +84,12 @@ export interface NamespaceContextChangedMessage {
          * - 'external': Changed outside the extension (e.g., via kubectl CLI)
          */
         source: 'extension' | 'external';
+        /** 
+         * Indicates whether the webview's displayed namespace matches the active kubectl context.
+         * When true, the namespace button should show as disabled/selected (default namespace).
+         * When false, the namespace button should show as enabled (can be set as default).
+         */
+        isActive: boolean;
     };
 }
 
