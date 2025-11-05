@@ -29,6 +29,20 @@ export enum ProgressLocation {
     Window = 10,
     Notification = 15
 }
+
+export enum ViewColumn {
+    One = 1,
+    Two = 2,
+    Three = 3,
+    Four = 4,
+    Five = 5,
+    Six = 6,
+    Seven = 7,
+    Eight = 8,
+    Nine = 9,
+    Active = -1,
+    Beside = -2
+}
 /* eslint-enable @typescript-eslint/naming-convention */
 
 export interface Memento {
@@ -258,6 +272,7 @@ const vscodeModule = {
     ExtensionMode,
     TreeItemCollapsibleState,
     ProgressLocation,
+    ViewColumn,
     ThemeColor,
     ThemeIcon,
     TreeItem,
@@ -279,6 +294,7 @@ if (typeof module !== 'undefined' && module.exports) {
         ExtensionMode,
         TreeItemCollapsibleState,
         ProgressLocation,
+        ViewColumn,
         ThemeColor,
         ThemeIcon,
         TreeItem,
