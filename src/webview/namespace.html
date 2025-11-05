@@ -27,7 +27,7 @@
             margin-bottom: 30px;
         }
 
-        .header h1 {
+        .header h2 {
             margin: 0 0 10px 0;
             font-size: 24px;
             font-weight: 600;
@@ -268,22 +268,21 @@
     </div>
 
     <div class="container">
-        <div class="namespace-selector-bar">
-            <label for="namespace-select">Active Namespace:</label>
-            <select id="namespace-select" class="namespace-dropdown">
-                <option value="">All Namespaces</option>
-            </select>
-            <button id="select-namespace" class="select-btn" disabled>Select</button>
-            <button id="clear-namespace" class="clear-btn" disabled>Clear</button>
+        <div class="namespace-header">
+            <h1 class="namespace-title">{{NAMESPACE_NAME}}</h1>
+            <button id="set-default-namespace" class="default-namespace-btn">
+                <span class="btn-icon">✓</span>
+                <span class="btn-text">Set as Default Namespace</span>
+            </button>
             <span class="namespace-info">(Changes kubectl context globally)</span>
         </div>
 
         <div class="header">
-            <h1>
+            <h2>
                 <span class="icon" id="namespace-icon"></span>
                 <span id="namespace-title">{{NAMESPACE_NAME}}</span>
                 <span class="badge" id="scope-badge">NAMESPACE</span>
-            </h1>
+            </h2>
             <div class="metadata">
                 <div class="metadata-item">
                     <span class="metadata-label">Cluster:</span>
