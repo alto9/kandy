@@ -209,3 +209,5 @@ These are stored in `ExtensionContext.globalState` but are NOT the source of tru
 - Do not expose kubeconfig file contents in UI
 - Respect RBAC permissions for namespace access
 
+
+
