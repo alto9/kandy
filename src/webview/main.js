@@ -25,91 +25,37 @@
     // Set up message passing for communication with extension
     const vscode = acquireVsCodeApi();
 
-    // Get namespace selector elements
-    const namespaceSelect = document.getElementById('namespace-select');
-    const selectButton = document.getElementById('select-namespace');
-    const clearButton = document.getElementById('clear-namespace');
-    
-    // Store the current webview namespace (from the page title/header)
-    const webviewNamespace = window.initialIsAllNamespaces ? null : document.getElementById('namespace-title')?.textContent;
+    // Get button elements
+    const setDefaultNamespaceButton = document.getElementById('set-default-namespace');
+    const btnIcon = setDefaultNamespaceButton?.querySelector('.btn-icon');
+    const btnText = setDefaultNamespaceButton?.querySelector('.btn-text');
+    const namespaceTitle = document.querySelector('h1.namespace-title');
 
     /**
-     * Update the select button state based on current selection and active namespace.
-     * Button shows "Selected ✓" when this namespace is active, "Select" otherwise.
-     * Button is disabled when "All Namespaces" is selected or when already selected.
-     */
-    function updateSelectButtonState(activeNamespace) {
-        const currentValue = namespaceSelect.value;
-        const isAllNamespaces = !currentValue || currentValue === '';
-        const isCurrentlyActive = currentValue && currentValue === activeNamespace;
-        
-        // Disable if "All Namespaces" or already selected
-        selectButton.disabled = isAllNamespaces || isCurrentlyActive;
-        
-        // Update button text and style based on selection state
-        if (isCurrentlyActive) {
-            selectButton.textContent = 'Selected ✓';
-            selectButton.classList.add('selected');
-        } else {
-            selectButton.textContent = 'Select';
-            selectButton.classList.remove('selected');
-        }
-    }
-
-    /**
-     * Update the clear button state based on current selection.
-     * Button is disabled when no namespace is selected (All Namespaces).
-     */
-    function updateClearButtonState() {
-        const currentValue = namespaceSelect.value;
-        clearButton.disabled = !currentValue || currentValue === '';
-    }
-
-    /**
-     * Populate the namespace dropdown with available namespaces.
+     * Update the button state based on whether the namespace is active.
      * 
-     * @param {Array<{name: string}>} namespaces - Array of namespace objects
-     * @param {string|null} currentNamespace - The currently active namespace
+     * @param {boolean} isActive - Whether this namespace is the active/default namespace
+     * @param {string} namespaceName - The namespace name (for validation/logging)
      */
-    function populateNamespaces(namespaces, currentNamespace) {
-        // Clear existing options except "All Namespaces"
-        namespaceSelect.innerHTML = '<option value="">All Namespaces</option>';
-        
-        // Add namespace options
-        if (namespaces && Array.isArray(namespaces)) {
-            namespaces.forEach(ns => {
-                const option = document.createElement('option');
-                option.value = ns.name;
-                option.textContent = ns.name;
-                namespaceSelect.appendChild(option);
-            });
+    function updateButtonState(isActive, namespaceName) {
+        if (!setDefaultNamespaceButton || !btnIcon || !btnText) {
+            console.warn('Button elements not found, cannot update state');
+            return;
         }
 
-        // Set current selection
-        if (currentNamespace) {
-            namespaceSelect.value = currentNamespace;
+        if (isActive) {
+            // Namespace is active - show disabled/selected state
+            setDefaultNamespaceButton.disabled = true;
+            btnIcon.style.display = 'inline';
+            btnIcon.classList.remove('hidden');
+            btnText.textContent = 'Default Namespace';
         } else {
-            namespaceSelect.value = '';
+            // Namespace is not active - show enabled state
+            setDefaultNamespaceButton.disabled = false;
+            btnIcon.style.display = 'none';
+            btnIcon.classList.add('hidden');
+            btnText.textContent = 'Set as Default Namespace';
         }
-
-        // Update button states
-        updateClearButtonState();
-        updateSelectButtonState(currentNamespace);
-    }
-
-    /**
-     * Set the current namespace selection in the dropdown.
-     * 
-     * @param {string|null} namespace - The namespace to select, or null for "All Namespaces"
-     */
-    function setCurrentNamespace(namespace) {
-        if (namespace) {
-            namespaceSelect.value = namespace;
-        } else {
-            namespaceSelect.value = '';
-        }
-        updateClearButtonState();
-        updateSelectButtonState(namespace);
     }
 
     /**
@@ -195,43 +141,31 @@
         hideNotification();
     });
 
-    // Handle namespace selection change from dropdown
-    namespaceSelect.addEventListener('change', () => {
-        const selectedNamespace = namespaceSelect.value;
-        
-        // Update select button state based on new selection
-        // We don't know the active namespace here, so we'll update it when we get the response
-        updateSelectButtonState(null);
-        updateClearButtonState();
-    });
-
-    // Handle select button click
-    selectButton.addEventListener('click', () => {
-        if (!selectButton.disabled) {
-            const selectedNamespace = namespaceSelect.value;
-            
-            if (selectedNamespace) {
-                // Send setActiveNamespace message to extension
-                vscode.postMessage({
-                    command: 'setActiveNamespace',
-                    data: {
-                        namespace: selectedNamespace
-                    }
-                });
+    // Handle button click for setting default namespace
+    if (setDefaultNamespaceButton) {
+        setDefaultNamespaceButton.addEventListener('click', () => {
+            // Prevent action if button is disabled
+            if (setDefaultNamespaceButton.disabled) {
+                return;
             }
-        }
-    });
 
-    // Handle clear button click
-    clearButton.addEventListener('click', () => {
-        if (!clearButton.disabled) {
-            namespaceSelect.value = '';
+            // Read namespace name from the title element
+            const namespaceName = namespaceTitle?.textContent?.trim();
+            
+            // For "All Namespaces" view, don't allow setting as default
+            if (isAllNamespaces || !namespaceName || namespaceName === 'All Namespaces') {
+                return;
+            }
+
+            // Send setActiveNamespace message to extension
             vscode.postMessage({
-                command: 'clearActiveNamespace'
+                command: 'setActiveNamespace',
+                data: {
+                    namespace: namespaceName
+                }
             });
-            updateClearButtonState();
-        }
-    });
+        });
+    }
 
     // Handle incoming messages from extension
     window.addEventListener('message', event => {
@@ -239,16 +173,17 @@
         
         switch (message.command) {
             case 'namespaceData':
-                // Populate dropdown with namespace list
-                populateNamespaces(message.data.namespaces, message.data.currentNamespace);
+                // Namespace data is no longer needed for dropdown, but we keep the handler
+                // in case it's used for other purposes
                 break;
             
             case 'namespaceContextChanged':
-                // Update selection when context changes
-                setCurrentNamespace(message.data.namespace);
+                // Extract isActive flag and namespace name
+                const isActive = message.data.isActive || false;
+                const namespaceName = namespaceTitle?.textContent?.trim();
                 
-                // Update select button state with the new active namespace
-                updateSelectButtonState(message.data.namespace);
+                // Update button state based on isActive flag
+                updateButtonState(isActive, namespaceName);
                 
                 // Show notification if the change was external
                 if (message.data.source === 'external') {
@@ -268,12 +203,29 @@
     window.kandyNamespace = {
         refresh,
         openResource,
-        populateNamespaces,
-        setCurrentNamespace
+        updateButtonState
     };
 
-    // Initialize button states
-    updateClearButtonState();
-    updateSelectButtonState(null);
+    // Initialize button state on load
+    // For "All Namespaces" view, disable the button
+    // For regular namespace view, start with disabled state (will be updated when first message arrives)
+    if (isAllNamespaces) {
+        // Disable button for "All Namespaces" view
+        if (setDefaultNamespaceButton) {
+            setDefaultNamespaceButton.disabled = true;
+            if (btnIcon) {
+                btnIcon.style.display = 'none';
+                btnIcon.classList.add('hidden');
+            }
+            if (btnText) {
+                btnText.textContent = 'Set as Default Namespace';
+            }
+        }
+    } else {
+        // Initialize with inactive state (will be updated by first namespaceContextChanged message)
+        const initialNamespaceName = namespaceTitle?.textContent?.trim();
+        if (initialNamespaceName) {
+            updateButtonState(false, initialNamespaceName);
+        }
+    }
 })();
-
