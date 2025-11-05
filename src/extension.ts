@@ -6,7 +6,7 @@ import { KubeconfigParser } from './kubernetes/KubeconfigParser';
 import { ClusterTreeProvider } from './tree/ClusterTreeProvider';
 import { Settings } from './config/Settings';
 import { configureApiKeyCommand } from './commands/ConfigureApiKey';
-import { setActiveNamespaceCommand, clearActiveNamespaceCommand } from './commands/namespaceCommands';
+import { setActiveNamespaceCommand } from './commands/namespaceCommands';
 import { namespaceWatcher } from './services/namespaceCache';
 import { NamespaceStatusBar } from './ui/statusBar';
 
@@ -116,10 +116,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         console.log('Namespace context watcher started.');
         
         // Subscribe to external context changes to notify webviews
-        const contextChangeSubscription = namespaceWatcher.onDidChangeContext((state) => {
+        const contextChangeSubscription = namespaceWatcher.onDidChangeContext(async (state) => {
             console.log('External context change detected, notifying webviews...', state);
             // Notify all open webview panels of the external change
-            NamespaceWebview.notifyAllPanelsOfContextChange(
+            await NamespaceWebview.notifyAllPanelsOfContextChange(
                 state.currentNamespace || null,
                 'external'
             );
@@ -292,14 +292,6 @@ function registerCommands(): void {
     );
     context.subscriptions.push(setActiveNamespaceCmd);
     disposables.push(setActiveNamespaceCmd);
-    
-    // Register clear active namespace command
-    const clearActiveNamespaceCmd = vscode.commands.registerCommand(
-        'kandy.clearActiveNamespace',
-        clearActiveNamespaceCommand
-    );
-    context.subscriptions.push(clearActiveNamespaceCmd);
-    disposables.push(clearActiveNamespaceCmd);
 }
 
 /**

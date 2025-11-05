@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
-import { getContextInfo, setNamespace, clearNamespace } from '../utils/kubectlContext';
+import { getContextInfo, getCurrentNamespace, setNamespace } from '../utils/kubectlContext';
 import { NamespaceCommands } from '../kubectl/NamespaceCommands';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
 import { WebviewMessage } from '../types/webviewMessages';
@@ -20,6 +20,16 @@ export interface NamespaceContext {
 }
 
 /**
+ * Information stored with each webview panel.
+ */
+interface PanelInfo {
+    /** The webview panel */
+    panel: vscode.WebviewPanel;
+    /** The namespace context for this panel */
+    namespaceContext: NamespaceContext;
+}
+
+/**
  * NamespaceWebview manages webview panels for namespace navigation.
  * Each panel shows resources and details for a specific namespace or cluster-wide view.
  */
@@ -27,8 +37,9 @@ export class NamespaceWebview {
     /**
      * Map of open webview panels keyed by "contextName:namespace".
      * Allows reusing existing panels when the same namespace is clicked again.
+     * Stores both the panel and its namespace context.
      */
-    private static openPanels: Map<string, vscode.WebviewPanel> = new Map();
+    private static openPanels: Map<string, PanelInfo> = new Map();
     
     private static extensionContext: vscode.ExtensionContext | undefined;
 
@@ -47,9 +58,9 @@ export class NamespaceWebview {
         const panelKey = NamespaceWebview.getPanelKey(namespaceContext);
 
         // If we already have a panel for this namespace, reveal it
-        const existingPanel = NamespaceWebview.openPanels.get(panelKey);
-        if (existingPanel) {
-            existingPanel.reveal(vscode.ViewColumn.One);
+        const existingPanelInfo = NamespaceWebview.openPanels.get(panelKey);
+        if (existingPanelInfo) {
+            existingPanelInfo.panel.reveal(vscode.ViewColumn.One);
             return;
         }
 
@@ -72,8 +83,11 @@ export class NamespaceWebview {
             }
         );
 
-        // Store the panel in our map
-        NamespaceWebview.openPanels.set(panelKey, panel);
+        // Store the panel and its context in our map
+        NamespaceWebview.openPanels.set(panelKey, {
+            panel,
+            namespaceContext
+        });
 
         // Set the webview's HTML content
         panel.webview.html = NamespaceWebview.getWebviewContent(
@@ -116,7 +130,7 @@ export class NamespaceWebview {
                                 }
                                 
                                 // Notify all webview panels of the context change
-                                NamespaceWebview.notifyAllPanelsOfContextChange(
+                                await NamespaceWebview.notifyAllPanelsOfContextChange(
                                     message.data.namespace,
                                     'extension'
                                 );
@@ -127,32 +141,6 @@ export class NamespaceWebview {
                             }
                         }
                         break;
-                    
-                    case 'clearActiveNamespace': {
-                        // Clear the active namespace in kubectl context
-                        const success = await clearNamespace();
-                        if (success) {
-                            console.log('Namespace cleared (All Namespaces)');
-                            
-                            // Refresh the tree view to show all resources
-                            try {
-                                const treeProvider = getClusterTreeProvider();
-                                treeProvider.refresh();
-                                console.log('Tree view refreshed after clearing namespace');
-                            } catch (error) {
-                                console.error('Failed to refresh tree view:', error);
-                            }
-                            
-                            // Notify all webview panels of the context change
-                            NamespaceWebview.notifyAllPanelsOfContextChange(
-                                null,
-                                'extension'
-                            );
-                        } else {
-                            vscode.window.showErrorMessage('Failed to clear namespace');
-                        }
-                        break;
-                    }
                 }
             },
             undefined,
@@ -325,21 +313,46 @@ export class NamespaceWebview {
 
     /**
      * Send a namespace context changed notification to a webview panel.
+     * Calculates the `isActive` flag by comparing the panel's displayed namespace
+     * with the current kubectl context namespace.
      * 
      * @param panel - The webview panel to notify
-     * @param namespace - The new namespace (null for "All Namespaces")
+     * @param namespaceContext - The namespace context for this panel
      * @param source - The source of the change ('extension' or 'external')
      */
-    public static sendNamespaceContextChanged(
+    public static async sendNamespaceContextChanged(
         panel: vscode.WebviewPanel,
-        namespace: string | null,
+        namespaceContext: NamespaceContext,
         source: 'extension' | 'external'
-    ): void {
+    ): Promise<void> {
+        // Get the current active namespace from kubectl context
+        let currentNamespace: string | null = null;
+        try {
+            currentNamespace = await getCurrentNamespace();
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to get current namespace for isActive calculation:', errorMessage);
+            // Fallback to false if we can't determine the active namespace
+            currentNamespace = null;
+        }
+
+        // Get the webview's displayed namespace
+        const webviewNamespace = namespaceContext.namespace || null;
+
+        // Calculate isActive:
+        // - Both null (All Namespaces) → true
+        // - One null, one not → false
+        // - Both non-null, same value → true
+        // - Both non-null, different values → false
+        const isActive = (webviewNamespace === null && currentNamespace === null) ||
+                        (webviewNamespace !== null && currentNamespace !== null && webviewNamespace === currentNamespace);
+
         panel.webview.postMessage({
             command: 'namespaceContextChanged',
             data: {
-                namespace,
-                source
+                namespace: currentNamespace,
+                source,
+                isActive
             }
         });
     }
@@ -351,12 +364,12 @@ export class NamespaceWebview {
      * @param namespace - The new namespace (null for "All Namespaces")
      * @param source - The source of the change ('extension' or 'external')
      */
-    public static notifyAllPanelsOfContextChange(
+    public static async notifyAllPanelsOfContextChange(
         namespace: string | null,
         source: 'extension' | 'external'
-    ): void {
-        for (const panel of NamespaceWebview.openPanels.values()) {
-            NamespaceWebview.sendNamespaceContextChanged(panel, namespace, source);
+    ): Promise<void> {
+        for (const panelInfo of NamespaceWebview.openPanels.values()) {
+            await NamespaceWebview.sendNamespaceContextChanged(panelInfo.panel, panelInfo.namespaceContext, source);
         }
     }
 }
