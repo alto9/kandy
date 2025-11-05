@@ -110,94 +110,59 @@
             letter-spacing: 0.5px;
         }
 
-        .namespace-selector-bar {
+        .namespace-header {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 10px;
+            gap: 15px;
+            padding: 15px;
             background-color: var(--vscode-editor-background);
-            border-bottom: 1px solid var(--vscode-panel-border);
-            margin-bottom: 20px;
+            border-bottom: 2px solid var(--vscode-panel-border);
         }
 
-        .namespace-selector-bar label {
+        .namespace-title {
+            flex: 1;
+            margin: 0;
+            font-size: 1.5em;
             font-weight: 600;
             color: var(--vscode-foreground);
-            white-space: nowrap;
         }
 
-        .namespace-dropdown {
-            padding: 5px 10px;
-            background-color: var(--vscode-dropdown-background);
-            color: var(--vscode-dropdown-foreground);
-            border: 1px solid var(--vscode-dropdown-border);
-            border-radius: 2px;
-            min-width: 200px;
-            cursor: pointer;
-        }
-
-        .namespace-dropdown:hover {
-            background-color: var(--vscode-dropdown-listBackground);
-        }
-
-        .namespace-dropdown:focus {
-            outline: 1px solid var(--vscode-focusBorder);
-            outline-offset: -1px;
-        }
-
-        .select-btn {
-            padding: 5px 15px;
+        .default-namespace-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
             background-color: var(--vscode-button-background);
             color: var(--vscode-button-foreground);
-            border: 1px solid var(--vscode-button-border);
-            border-radius: 2px;
+            border: none;
+            border-radius: 4px;
             cursor: pointer;
-            white-space: nowrap;
-            min-width: 90px;
+            font-size: 0.95em;
         }
 
-        .select-btn:hover:not(:disabled) {
+        .default-namespace-btn:hover:not(:disabled) {
             background-color: var(--vscode-button-hoverBackground);
         }
 
-        .select-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .select-btn.selected {
+        .default-namespace-btn:disabled {
             background-color: var(--vscode-button-secondaryBackground);
             color: var(--vscode-button-secondaryForeground);
+            cursor: default;
+            opacity: 0.8;
         }
 
-        .select-btn.selected:hover:not(:disabled) {
-            background-color: var(--vscode-button-secondaryHoverBackground);
+        .default-namespace-btn .btn-icon {
+            font-size: 1.1em;
         }
 
-        .clear-btn {
-            padding: 5px 15px;
-            background-color: var(--vscode-button-secondaryBackground);
-            color: var(--vscode-button-secondaryForeground);
-            border: 1px solid var(--vscode-button-border);
-            border-radius: 2px;
-            cursor: pointer;
-            white-space: nowrap;
-        }
-
-        .clear-btn:hover:not(:disabled) {
-            background-color: var(--vscode-button-secondaryHoverBackground);
-        }
-
-        .clear-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+        .default-namespace-btn:not(:disabled) .btn-icon {
+            display: none;
         }
 
         .namespace-info {
-            font-size: 0.9em;
+            font-size: 0.85em;
             color: var(--vscode-descriptionForeground);
             font-style: italic;
-            margin-left: auto;
         }
 
         /* Notification banner styles */
