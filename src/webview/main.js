@@ -178,23 +178,38 @@
                 break;
             
             case 'namespaceContextChanged':
-                // Extract isActive flag and namespace name
-                const isActive = message.data.isActive || false;
+                // Validate message data exists
+                if (!message.data) {
+                    console.warn('namespaceContextChanged message missing data property');
+                    break;
+                }
+                
+                // Extract isActive flag - ensure it's a boolean
+                // Default to false if missing, undefined, or not a boolean
+                const isActive = typeof message.data.isActive === 'boolean' 
+                    ? message.data.isActive 
+                    : false;
+                
+                // Get namespace name from title element for validation/logging
                 const namespaceName = namespaceTitle?.textContent?.trim();
                 
                 // Update button state based on isActive flag
+                // This handles transitions: enabled ↔ disabled/selected
                 updateButtonState(isActive, namespaceName);
                 
                 // Show notification if the change was external
                 if (message.data.source === 'external') {
                     let notificationMessage;
                     if (message.data.namespace) {
+                        // Format matches story requirement: "Namespace context changed externally to: <namespace>"
                         notificationMessage = `Namespace context changed externally to: ${message.data.namespace}`;
                     } else {
                         notificationMessage = 'Namespace context cleared externally';
                     }
                     showNotification(notificationMessage);
                 }
+                // Note: Handler intentionally does not trigger resource refreshes
+                // to avoid unnecessary reloads when namespace context changes
                 break;
         }
     });
