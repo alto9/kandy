@@ -2,7 +2,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { KubectlError } from '../kubernetes/KubectlError';
 import { getCurrentNamespace } from '../utils/kubectlContext';
-import { WorkloadEntry } from '../types/workloadData';
+import { WorkloadEntry, WorkloadHealth } from '../types/workloadData';
 
 /**
  * Timeout for kubectl commands in milliseconds.
@@ -1321,7 +1321,7 @@ export class WorkloadCommands {
             return {
                 name,
                 namespace: itemNamespace,
-                health: undefined as any, // Health will be calculated by health analyzer
+                health: undefined as unknown as WorkloadHealth, // Health will be calculated by health analyzer
                 readyReplicas,
                 desiredReplicas,
                 selector,
@@ -1400,7 +1400,7 @@ export class WorkloadCommands {
             return {
                 name,
                 namespace: itemNamespace,
-                health: undefined as any, // Health will be calculated by health analyzer
+                health: undefined as unknown as WorkloadHealth, // Health will be calculated by health analyzer
                 readyReplicas,
                 desiredReplicas,
                 selector,
@@ -1479,7 +1479,7 @@ export class WorkloadCommands {
             return {
                 name,
                 namespace: itemNamespace,
-                health: undefined as any, // Health will be calculated by health analyzer
+                health: undefined as unknown as WorkloadHealth, // Health will be calculated by health analyzer
                 readyReplicas,
                 desiredReplicas,
                 selector,
@@ -1561,7 +1561,7 @@ export class WorkloadCommands {
             return {
                 name,
                 namespace: itemNamespace,
-                health: undefined as any, // Health will be calculated by health analyzer
+                health: undefined as unknown as WorkloadHealth, // Health will be calculated by health analyzer
                 readyReplicas,
                 desiredReplicas,
                 selector,
