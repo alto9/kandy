@@ -83,6 +83,30 @@
         });
     }
 
+    /**
+     * Select a workload type and update pill selector UI state.
+     * Sends a fetchWorkloads message to the extension to load workload data.
+     * 
+     * @param {string} workloadType - The workload type to select (e.g., 'deployments', 'statefulsets')
+     */
+    function selectWorkloadType(workloadType) {
+        // Remove active class from all pills
+        const allPills = document.querySelectorAll('.pill-selector');
+        allPills.forEach(pill => pill.classList.remove('active'));
+        
+        // Add active class to clicked pill
+        const activePill = document.querySelector(`[data-workload-type="${workloadType}"]`);
+        if (activePill) {
+            activePill.classList.add('active');
+        }
+        
+        // Send fetchWorkloads message to extension
+        vscode.postMessage({
+            command: 'fetchWorkloads',
+            data: { workloadType }
+        });
+    }
+
     // Notification management
     let notificationTimeout = null;
     const notificationElement = document.getElementById('context-notification');
@@ -167,6 +191,17 @@
         });
     }
 
+    // Initialize pill selector event listeners
+    const pillSelectors = document.querySelectorAll('.pill-selector');
+    pillSelectors.forEach(pill => {
+        pill.addEventListener('click', () => {
+            const workloadType = pill.getAttribute('data-workload-type');
+            if (workloadType) {
+                selectWorkloadType(workloadType);
+            }
+        });
+    });
+
     // Handle incoming messages from extension
     window.addEventListener('message', event => {
         const message = event.data;
@@ -218,7 +253,8 @@
     window.kandyNamespace = {
         refresh,
         openResource,
-        updateButtonState
+        updateButtonState,
+        selectWorkloadType
     };
 
     // Initialize button state on load
