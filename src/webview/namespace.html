@@ -223,6 +223,128 @@
             outline: 1px solid var(--vscode-focusBorder);
             outline-offset: 2px;
         }
+
+        /* Workloads Section Styling */
+        .workloads-section {
+            padding: 20px;
+        }
+
+        .workloads-section h2 {
+            margin: 0 0 15px 0;
+            font-size: 1.2em;
+            font-weight: 600;
+            color: var(--vscode-foreground);
+        }
+
+        /* Pill Selector Styling */
+        .workload-type-pills {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .pill-selector {
+            padding: 8px 16px;
+            border: 1px solid var(--vscode-panel-border);
+            background-color: var(--vscode-editor-background);
+            color: var(--vscode-descriptionForeground);
+            border-radius: 16px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .pill-selector:hover:not(.active) {
+            background-color: var(--vscode-list-hoverBackground);
+            border-color: var(--vscode-focusBorder);
+        }
+
+        .pill-selector.active {
+            background-color: var(--vscode-button-background);
+            color: var(--vscode-button-foreground);
+            border-color: var(--vscode-button-background);
+            font-weight: 600;
+        }
+
+        .pill-selector:focus {
+            outline: 1px solid var(--vscode-focusBorder);
+            outline-offset: 2px;
+        }
+
+        /* Workloads Table Styling */
+        .workloads-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--vscode-editor-background);
+            border: 1px solid var(--vscode-panel-border);
+            border-radius: 4px;
+        }
+
+        .workloads-table thead {
+            background-color: var(--vscode-editor-background);
+            border-bottom: 2px solid var(--vscode-panel-border);
+        }
+
+        .workloads-table th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9em;
+            color: var(--vscode-foreground);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .workloads-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--vscode-panel-border);
+            font-size: 0.95em;
+        }
+
+        .workload-row {
+            cursor: default;
+        }
+
+        .workload-row:hover {
+            background-color: var(--vscode-list-hoverBackground);
+        }
+
+        /* Health Indicator Styling */
+        .health-indicator {
+            font-size: 1.2em;
+            margin-right: 6px;
+        }
+
+        .health-indicator.healthy {
+            color: var(--vscode-testing-iconPassed);
+        }
+
+        .health-indicator.degraded {
+            color: var(--vscode-editorWarning-foreground);
+        }
+
+        .health-indicator.unhealthy {
+            color: var(--vscode-testing-iconFailed);
+        }
+
+        .health-indicator.unknown {
+            color: var(--vscode-descriptionForeground);
+        }
+
+        .workload-health {
+            display: flex;
+            align-items: center;
+        }
+
+        /* Table Note Styling */
+        .table-note {
+            margin-top: 10px;
+            font-size: 0.85em;
+            color: var(--vscode-descriptionForeground);
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
