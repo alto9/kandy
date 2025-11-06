@@ -51,7 +51,23 @@ Scenario: Viewing and selecting namespaces
   Then a webview panel should open for that namespace
   And the webview title should display the namespace name
   And the webview should show a "Set as Default Namespace" button
-  And the webview should allow browsing resources within that namespace
+  And the webview should display a workloads section with horizontal pill selectors
+  And the pill selectors should include: Deployments, StatefulSets, DaemonSets, and CronJobs
+  And each workload should show health status and ready/desired counts
+
+Scenario: Viewing workloads in namespace webview
+  Given a user has opened a namespace webview
+  When the workloads section is displayed
+  Then the pill selectors should show: Deployments, StatefulSets, DaemonSets, CronJobs
+  And the Deployments pill should be selected by default
+  And the table should show columns: Name, Namespace, Health, Ready/Desired
+  And the table should list only Deployments
+  When the user clicks on the StatefulSets pill
+  Then the table should update to list only StatefulSets
+  And each workload should display health status derived from pod health checks
+  And each workload should show ready replica count vs desired replica count
+  And workload items should be non-interactive
+  And hovering over workload rows should show visual feedback
 
 Scenario: Expanding Workloads category
   Given a user has expanded a cluster showing resource categories

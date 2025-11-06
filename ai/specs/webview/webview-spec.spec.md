@@ -131,6 +131,9 @@ interface NamespaceContextChangedMessage extends ExtensionMessage {
 ## UI Layout Specifications
 
 ### Common Layout Structure
+
+**Note**: The namespace name shown in examples (e.g., "production") represents the actual namespace name from Kubernetes.
+
 ```html
 <div class="webview-container">
   <!-- Header Section with Namespace Title -->
@@ -140,56 +143,135 @@ interface NamespaceContextChangedMessage extends ExtensionMessage {
       <span class="btn-icon">✓</span>
       <span class="btn-text">Default Namespace</span>
     </button>
-    <span class="namespace-info">
-      (Changes kubectl context globally)
-    </span>
   </div>
 
-  <!-- Resource Navigation Section -->
-  <div class="resource-header">
-    <h2>Pod: nginx-deployment-abc123</h2>
-    <div class="status-badges">
-      <span class="status running">Running</span>
-      <span class="restart-count">Restarts: 0</span>
+  <!-- Workloads Section -->
+  <div class="workloads-section">
+    <h2>Workloads</h2>
+    
+    <!-- Pill Selectors -->
+    <div class="workload-type-pills">
+      <button class="pill-selector active" data-workload-type="deployments">
+        Deployments
+      </button>
+      <button class="pill-selector" data-workload-type="statefulsets">
+        StatefulSets
+      </button>
+      <button class="pill-selector" data-workload-type="daemonsets">
+        DaemonSets
+      </button>
+      <button class="pill-selector" data-workload-type="cronjobs">
+        CronJobs
+      </button>
     </div>
-  </div>
-
-  <!-- Main Content Tabs -->
-  <div class="tab-container">
-    <div class="tab-nav">
-      <button class="tab active">Overview</button>
-      <button class="tab">YAML</button>
-      <button class="tab">Events</button>
-      <button class="tab">Logs</button>
-    </div>
-
-    <div class="tab-content">
-      <!-- Overview Tab -->
-      <div class="overview-panel">
-        <!-- AI Recommendations -->
-        <div class="ai-recommendations">
-          <h3>AI Recommendations</h3>
-          <!-- Recommendation cards -->
-        </div>
-
-        <!-- Resource Details -->
-        <div class="resource-details">
-          <!-- Resource-specific information -->
-        </div>
-      </div>
-
-      <!-- YAML Tab -->
-      <div class="yaml-panel">
-        <pre><code class="yaml-content"></code></pre>
-        <div class="yaml-actions">
-          <button>Edit in VS Code</button>
-          <button>Apply Changes</button>
-        </div>
-      </div>
-    </div>
+    
+    <!-- Workloads Table -->
+    <table class="workloads-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Namespace</th>
+          <th>Health</th>
+          <th>Ready/Desired</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="workload-row">
+          <td class="workload-name">nginx-deployment</td>
+          <td class="workload-namespace">production</td>
+          <td class="workload-health">
+            <span class="health-indicator healthy">●</span>
+            <span class="health-text">Healthy</span>
+          </td>
+          <td class="workload-replicas">3/3</td>
+        </tr>
+        <tr class="workload-row">
+          <td class="workload-name">api-deployment</td>
+          <td class="workload-namespace">production</td>
+          <td class="workload-health">
+            <span class="health-indicator degraded">●</span>
+            <span class="health-text">Degraded</span>
+          </td>
+          <td class="workload-replicas">2/3</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="table-note">Workload items are currently non-interactive.</p>
   </div>
 </div>
 ```
+
+### Workloads Section Specification
+
+#### Pill Selector Behavior
+
+The workloads section uses horizontal pill selectors to switch between workload types:
+
+- **Default Selection**: Deployments pill is selected when webview opens
+- **Single Selection**: Only one pill can be selected at a time
+- **Table Updates**: Clicking a pill updates the table to show only that workload type
+- **Visual States**: Active (selected) and inactive (unselected) states with distinct styling
+- **Hover Feedback**: Unselected pills show hover effects
+
+#### Data Structure
+```typescript
+interface WorkloadEntry {
+  name: string;
+  namespace: string;
+  health: WorkloadHealth;
+  readyReplicas: number;
+  desiredReplicas: number;
+}
+
+type WorkloadType = 'Deployment' | 'StatefulSet' | 'DaemonSet' | 'CronJob';
+
+interface WorkloadHealth {
+  status: 'Healthy' | 'Degraded' | 'Unhealthy' | 'Unknown';
+  podStatus: PodHealthSummary;
+}
+
+interface PodHealthSummary {
+  totalPods: number;
+  readyPods: number;
+  healthChecks: {
+    passed: number;
+    failed: number;
+    unknown: number;
+  };
+}
+```
+
+#### Health Calculation Logic
+Health status is derived from pod-level health checks and replica status:
+
+1. **Healthy**: All desired replicas are ready AND all pod health checks pass
+   - `readyReplicas === desiredReplicas`
+   - `healthChecks.failed === 0`
+
+2. **Degraded**: Some replicas are ready OR some health checks failing
+   - `readyReplicas < desiredReplicas && readyReplicas > 0`
+   - OR `healthChecks.failed > 0 && healthChecks.passed > 0`
+
+3. **Unhealthy**: No replicas ready OR all health checks failing
+   - `readyReplicas === 0`
+   - OR `healthChecks.passed === 0 && healthChecks.failed > 0`
+
+4. **Unknown**: Unable to determine health status
+   - `healthChecks.unknown > 0 && healthChecks.passed === 0 && healthChecks.failed === 0`
+
+#### Workload Types Available
+Users can switch between 4 types of workloads using pill selectors:
+1. **Deployments**: Standard stateless applications
+2. **StatefulSets**: Stateful applications with persistent identity
+3. **DaemonSets**: One pod per node workloads
+4. **CronJobs**: Scheduled job executions
+
+#### Table Behavior
+- **Type Filtering**: Table displays only the workload type selected via pill selector
+- **Non-Interactive**: Workload rows are not clickable
+- **Visual Feedback**: Rows may have hover styles but no click actions
+- **Empty State**: When no workloads of selected type exist, display message: "No {type} found in this namespace"
+- **Namespace Filtering**: Table respects active namespace context from kubectl
 
 ### Namespace Button Behavior
 
@@ -198,7 +280,6 @@ interface NamespaceContextChangedMessage extends ExtensionMessage {
 - **Button Label**: "Set as Default Namespace" (when enabled) or "Default Namespace" (when disabled)
 - **Enabled State**: Button is clickable when viewing a namespace that is NOT the current kubectl context namespace
 - **Disabled/Selected State**: Button is disabled with checkmark icon when viewing the namespace that IS the current kubectl context namespace
-- **Warning Label**: Shows "(Changes kubectl context globally)" to inform user
 
 #### User Interactions
 - **Click "Set as Default Namespace" button** (when enabled): 
@@ -266,7 +347,122 @@ interface NamespaceContextChangedMessage extends ExtensionMessage {
   display: none;
 }
 
-.namespace-info {
+/* Workloads Section Styling */
+.workloads-section {
+  padding: 20px;
+}
+
+.workloads-section h2 {
+  margin: 0 0 15px 0;
+  font-size: 1.2em;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+}
+
+/* Pill Selector Styling */
+.workload-type-pills {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.pill-selector {
+  padding: 8px 16px;
+  border: 1px solid var(--vscode-panel-border);
+  background-color: var(--vscode-editor-background);
+  color: var(--vscode-descriptionForeground);
+  border-radius: 16px;
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.pill-selector:hover:not(.active) {
+  background-color: var(--vscode-list-hoverBackground);
+  border-color: var(--vscode-focusBorder);
+}
+
+.pill-selector.active {
+  background-color: var(--vscode-button-background);
+  color: var(--vscode-button-foreground);
+  border-color: var(--vscode-button-background);
+  font-weight: 600;
+}
+
+.pill-selector:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+}
+
+/* Workloads Table Styling */
+
+.workloads-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: var(--vscode-editor-background);
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+}
+
+.workloads-table thead {
+  background-color: var(--vscode-editor-background);
+  border-bottom: 2px solid var(--vscode-panel-border);
+}
+
+.workloads-table th {
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.9em;
+  color: var(--vscode-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.workloads-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  font-size: 0.95em;
+}
+
+.workload-row {
+  cursor: default; /* Not clickable until profiles implemented */
+}
+
+.workload-row:hover {
+  background-color: var(--vscode-list-hoverBackground);
+}
+
+.health-indicator {
+  font-size: 1.2em;
+  margin-right: 6px;
+}
+
+.health-indicator.healthy {
+  color: var(--vscode-testing-iconPassed);
+}
+
+.health-indicator.degraded {
+  color: var(--vscode-editorWarning-foreground);
+}
+
+.health-indicator.unhealthy {
+  color: var(--vscode-testing-iconFailed);
+}
+
+.health-indicator.unknown {
+  color: var(--vscode-descriptionForeground);
+}
+
+.workload-health {
+  display: flex;
+  align-items: center;
+}
+
+.table-note {
+  margin-top: 10px;
   font-size: 0.85em;
   color: var(--vscode-descriptionForeground);
   font-style: italic;
@@ -358,6 +554,15 @@ interface AIRecommendation {
 - Clicking enabled button sets namespace as active and updates button state
 - External namespace context change detection and webview button update
 - Button state synchronization across multiple webviews for same namespace
+- Workloads section displays pill selectors for 4 workload types
+- Deployments pill is selected by default
+- Clicking pill updates table to show only selected workload type
+- Only one pill can be selected at a time
+- Health status correctly calculated from pod health checks
+- Ready/Desired replica counts display correctly
+- Workload items are non-interactive
+- Empty state message specific to selected workload type
+- Table respects active namespace filtering
 
 ## Security Considerations
 
