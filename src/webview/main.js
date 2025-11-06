@@ -107,6 +107,140 @@
         });
     }
 
+    /**
+     * Render the workloads table with data received from the extension.
+     * Clears existing rows and generates new rows for each workload, or shows empty state.
+     * 
+     * @param {Object} data - WorkloadsTableData object containing workloads array and metadata
+     */
+    function renderWorkloadsTable(data) {
+        const tbody = document.getElementById('workloads-tbody');
+        const tableContainer = document.querySelector('.table-container');
+        const emptyState = document.querySelector('.empty-state');
+        
+        // Clear existing rows
+        tbody.innerHTML = '';
+        
+        // Check if workloads array is empty
+        if (!data.workloads || data.workloads.length === 0) {
+            showEmptyState(data.workloadType);
+            return;
+        }
+        
+        // Hide empty state if visible
+        if (emptyState) {
+            emptyState.style.display = 'none';
+        }
+        
+        // Show table container
+        if (tableContainer) {
+            tableContainer.style.display = 'block';
+        }
+        
+        // Create row for each workload
+        data.workloads.forEach(workload => {
+            const row = createWorkloadRow(workload);
+            tbody.appendChild(row);
+        });
+    }
+
+    /**
+     * Create a table row element for a single workload entry.
+     * 
+     * @param {Object} workload - WorkloadEntry object with name, namespace, health, and replica info
+     * @returns {HTMLTableRowElement} The created table row element
+     */
+    function createWorkloadRow(workload) {
+        const tr = document.createElement('tr');
+        tr.className = 'workload-row';
+        tr.setAttribute('data-workload-name', workload.name);
+        tr.setAttribute('data-workload-type', workload.workloadType || '');
+        
+        // Name column
+        const nameTd = document.createElement('td');
+        nameTd.className = 'workload-name';
+        nameTd.textContent = workload.name;
+        tr.appendChild(nameTd);
+        
+        // Namespace column
+        const namespaceTd = document.createElement('td');
+        namespaceTd.className = 'workload-namespace';
+        namespaceTd.textContent = workload.namespace;
+        tr.appendChild(namespaceTd);
+        
+        // Health column
+        const healthTd = document.createElement('td');
+        healthTd.className = 'workload-health';
+        
+        const healthIndicator = document.createElement('span');
+        healthIndicator.className = `health-indicator ${getHealthIndicatorClass(workload.health.status)}`;
+        healthIndicator.textContent = '●';
+        
+        const healthText = document.createElement('span');
+        healthText.className = 'health-text';
+        healthText.textContent = workload.health.status;
+        
+        healthTd.appendChild(healthIndicator);
+        healthTd.appendChild(healthText);
+        tr.appendChild(healthTd);
+        
+        // Replicas column
+        const replicasTd = document.createElement('td');
+        replicasTd.className = 'workload-replicas';
+        replicasTd.textContent = `${workload.readyReplicas}/${workload.desiredReplicas}`;
+        tr.appendChild(replicasTd);
+        
+        return tr;
+    }
+
+    /**
+     * Map health status to CSS class name.
+     * 
+     * @param {string} status - HealthStatus ('Healthy', 'Degraded', 'Unhealthy', 'Unknown')
+     * @returns {string} CSS class name for the health indicator
+     */
+    function getHealthIndicatorClass(status) {
+        const statusMap = {
+            'Healthy': 'healthy',
+            'Degraded': 'degraded',
+            'Unhealthy': 'unhealthy',
+            'Unknown': 'unknown'
+        };
+        return statusMap[status] || 'unknown';
+    }
+
+    /**
+     * Display empty state message when no workloads of the selected type exist.
+     * 
+     * @param {string} workloadType - The workload type ('Deployment', 'StatefulSet', 'DaemonSet', 'CronJob')
+     */
+    function showEmptyState(workloadType) {
+        const tableContainer = document.querySelector('.table-container');
+        const emptyState = document.querySelector('.empty-state');
+        const emptyMessage = document.getElementById('empty-message');
+        
+        // Hide table
+        if (tableContainer) {
+            tableContainer.style.display = 'none';
+        }
+        
+        // Show empty state
+        if (emptyState) {
+            emptyState.style.display = 'block';
+        }
+        
+        // Set type-specific message
+        if (emptyMessage) {
+            const typeMessages = {
+                'Deployment': 'No deployments found in this namespace',
+                'StatefulSet': 'No statefulsets found in this namespace',
+                'DaemonSet': 'No daemonsets found in this namespace',
+                'CronJob': 'No cronjobs found in this namespace'
+            };
+            emptyMessage.textContent = typeMessages[workloadType] || 'No workloads found in this namespace';
+        }
+    }
+
     // Notification management
     let notificationTimeout = null;
     const notificationElement = document.getElementById('context-notification');
@@ -246,6 +380,12 @@
                 // Note: Handler intentionally does not trigger resource refreshes
                 // to avoid unnecessary reloads when namespace context changes
                 break;
+            
+            case 'workloadsData':
+                if (message.data) {
+                    renderWorkloadsTable(message.data);
+                }
+                break;
         }
     });
 
@@ -254,7 +394,9 @@
         refresh,
         openResource,
         updateButtonState,
-        selectWorkloadType
+        selectWorkloadType,
+        renderWorkloadsTable,
+        showEmptyState
     };
 
     // Initialize button state on load
