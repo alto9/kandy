@@ -115,8 +115,6 @@
      */
     function renderWorkloadsTable(data) {
         const tbody = document.getElementById('workloads-tbody');
-        const tableContainer = document.querySelector('.table-container');
-        const emptyState = document.querySelector('.empty-state');
         
         // Clear existing rows
         tbody.innerHTML = '';
@@ -127,15 +125,8 @@
             return;
         }
         
-        // Hide empty state if visible
-        if (emptyState) {
-            emptyState.style.display = 'none';
-        }
-        
-        // Show table container
-        if (tableContainer) {
-            tableContainer.style.display = 'block';
-        }
+        // Hide empty state if visible and show table
+        hideEmptyState();
         
         // Create row for each workload
         data.workloads.forEach(workload => {
@@ -238,6 +229,24 @@
                 'CronJob': 'No cronjobs found in this namespace'
             };
             emptyMessage.textContent = typeMessages[workloadType] || 'No workloads found in this namespace';
+        }
+    }
+
+    /**
+     * Hide the empty state and show the table container.
+     */
+    function hideEmptyState() {
+        const tableContainer = document.querySelector('.table-container');
+        const emptyState = document.querySelector('.empty-state');
+        
+        // Hide empty state
+        if (emptyState) {
+            emptyState.style.display = 'none';
+        }
+        
+        // Show table container
+        if (tableContainer) {
+            tableContainer.style.display = 'block';
         }
     }
 
@@ -396,7 +405,8 @@
         updateButtonState,
         selectWorkloadType,
         renderWorkloadsTable,
-        showEmptyState
+        showEmptyState,
+        hideEmptyState
     };
 
     // Initialize button state on load
