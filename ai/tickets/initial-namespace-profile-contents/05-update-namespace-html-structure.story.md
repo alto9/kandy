@@ -4,7 +4,7 @@ session_id: initial-namespace-profile-contents
 feature_id: [namespace-detail-view]
 spec_id: [webview-spec, namespace-workloads-table-spec]
 model_id: []
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 20
 ---

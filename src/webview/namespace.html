@@ -260,14 +260,52 @@
             </div>
         </div>
 
-        <div class="content">
-            <div class="placeholder-icon">📦</div>
-            <div class="placeholder-title">Resource Navigation</div>
-            <div class="placeholder-message">
-                Resource navigation and management features are coming soon. 
-                This panel will display pods, deployments, services, and other 
-                Kubernetes resources for this namespace.
+        <div class="workloads-section">
+            <h2>Workloads</h2>
+            
+            <!-- Pill Selectors -->
+            <div class="workload-type-pills">
+                <button class="pill-selector active" data-workload-type="deployments">
+                    Deployments
+                </button>
+                <button class="pill-selector" data-workload-type="statefulsets">
+                    StatefulSets
+                </button>
+                <button class="pill-selector" data-workload-type="daemonsets">
+                    DaemonSets
+                </button>
+                <button class="pill-selector" data-workload-type="cronjobs">
+                    CronJobs
+                </button>
             </div>
+            
+            <!-- Table Container -->
+            <div class="table-container">
+                <table class="workloads-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Namespace</th>
+                            <th>Health</th>
+                            <th>Ready/Desired</th>
+                        </tr>
+                    </thead>
+                    <tbody id="workloads-tbody">
+                        <!-- Workload rows are dynamically generated based on selected pill -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Empty State -->
+            <div class="empty-state" style="display: none;">
+                <div class="empty-icon">📦</div>
+                <p class="empty-message" id="empty-message">No deployments found in this namespace</p>
+            </div>
+            
+            <!-- Info Note -->
+            <p class="table-note">
+                Workload items are currently non-interactive.
+            </p>
         </div>
     </div>
 
