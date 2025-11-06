@@ -4,7 +4,7 @@ session_id: initial-namespace-profile-contents
 feature_id: [namespace-detail-view]
 spec_id: [namespace-workloads-table-spec]
 model_id: [namespace-selection-state]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 30
 ---

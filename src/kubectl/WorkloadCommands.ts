@@ -2,6 +2,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { KubectlError } from '../kubernetes/KubectlError';
 import { getCurrentNamespace } from '../utils/kubectlContext';
+import { WorkloadEntry } from '../types/workloadData';
 
 /**
  * Timeout for kubectl commands in milliseconds.
@@ -340,6 +341,112 @@ interface JobItem {
  */
 interface JobListResponse {
     items?: JobItem[];
+}
+
+/**
+ * Interface for kubectl deployment response items with creationTimestamp.
+ * Used by getDeploymentsForNamespace to return WorkloadEntry objects.
+ */
+interface DeploymentItemWithTimestamp {
+    metadata?: {
+        name?: string;
+        namespace?: string;
+        creationTimestamp?: string;
+    };
+    spec?: {
+        replicas?: number;
+        selector?: {
+            matchLabels?: {
+                [key: string]: string;
+            };
+        };
+    };
+    status?: {
+        readyReplicas?: number;
+        replicas?: number;
+    };
+}
+
+/**
+ * Interface for kubectl statefulset response items with creationTimestamp.
+ * Used by getStatefulSetsForNamespace to return WorkloadEntry objects.
+ */
+interface StatefulSetItemWithTimestamp {
+    metadata?: {
+        name?: string;
+        namespace?: string;
+        creationTimestamp?: string;
+    };
+    spec?: {
+        replicas?: number;
+        selector?: {
+            matchLabels?: {
+                [key: string]: string;
+            };
+        };
+    };
+    status?: {
+        readyReplicas?: number;
+        replicas?: number;
+    };
+}
+
+/**
+ * Interface for kubectl daemonset response items with creationTimestamp.
+ * Used by getDaemonSetsForNamespace to return WorkloadEntry objects.
+ */
+interface DaemonSetItemWithTimestamp {
+    metadata?: {
+        name?: string;
+        namespace?: string;
+        creationTimestamp?: string;
+    };
+    spec?: {
+        selector?: {
+            matchLabels?: {
+                [key: string]: string;
+            };
+        };
+    };
+    status?: {
+        desiredNumberScheduled?: number;
+        numberReady?: number;
+    };
+}
+
+/**
+ * Interface for kubectl cronjob response items with creationTimestamp.
+ * Used by getCronJobsForNamespace to return WorkloadEntry objects.
+ */
+interface CronJobItemWithTimestamp {
+    metadata?: {
+        name?: string;
+        namespace?: string;
+        creationTimestamp?: string;
+    };
+    spec?: {
+        schedule?: string;
+        suspend?: boolean;
+        jobTemplate?: {
+            spec?: {
+                selector?: {
+                    matchLabels?: {
+                        [key: string]: string;
+                    };
+                };
+            };
+        };
+    };
+    status?: {
+        lastScheduleTime?: string;
+    };
+}
+
+/**
+ * Interface for kubectl workload list response with timestamps.
+ */
+interface WorkloadListResponse<T> {
+    items?: T[];
 }
 
 /**
@@ -1150,6 +1257,325 @@ export class WorkloadCommands {
                 error: kubectlError
             };
         }
+    }
+
+    /**
+     * Retrieves deployments for a namespace and returns WorkloadEntry objects.
+     * Used by the namespace webview to display workload information with health status.
+     * 
+     * @param namespace Namespace to query, or null for all namespaces
+     * @param kubeconfigPath Path to the kubeconfig file
+     * @param contextName Name of the context to query
+     * @returns Promise<WorkloadEntry[]> Array of workload entries with health field undefined
+     * @throws Error if kubectl command fails
+     */
+    public static async getDeploymentsForNamespace(
+        namespace: string | null,
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<WorkloadEntry[]> {
+        // Build kubectl command arguments
+        const args = ['get', 'deployments'];
+        
+        // Handle namespace parameter
+        if (namespace === null) {
+            args.push('--all-namespaces');
+        } else {
+            args.push(`--namespace=${namespace}`);
+        }
+        
+        args.push(
+            '--output=json',
+            `--kubeconfig=${kubeconfigPath}`,
+            `--context=${contextName}`
+        );
+
+        // Execute kubectl get deployments with JSON output
+        const { stdout } = await execFileAsync(
+            'kubectl',
+            args,
+            {
+                timeout: KUBECTL_TIMEOUT_MS,
+                maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
+                env: { ...process.env }
+            }
+        );
+
+        // Parse the JSON response
+        const response: WorkloadListResponse<DeploymentItemWithTimestamp> = JSON.parse(stdout);
+        
+        // Extract workload entry information from the items array
+        const workloads: WorkloadEntry[] = response.items?.map((item: DeploymentItemWithTimestamp) => {
+            const name = item.metadata?.name || 'Unknown';
+            const itemNamespace = item.metadata?.namespace || 'default';
+            const desiredReplicas = item.spec?.replicas || 0;
+            const readyReplicas = item.status?.readyReplicas || 0;
+            const creationTimestamp = item.metadata?.creationTimestamp || new Date().toISOString();
+            
+            // Build label selector from matchLabels
+            const matchLabels = item.spec?.selector?.matchLabels || {};
+            const selector = Object.entries(matchLabels)
+                .map(([key, value]) => `${key}=${value}`)
+                .join(',');
+            
+            return {
+                name,
+                namespace: itemNamespace,
+                health: undefined as any, // Health will be calculated by health analyzer
+                readyReplicas,
+                desiredReplicas,
+                selector,
+                creationTimestamp
+            };
+        }) || [];
+        
+        // Sort workloads by namespace, then by name
+        workloads.sort((a, b) => {
+            const nsCompare = a.namespace.localeCompare(b.namespace);
+            return nsCompare !== 0 ? nsCompare : a.name.localeCompare(b.name);
+        });
+        
+        return workloads;
+    }
+
+    /**
+     * Retrieves statefulsets for a namespace and returns WorkloadEntry objects.
+     * Used by the namespace webview to display workload information with health status.
+     * 
+     * @param namespace Namespace to query, or null for all namespaces
+     * @param kubeconfigPath Path to the kubeconfig file
+     * @param contextName Name of the context to query
+     * @returns Promise<WorkloadEntry[]> Array of workload entries with health field undefined
+     * @throws Error if kubectl command fails
+     */
+    public static async getStatefulSetsForNamespace(
+        namespace: string | null,
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<WorkloadEntry[]> {
+        // Build kubectl command arguments
+        const args = ['get', 'statefulsets'];
+        
+        // Handle namespace parameter
+        if (namespace === null) {
+            args.push('--all-namespaces');
+        } else {
+            args.push(`--namespace=${namespace}`);
+        }
+        
+        args.push(
+            '--output=json',
+            `--kubeconfig=${kubeconfigPath}`,
+            `--context=${contextName}`
+        );
+
+        // Execute kubectl get statefulsets with JSON output
+        const { stdout } = await execFileAsync(
+            'kubectl',
+            args,
+            {
+                timeout: KUBECTL_TIMEOUT_MS,
+                maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
+                env: { ...process.env }
+            }
+        );
+
+        // Parse the JSON response
+        const response: WorkloadListResponse<StatefulSetItemWithTimestamp> = JSON.parse(stdout);
+        
+        // Extract workload entry information from the items array
+        const workloads: WorkloadEntry[] = response.items?.map((item: StatefulSetItemWithTimestamp) => {
+            const name = item.metadata?.name || 'Unknown';
+            const itemNamespace = item.metadata?.namespace || 'default';
+            const desiredReplicas = item.spec?.replicas || 0;
+            const readyReplicas = item.status?.readyReplicas || 0;
+            const creationTimestamp = item.metadata?.creationTimestamp || new Date().toISOString();
+            
+            // Build label selector from matchLabels
+            const matchLabels = item.spec?.selector?.matchLabels || {};
+            const selector = Object.entries(matchLabels)
+                .map(([key, value]) => `${key}=${value}`)
+                .join(',');
+            
+            return {
+                name,
+                namespace: itemNamespace,
+                health: undefined as any, // Health will be calculated by health analyzer
+                readyReplicas,
+                desiredReplicas,
+                selector,
+                creationTimestamp
+            };
+        }) || [];
+        
+        // Sort workloads by namespace, then by name
+        workloads.sort((a, b) => {
+            const nsCompare = a.namespace.localeCompare(b.namespace);
+            return nsCompare !== 0 ? nsCompare : a.name.localeCompare(b.name);
+        });
+        
+        return workloads;
+    }
+
+    /**
+     * Retrieves daemonsets for a namespace and returns WorkloadEntry objects.
+     * Used by the namespace webview to display workload information with health status.
+     * 
+     * @param namespace Namespace to query, or null for all namespaces
+     * @param kubeconfigPath Path to the kubeconfig file
+     * @param contextName Name of the context to query
+     * @returns Promise<WorkloadEntry[]> Array of workload entries with health field undefined
+     * @throws Error if kubectl command fails
+     */
+    public static async getDaemonSetsForNamespace(
+        namespace: string | null,
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<WorkloadEntry[]> {
+        // Build kubectl command arguments
+        const args = ['get', 'daemonsets'];
+        
+        // Handle namespace parameter
+        if (namespace === null) {
+            args.push('--all-namespaces');
+        } else {
+            args.push(`--namespace=${namespace}`);
+        }
+        
+        args.push(
+            '--output=json',
+            `--kubeconfig=${kubeconfigPath}`,
+            `--context=${contextName}`
+        );
+
+        // Execute kubectl get daemonsets with JSON output
+        const { stdout } = await execFileAsync(
+            'kubectl',
+            args,
+            {
+                timeout: KUBECTL_TIMEOUT_MS,
+                maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
+                env: { ...process.env }
+            }
+        );
+
+        // Parse the JSON response
+        const response: WorkloadListResponse<DaemonSetItemWithTimestamp> = JSON.parse(stdout);
+        
+        // Extract workload entry information from the items array
+        const workloads: WorkloadEntry[] = response.items?.map((item: DaemonSetItemWithTimestamp) => {
+            const name = item.metadata?.name || 'Unknown';
+            const itemNamespace = item.metadata?.namespace || 'default';
+            const desiredReplicas = item.status?.desiredNumberScheduled || 0;
+            const readyReplicas = item.status?.numberReady || 0;
+            const creationTimestamp = item.metadata?.creationTimestamp || new Date().toISOString();
+            
+            // Build label selector from matchLabels
+            const matchLabels = item.spec?.selector?.matchLabels || {};
+            const selector = Object.entries(matchLabels)
+                .map(([key, value]) => `${key}=${value}`)
+                .join(',');
+            
+            return {
+                name,
+                namespace: itemNamespace,
+                health: undefined as any, // Health will be calculated by health analyzer
+                readyReplicas,
+                desiredReplicas,
+                selector,
+                creationTimestamp
+            };
+        }) || [];
+        
+        // Sort workloads by namespace, then by name
+        workloads.sort((a, b) => {
+            const nsCompare = a.namespace.localeCompare(b.namespace);
+            return nsCompare !== 0 ? nsCompare : a.name.localeCompare(b.name);
+        });
+        
+        return workloads;
+    }
+
+    /**
+     * Retrieves cronjobs for a namespace and returns WorkloadEntry objects.
+     * Used by the namespace webview to display workload information with health status.
+     * Note: CronJobs don't have replicas, so both readyReplicas and desiredReplicas are set to 0.
+     * 
+     * @param namespace Namespace to query, or null for all namespaces
+     * @param kubeconfigPath Path to the kubeconfig file
+     * @param contextName Name of the context to query
+     * @returns Promise<WorkloadEntry[]> Array of workload entries with health field undefined
+     * @throws Error if kubectl command fails
+     */
+    public static async getCronJobsForNamespace(
+        namespace: string | null,
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<WorkloadEntry[]> {
+        // Build kubectl command arguments
+        const args = ['get', 'cronjobs'];
+        
+        // Handle namespace parameter
+        if (namespace === null) {
+            args.push('--all-namespaces');
+        } else {
+            args.push(`--namespace=${namespace}`);
+        }
+        
+        args.push(
+            '--output=json',
+            `--kubeconfig=${kubeconfigPath}`,
+            `--context=${contextName}`
+        );
+
+        // Execute kubectl get cronjobs with JSON output
+        const { stdout } = await execFileAsync(
+            'kubectl',
+            args,
+            {
+                timeout: KUBECTL_TIMEOUT_MS,
+                maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
+                env: { ...process.env }
+            }
+        );
+
+        // Parse the JSON response
+        const response: WorkloadListResponse<CronJobItemWithTimestamp> = JSON.parse(stdout);
+        
+        // Extract workload entry information from the items array
+        const workloads: WorkloadEntry[] = response.items?.map((item: CronJobItemWithTimestamp) => {
+            const name = item.metadata?.name || 'Unknown';
+            const itemNamespace = item.metadata?.namespace || 'default';
+            const creationTimestamp = item.metadata?.creationTimestamp || new Date().toISOString();
+            
+            // CronJobs don't have replicas
+            const desiredReplicas = 0;
+            const readyReplicas = 0;
+            
+            // Extract label selector from jobTemplate if available
+            const matchLabels = item.spec?.jobTemplate?.spec?.selector?.matchLabels || {};
+            const selector = Object.entries(matchLabels)
+                .map(([key, value]) => `${key}=${value}`)
+                .join(',');
+            
+            return {
+                name,
+                namespace: itemNamespace,
+                health: undefined as any, // Health will be calculated by health analyzer
+                readyReplicas,
+                desiredReplicas,
+                selector,
+                creationTimestamp
+            };
+        }) || [];
+        
+        // Sort workloads by namespace, then by name
+        workloads.sort((a, b) => {
+            const nsCompare = a.namespace.localeCompare(b.namespace);
+            return nsCompare !== 0 ? nsCompare : a.name.localeCompare(b.name);
+        });
+        
+        return workloads;
     }
 }
 
