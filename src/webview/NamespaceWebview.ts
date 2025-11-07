@@ -276,23 +276,23 @@ export class NamespaceWebview {
             // Read the HTML file
             let htmlContent = fs.readFileSync(htmlPath, 'utf8');
             
-            // Replace placeholders with actual context data
-            htmlContent = htmlContent.replace('{{CLUSTER_NAME}}', this.escapeHtml(namespaceContext.clusterName));
-            htmlContent = htmlContent.replace('{{CONTEXT_NAME}}', this.escapeHtml(namespaceContext.contextName));
+            // Replace placeholders with actual context data (using regex with global flag for all occurrences)
+            htmlContent = htmlContent.replace(/\{\{CLUSTER_NAME\}\}/g, this.escapeHtml(namespaceContext.clusterName));
+            htmlContent = htmlContent.replace(/\{\{CONTEXT_NAME\}\}/g, this.escapeHtml(namespaceContext.contextName));
             
             if (namespaceContext.namespace) {
-                htmlContent = htmlContent.replace('{{NAMESPACE_NAME}}', this.escapeHtml(namespaceContext.namespace));
-                htmlContent = htmlContent.replace('{{IS_ALL_NAMESPACES}}', 'false');
+                htmlContent = htmlContent.replace(/\{\{NAMESPACE_NAME\}\}/g, this.escapeHtml(namespaceContext.namespace));
+                htmlContent = htmlContent.replace(/\{\{IS_ALL_NAMESPACES\}\}/g, 'false');
             } else {
-                htmlContent = htmlContent.replace('{{NAMESPACE_NAME}}', 'All Namespaces');
-                htmlContent = htmlContent.replace('{{IS_ALL_NAMESPACES}}', 'true');
+                htmlContent = htmlContent.replace(/\{\{NAMESPACE_NAME\}\}/g, 'All Namespaces');
+                htmlContent = htmlContent.replace(/\{\{IS_ALL_NAMESPACES\}\}/g, 'true');
             }
             
             // Replace script URI placeholder
-            htmlContent = htmlContent.replace('{{SCRIPT_URI}}', scriptUri.toString());
+            htmlContent = htmlContent.replace(/\{\{SCRIPT_URI\}\}/g, scriptUri.toString());
             
             // Replace CSP source placeholder
-            htmlContent = htmlContent.replace('{{CSP_SOURCE}}', webview.cspSource);
+            htmlContent = htmlContent.replace(/\{\{CSP_SOURCE\}\}/g, webview.cspSource);
             
             return htmlContent;
         } catch (error) {

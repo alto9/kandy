@@ -431,4 +431,15 @@
             updateButtonState(false, initialNamespaceName);
         }
     }
+
+    // Automatically fetch workloads for the initially active tab (deployments)
+    // This ensures data is loaded when the webview first opens
+    const initialActivePill = document.querySelector('.pill-selector.active');
+    if (initialActivePill) {
+        const workloadType = initialActivePill.getAttribute('data-workload-type');
+        if (workloadType) {
+            // Fetch workloads for the initially selected type
+            selectWorkloadType(workloadType);
+        }
+    }
 })();

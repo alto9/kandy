@@ -4,6 +4,7 @@
   "description": "An AI-powered VS Code extension for Kubernetes cluster management that makes DevOps workflows conversational and intelligent",
   "version": "0.1.0",
   "publisher": "alto9",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/alto9/kandy"
@@ -113,12 +114,12 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
-    "compile": "webpack --mode production",
+    "build": "webpack --mode production",
     "watch": "webpack --mode development --watch",
-    "pretest": "npm run compile && npm run lint",
-    "lint": "eslint src --ext ts",
+    "pretest": "npm run build && npm run lint",
     "test": "mocha --require source-map-support/register --require out/src/test/setup.js --ui tdd 'out/{src/test,tests}/**/*.test.js'",
+    "lint": "eslint src --ext ts",
+    "prepackage": "npm run build",
     "package": "vsce package"
   },
   "devDependencies": {
