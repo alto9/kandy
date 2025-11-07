@@ -6,6 +6,10 @@ import { NamespaceCommands } from '../kubectl/NamespaceCommands';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
 import { WebviewMessage } from '../types/webviewMessages';
 import { getClusterTreeProvider } from '../extension';
+import { WorkloadCommands } from '../kubectl/WorkloadCommands';
+import { PodHealthAnalyzer } from '../kubernetes/PodHealthAnalyzer';
+import { calculateHealthStatus } from '../kubernetes/HealthCalculator';
+import { WorkloadType, WorkloadEntry } from '../types/workloadData';
 
 /**
  * Context information for namespace webviews.
@@ -27,6 +31,22 @@ interface PanelInfo {
     panel: vscode.WebviewPanel;
     /** The namespace context for this panel */
     namespaceContext: NamespaceContext;
+}
+
+/**
+ * Maps lowercase workload type values from HTML to TypeScript WorkloadType.
+ * 
+ * @param type - The lowercase workload type from HTML data attribute
+ * @returns The capitalized WorkloadType or null if invalid
+ */
+function mapWorkloadType(type: string): WorkloadType | null {
+    const mapping: { [key: string]: WorkloadType } = {
+        'deployments': 'Deployment',
+        'statefulsets': 'StatefulSet',
+        'daemonsets': 'DaemonSet',
+        'cronjobs': 'CronJob'
+    };
+    return mapping[type] || null;
 }
 
 /**
@@ -102,6 +122,9 @@ export class NamespaceWebview {
         // Handle messages from the webview
         panel.webview.onDidReceiveMessage(
             async (message: WebviewMessage) => {
+                // Get panel info for namespace context
+                const panelInfo = NamespaceWebview.openPanels.get(panelKey);
+                
                 switch (message.command) {
                     case 'refresh':
                         // TODO: Refresh namespace data
@@ -139,6 +162,150 @@ export class NamespaceWebview {
                                     `Failed to set namespace to: ${message.data.namespace}`
                                 );
                             }
+                        }
+                        break;
+                    
+                    case 'fetchWorkloads':
+                        // Fetch workloads for the selected type
+                        if (!panelInfo) {
+                            console.error('Panel info not found for fetchWorkloads');
+                            break;
+                        }
+                        
+                        try {
+                            // Extract and validate workload type
+                            const workloadTypeRaw = message.data?.workloadType;
+                            if (!workloadTypeRaw) {
+                                throw new Error('Workload type not specified');
+                            }
+                            
+                            // Map lowercase type to capitalized WorkloadType
+                            const workloadType = mapWorkloadType(workloadTypeRaw);
+                            if (!workloadType) {
+                                throw new Error(`Invalid workload type: ${workloadTypeRaw}`);
+                            }
+                            
+                            // Get namespace context (undefined for All Namespaces)
+                            const namespace = panelInfo.namespaceContext.namespace || null;
+                            const kubeconfigPath = KubeconfigParser.getKubeconfigPath();
+                            const contextName = panelInfo.namespaceContext.contextName;
+                            
+                            console.log(`Fetching ${workloadType} for namespace: ${namespace || 'All Namespaces'}`);
+                            
+                            // Fetch workloads based on type
+                            let workloads: WorkloadEntry[] = [];
+                            
+                            switch (workloadType) {
+                                case 'Deployment':
+                                    workloads = await WorkloadCommands.getDeploymentsForNamespace(
+                                        namespace,
+                                        kubeconfigPath,
+                                        contextName
+                                    );
+                                    break;
+                                case 'StatefulSet':
+                                    workloads = await WorkloadCommands.getStatefulSetsForNamespace(
+                                        namespace,
+                                        kubeconfigPath,
+                                        contextName
+                                    );
+                                    break;
+                                case 'DaemonSet':
+                                    workloads = await WorkloadCommands.getDaemonSetsForNamespace(
+                                        namespace,
+                                        kubeconfigPath,
+                                        contextName
+                                    );
+                                    break;
+                                case 'CronJob':
+                                    workloads = await WorkloadCommands.getCronJobsForNamespace(
+                                        namespace,
+                                        kubeconfigPath,
+                                        contextName
+                                    );
+                                    break;
+                            }
+                            
+                            console.log(`Fetched ${workloads.length} ${workloadType}(s)`);
+                            
+                            // Calculate health for each workload
+                            const workloadsWithHealth = await Promise.all(
+                                workloads.map(async (workload) => {
+                                    try {
+                                        // Get pods for this workload
+                                        const pods = await PodHealthAnalyzer.getPodsForWorkload(
+                                            workload,
+                                            workload.namespace,
+                                            kubeconfigPath,
+                                            contextName
+                                        );
+                                        
+                                        // Aggregate pod health
+                                        const podSummary = PodHealthAnalyzer.aggregatePodHealth(pods);
+                                        
+                                        // Calculate health status
+                                        const healthStatus = calculateHealthStatus(
+                                            workload.readyReplicas,
+                                            workload.desiredReplicas,
+                                            podSummary
+                                        );
+                                        
+                                        // Return workload with complete health information
+                                        return {
+                                            ...workload,
+                                            health: {
+                                                status: healthStatus,
+                                                podStatus: podSummary,
+                                                lastChecked: new Date()
+                                            }
+                                        };
+                                    } catch (error) {
+                                        // If health calculation fails for a workload, return with Unknown status
+                                        console.error(`Failed to calculate health for ${workload.name}:`, error);
+                                        return {
+                                            ...workload,
+                                            health: {
+                                                status: 'Unknown' as const,
+                                                podStatus: {
+                                                    totalPods: 0,
+                                                    readyPods: 0,
+                                                    healthChecks: { passed: 0, failed: 0, unknown: 0 },
+                                                    conditions: []
+                                                },
+                                                lastChecked: new Date()
+                                            }
+                                        };
+                                    }
+                                })
+                            );
+                            
+                            // Send response to webview
+                            panel.webview.postMessage({
+                                command: 'workloadsData',
+                                data: {
+                                    workloads: workloadsWithHealth,
+                                    lastUpdated: new Date(),
+                                    namespace: namespace
+                                }
+                            });
+                            
+                            console.log(`Sent ${workloadsWithHealth.length} workloads with health data to webview`);
+                            
+                        } catch (error) {
+                            // Log the error
+                            const errorMessage = error instanceof Error ? error.message : String(error);
+                            console.error(`Failed to fetch workloads:`, errorMessage);
+                            
+                            // Send error response to webview
+                            panel.webview.postMessage({
+                                command: 'workloadsData',
+                                data: {
+                                    workloads: [],
+                                    lastUpdated: new Date(),
+                                    namespace: panelInfo.namespaceContext.namespace || null,
+                                    error: errorMessage
+                                }
+                            });
                         }
                         break;
                 }

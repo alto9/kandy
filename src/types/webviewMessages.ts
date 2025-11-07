@@ -44,12 +44,25 @@ export interface OpenResourceMessage {
 }
 
 /**
+ * Message sent when user selects a workload type pill.
+ * Instructs the extension to fetch workload data for the selected type.
+ */
+export interface FetchWorkloadsMessage {
+    command: 'fetchWorkloads';
+    data: {
+        /** The workload type (lowercase: 'deployments', 'statefulsets', 'daemonsets', 'cronjobs') */
+        workloadType: string;
+    };
+}
+
+/**
  * Union type of all messages that can be sent from webview to extension.
  */
 export type WebviewMessage = 
     | SetActiveNamespaceMessage 
     | RefreshMessage
-    | OpenResourceMessage;
+    | OpenResourceMessage
+    | FetchWorkloadsMessage;
 
 // ============================================================================
 // Extension to Webview Messages
@@ -94,9 +107,28 @@ export interface NamespaceContextChangedMessage {
 }
 
 /**
+ * Message sent by extension with workload data for the selected type.
+ * Contains workloads array with health information and metadata.
+ */
+export interface WorkloadsDataMessage {
+    command: 'workloadsData';
+    data: {
+        /** Array of workload entries with health information */
+        workloads: any[]; // WorkloadEntry[] - using any to avoid circular dependencies
+        /** Timestamp of last data update */
+        lastUpdated: Date;
+        /** Namespace filter (null means "All Namespaces") */
+        namespace: string | null;
+        /** Optional error message if data fetch failed */
+        error?: string;
+    };
+}
+
+/**
  * Union type of all messages that can be sent from extension to webview.
  */
 export type ExtensionMessage = 
     | NamespaceDataMessage 
-    | NamespaceContextChangedMessage;
+    | NamespaceContextChangedMessage
+    | WorkloadsDataMessage;
 
