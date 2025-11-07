@@ -119,6 +119,9 @@ export class NamespaceWebview {
         // Send initial namespace data to populate the selector
         NamespaceWebview.sendNamespaceData(panel);
 
+        // Send initial workload data (Deployments by default)
+        NamespaceWebview.sendInitialWorkloadData(panel, namespaceContext);
+
         // Handle messages from the webview
         panel.webview.onDidReceiveMessage(
             async (message: WebviewMessage) => {
@@ -185,98 +188,10 @@ export class NamespaceWebview {
                                 throw new Error(`Invalid workload type: ${workloadTypeRaw}`);
                             }
                             
-                            // Get namespace context (undefined for All Namespaces)
-                            const namespace = panelInfo.namespaceContext.namespace || null;
-                            const kubeconfigPath = KubeconfigParser.getKubeconfigPath();
-                            const contextName = panelInfo.namespaceContext.contextName;
-                            
-                            console.log(`Fetching ${workloadType} for namespace: ${namespace || 'All Namespaces'}`);
-                            
-                            // Fetch workloads based on type
-                            let workloads: WorkloadEntry[] = [];
-                            
-                            switch (workloadType) {
-                                case 'Deployment':
-                                    workloads = await WorkloadCommands.getDeploymentsForNamespace(
-                                        namespace,
-                                        kubeconfigPath,
-                                        contextName
-                                    );
-                                    break;
-                                case 'StatefulSet':
-                                    workloads = await WorkloadCommands.getStatefulSetsForNamespace(
-                                        namespace,
-                                        kubeconfigPath,
-                                        contextName
-                                    );
-                                    break;
-                                case 'DaemonSet':
-                                    workloads = await WorkloadCommands.getDaemonSetsForNamespace(
-                                        namespace,
-                                        kubeconfigPath,
-                                        contextName
-                                    );
-                                    break;
-                                case 'CronJob':
-                                    workloads = await WorkloadCommands.getCronJobsForNamespace(
-                                        namespace,
-                                        kubeconfigPath,
-                                        contextName
-                                    );
-                                    break;
-                            }
-                            
-                            console.log(`Fetched ${workloads.length} ${workloadType}(s)`);
-                            
-                            // Calculate health for each workload
-                            const workloadsWithHealth = await Promise.all(
-                                workloads.map(async (workload) => {
-                                    try {
-                                        // Get pods for this workload
-                                        const pods = await PodHealthAnalyzer.getPodsForWorkload(
-                                            workload,
-                                            workload.namespace,
-                                            kubeconfigPath,
-                                            contextName
-                                        );
-                                        
-                                        // Aggregate pod health
-                                        const podSummary = PodHealthAnalyzer.aggregatePodHealth(pods);
-                                        
-                                        // Calculate health status
-                                        const healthStatus = calculateHealthStatus(
-                                            workload.readyReplicas,
-                                            workload.desiredReplicas,
-                                            podSummary
-                                        );
-                                        
-                                        // Return workload with complete health information
-                                        return {
-                                            ...workload,
-                                            health: {
-                                                status: healthStatus,
-                                                podStatus: podSummary,
-                                                lastChecked: new Date()
-                                            }
-                                        };
-                                    } catch (error) {
-                                        // If health calculation fails for a workload, return with Unknown status
-                                        console.error(`Failed to calculate health for ${workload.name}:`, error);
-                                        return {
-                                            ...workload,
-                                            health: {
-                                                status: 'Unknown' as const,
-                                                podStatus: {
-                                                    totalPods: 0,
-                                                    readyPods: 0,
-                                                    healthChecks: { passed: 0, failed: 0, unknown: 0 },
-                                                    conditions: []
-                                                },
-                                                lastChecked: new Date()
-                                            }
-                                        };
-                                    }
-                                })
+                            // Fetch workloads with health data using extracted method
+                            const workloadsWithHealth = await NamespaceWebview.fetchWorkloadsData(
+                                workloadType,
+                                panelInfo.namespaceContext
                             );
                             
                             // Send response to webview
@@ -285,7 +200,7 @@ export class NamespaceWebview {
                                 data: {
                                     workloads: workloadsWithHealth,
                                     lastUpdated: new Date(),
-                                    namespace: namespace
+                                    namespace: panelInfo.namespaceContext.namespace || null
                                 }
                             });
                             
@@ -473,6 +388,165 @@ export class NamespaceWebview {
                 data: {
                     namespaces: [],
                     currentNamespace: null
+                }
+            });
+        }
+    }
+
+    /**
+     * Fetch workload data for a specific workload type and namespace context.
+     * This method encapsulates the logic for fetching workloads and calculating their health status.
+     * 
+     * @param workloadType - The type of workload to fetch (Deployment, StatefulSet, etc.)
+     * @param namespaceContext - The namespace context containing cluster and namespace information
+     * @returns Promise resolving to array of WorkloadEntry objects with health data
+     * @throws Error if workload fetch or health calculation fails
+     */
+    private static async fetchWorkloadsData(
+        workloadType: WorkloadType,
+        namespaceContext: NamespaceContext
+    ): Promise<WorkloadEntry[]> {
+        // Get namespace context (undefined for All Namespaces)
+        const namespace = namespaceContext.namespace || null;
+        const kubeconfigPath = KubeconfigParser.getKubeconfigPath();
+        const contextName = namespaceContext.contextName;
+        
+        console.log(`Fetching ${workloadType} for namespace: ${namespace || 'All Namespaces'}`);
+        
+        // Fetch workloads based on type
+        let workloads: WorkloadEntry[] = [];
+        
+        switch (workloadType) {
+            case 'Deployment':
+                workloads = await WorkloadCommands.getDeploymentsForNamespace(
+                    namespace,
+                    kubeconfigPath,
+                    contextName
+                );
+                break;
+            case 'StatefulSet':
+                workloads = await WorkloadCommands.getStatefulSetsForNamespace(
+                    namespace,
+                    kubeconfigPath,
+                    contextName
+                );
+                break;
+            case 'DaemonSet':
+                workloads = await WorkloadCommands.getDaemonSetsForNamespace(
+                    namespace,
+                    kubeconfigPath,
+                    contextName
+                );
+                break;
+            case 'CronJob':
+                workloads = await WorkloadCommands.getCronJobsForNamespace(
+                    namespace,
+                    kubeconfigPath,
+                    contextName
+                );
+                break;
+        }
+        
+        console.log(`Fetched ${workloads.length} ${workloadType}(s)`);
+        
+        // Calculate health for each workload
+        const workloadsWithHealth = await Promise.all(
+            workloads.map(async (workload) => {
+                try {
+                    // Get pods for this workload
+                    const pods = await PodHealthAnalyzer.getPodsForWorkload(
+                        workload,
+                        workload.namespace,
+                        kubeconfigPath,
+                        contextName
+                    );
+                    
+                    // Aggregate pod health
+                    const podSummary = PodHealthAnalyzer.aggregatePodHealth(pods);
+                    
+                    // Calculate health status
+                    const healthStatus = calculateHealthStatus(
+                        workload.readyReplicas,
+                        workload.desiredReplicas,
+                        podSummary
+                    );
+                    
+                    // Return workload with complete health information
+                    return {
+                        ...workload,
+                        health: {
+                            status: healthStatus,
+                            podStatus: podSummary,
+                            lastChecked: new Date()
+                        }
+                    };
+                } catch (error) {
+                    // If health calculation fails for a workload, return with Unknown status
+                    console.error(`Failed to calculate health for ${workload.name}:`, error);
+                    return {
+                        ...workload,
+                        health: {
+                            status: 'Unknown' as const,
+                            podStatus: {
+                                totalPods: 0,
+                                readyPods: 0,
+                                healthChecks: { passed: 0, failed: 0, unknown: 0 },
+                                conditions: []
+                            },
+                            lastChecked: new Date()
+                        }
+                    };
+                }
+            })
+        );
+        
+        return workloadsWithHealth;
+    }
+
+    /**
+     * Send initial workload data to a newly opened webview panel.
+     * Automatically fetches Deployments data (the default workload type) and sends it to the webview.
+     * Handles errors gracefully by sending an empty array if the fetch fails.
+     * 
+     * @param panel - The webview panel to send data to
+     * @param namespaceContext - The namespace context for this panel
+     */
+    private static async sendInitialWorkloadData(
+        panel: vscode.WebviewPanel,
+        namespaceContext: NamespaceContext
+    ): Promise<void> {
+        try {
+            // Fetch Deployments (default workload type) with health data
+            const workloadsWithHealth = await NamespaceWebview.fetchWorkloadsData(
+                'Deployment',
+                namespaceContext
+            );
+            
+            // Send response to webview
+            panel.webview.postMessage({
+                command: 'workloadsData',
+                data: {
+                    workloads: workloadsWithHealth,
+                    lastUpdated: new Date(),
+                    namespace: namespaceContext.namespace || null
+                }
+            });
+            
+            console.log(`Sent initial ${workloadsWithHealth.length} Deployment(s) to webview`);
+            
+        } catch (error) {
+            // Log the error but don't crash - send empty array for graceful degradation
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`Failed to fetch initial workload data:`, errorMessage);
+            
+            // Send empty workloads array to webview
+            panel.webview.postMessage({
+                command: 'workloadsData',
+                data: {
+                    workloads: [],
+                    lastUpdated: new Date(),
+                    namespace: namespaceContext.namespace || null,
+                    error: errorMessage
                 }
             });
         }

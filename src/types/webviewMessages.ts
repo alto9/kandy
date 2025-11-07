@@ -5,6 +5,8 @@
  * and the extension host, covering namespace selection, resource navigation, and context updates.
  */
 
+import { WorkloadEntry } from './workloadData';
+
 // ============================================================================
 // Webview to Extension Messages
 // ============================================================================
@@ -114,7 +116,7 @@ export interface WorkloadsDataMessage {
     command: 'workloadsData';
     data: {
         /** Array of workload entries with health information */
-        workloads: any[]; // WorkloadEntry[] - using any to avoid circular dependencies
+        workloads: WorkloadEntry[];
         /** Timestamp of last data update */
         lastUpdated: Date;
         /** Namespace filter (null means "All Namespaces") */
