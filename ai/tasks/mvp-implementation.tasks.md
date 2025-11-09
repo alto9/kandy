@@ -153,7 +153,7 @@ assignee: development-team
 - HTTP client libraries for server communication
 
 ### Internal Dependencies
-- kandy-server must be running for AI features
+- kube9-server must be running for AI features
 - kubeconfig file must be valid and accessible
 - VS Code Kubernetes extension compatibility
 

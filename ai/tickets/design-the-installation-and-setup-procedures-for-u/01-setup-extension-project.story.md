@@ -20,8 +20,8 @@ This is the first story in implementing the initial-configuration feature. The e
 ## Implementation Steps
 
 1. Create `package.json` with extension metadata, activation events, and dependencies
-   - Set name to "kandy"
-   - Set displayName to "Kandy - Kubernetes Cluster Manager"
+   - Set name to "kube9"
+   - Set displayName to "kube9 - Kubernetes Cluster Manager"
    - Add activation event: "onStartupFinished"
    - Add VS Code engine requirement: "^1.80.0"
    - Include main entry point: "./out/extension.js"

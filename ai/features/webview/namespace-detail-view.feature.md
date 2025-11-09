@@ -11,7 +11,7 @@ context_id: [kubernetes-cluster-management]
 Feature: Namespace Detail View
 
 Background:
-  Given the Kandy VS Code extension is installed and activated
+  Given the kube9 VS Code extension is installed and activated
   And the user has a valid kubeconfig file
   And the user is connected to a cluster
 

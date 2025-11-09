@@ -22,7 +22,7 @@ Users should understand they can use the extension's core features (cluster view
 1. Add status bar item showing authentication status (optional)
 2. Create placeholder message in tree view when no API key is configured:
    - "Configure API key to enable AI recommendations"
-3. Add command "Kandy: Configure API Key" that opens settings
+3. Add command "kube9: Configure API Key" that opens settings
 4. Register command in package.json
 5. Add click handler on auth messages that opens settings
 6. Ensure messaging doesn't block core functionality
@@ -39,8 +39,8 @@ Users should understand they can use the extension's core features (cluster view
 
 - [ ] Auth status is visible but non-intrusive in UI
 - [ ] Message clearly states "API key needed for AI features only"
-- [ ] Clicking on auth message opens VS Code settings to kandy.apiKey
-- [ ] Command palette includes "Kandy: Configure API Key" command
+- [ ] Clicking on auth message opens VS Code settings to kube9.apiKey
+- [ ] Command palette includes "kube9: Configure API Key" command
 - [ ] Core features work without API key configured
 - [ ] Messaging doesn't repeatedly interrupt user workflow
 - [ ] Tooltips provide helpful context about authentication

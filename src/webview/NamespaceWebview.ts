@@ -91,7 +91,7 @@ export class NamespaceWebview {
 
         // Create a new webview panel
         const panel = vscode.window.createWebviewPanel(
-            'kandyNamespace',
+            'kube9Namespace',
             title,
             vscode.ViewColumn.One,
             {

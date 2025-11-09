@@ -134,7 +134,7 @@ suite('GlobalState Test Suite', () => {
         await state.setWelcomeScreenDismissed(true);
         
         // Verify the value is stored with the correct key
-        const value = mockMemento.get<boolean>('kandy.welcomeScreen.dismissed');
+        const value = mockMemento.get<boolean>('kube9.welcomeScreen.dismissed');
         assert.strictEqual(value, true);
     });
 

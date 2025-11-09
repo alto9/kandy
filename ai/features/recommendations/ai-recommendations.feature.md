@@ -5,9 +5,9 @@ spec_id: [ai-service-spec, webview-spec]
 
 # AI Recommendations Feature
 
-GIVEN a user has selected a resource in the Kandy tree view
+GIVEN a user has selected a resource in the kube9 tree view
 WHEN the webview panel opens for that resource
-THEN the extension should send the resource data to the Kandy server for AI analysis
+THEN the extension should send the resource data to the kube9 server for AI analysis
 AND display AI-generated recommendations in the webview panel
 
 GIVEN a user is viewing a pod in the webview panel

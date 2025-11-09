@@ -108,7 +108,7 @@ export class NamespacesCategory {
 
             // Make namespace clickable to open webview
             item.command = {
-                command: 'kandy.openNamespace',
+                command: 'kube9.openNamespace',
                 title: 'Open Namespace',
                 arguments: [
                     contextName,

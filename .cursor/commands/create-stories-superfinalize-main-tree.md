@@ -12,7 +12,7 @@ STEP 2: Retrieve the required schemas:
 
 STEP 3: Review the design session:
 
-**Session File**: /home/danderson/code/alto9/opensource/kandy/ai/sessions/superfinalize-main-tree.session.md
+**Session File**: /home/danderson/code/alto9/opensource/kube9/ai/sessions/superfinalize-main-tree.session.md
 **Session ID**: superfinalize-main-tree
 
 **Session Content**:
@@ -32,7 +32,7 @@ superfinalize main tree
 
 ## Goals
 
-Finalize the options we want to see in the main Kandy tree navigation
+Finalize the options we want to see in the main kube9 tree navigation
 
 ## Approach
 
@@ -63,14 +63,14 @@ index b52736c..9ee1d1c 100644
  
  # Tree View Navigation Feature
  
--GIVEN a user has installed the Kandy VS Code extension
--WHEN they open the VS Code command palette and search for "Kandy"
--THEN they should see Kandy-related commands available
+-GIVEN a user has installed the kube9 VS Code extension
+-WHEN they open the VS Code command palette and search for "kube9"
+-THEN they should see kube9-related commands available
 -
 -GIVEN a user has a valid kubeconfig file
--WHEN they run the "Kandy: Connect to Cluster" command
+-WHEN they run the "kube9: Connect to Cluster" command
 -THEN the extension should parse their kubeconfig file
--AND display available clusters in the Kandy tree view
+-AND display available clusters in the kube9 tree view
 -
 -GIVEN a user has connected to a cluster
 -WHEN they expand a cluster in the tree view
@@ -107,19 +107,19 @@ index b52736c..9ee1d1c 100644
 +Feature: Tree View Navigation
 +
 +Background:
-+  Given the Kandy VS Code extension is installed and activated
++  Given the kube9 VS Code extension is installed and activated
 +  And the user has a valid kubeconfig file
 +
-+Scenario: Viewing Kandy commands in VS Code
-+  Given a user has installed the Kandy VS Code extension
-+  When they open the VS Code command palette and search for "Kandy"
-+  Then they should see Kandy-related commands available
++Scenario: Viewing kube9 commands in VS Code
++  Given a user has installed the kube9 VS Code extension
++  When they open the VS Code command palette and search for "kube9"
++  Then they should see kube9-related commands available
 +
 +Scenario: Connecting to a cluster
 +  Given a user has a valid kubeconfig file
-+  When they run the "Kandy: Connect to Cluster" command
++  When they run the "kube9: Connect to Cluster" command
 +  Then the extension should parse their kubeconfig file
-+  And display available clusters in the Kandy tree view
++  And display available clusters in the kube9 tree view
 +
 +Scenario: Expanding a cluster shows resource categories
 +  Given a user has connected to a cluster

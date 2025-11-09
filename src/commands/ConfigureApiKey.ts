@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 /**
- * Command handler to open VS Code settings focused on the Kandy API key configuration.
+ * Command handler to open VS Code settings focused on the kube9 API key configuration.
  * This command provides users with quick access to configure their API key for AI-powered features.
  * 
  * The API key is optional and only required for AI recommendations.
@@ -9,10 +9,10 @@ import * as vscode from 'vscode';
  */
 export async function configureApiKeyCommand(): Promise<void> {
     try {
-        // Open VS Code settings and focus on the kandy.apiKey setting
+        // Open VS Code settings and focus on the kube9.apiKey setting
         await vscode.commands.executeCommand(
             'workbench.action.openSettings',
-            'kandy.apiKey'
+            'kube9.apiKey'
         );
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);

@@ -187,13 +187,13 @@ interface TreeItemData {
 "menus": {
   "view/item/context": [
     {
-      "command": "kandy.setActiveNamespace",
-      "when": "view == kandyTreeView && viewItem == namespace && !isActiveNamespace",
+      "command": "kube9.setActiveNamespace",
+      "when": "view == kube9TreeView && viewItem == namespace && !isActiveNamespace",
       "group": "namespace@1"
     },
     {
-      "command": "kandy.clearActiveNamespace",
-      "when": "view == kandyTreeView && viewItem == namespace && isActiveNamespace",
+      "command": "kube9.clearActiveNamespace",
+      "when": "view == kube9TreeView && viewItem == namespace && isActiveNamespace",
       "group": "namespace@1"
     }
   ]

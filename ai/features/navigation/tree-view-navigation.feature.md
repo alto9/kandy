@@ -11,19 +11,19 @@ context_id: [kubernetes-cluster-management]
 Feature: Tree View Navigation
 
 Background:
-  Given the Kandy VS Code extension is installed and activated
+  Given the kube9 VS Code extension is installed and activated
   And the user has a valid kubeconfig file
 
-Scenario: Viewing Kandy commands in VS Code
-  Given a user has installed the Kandy VS Code extension
-  When they open the VS Code command palette and search for "Kandy"
-  Then they should see Kandy-related commands available
+Scenario: Viewing kube9 commands in VS Code
+  Given a user has installed the kube9 VS Code extension
+  When they open the VS Code command palette and search for "kube9"
+  Then they should see kube9-related commands available
 
 Scenario: Connecting to a cluster
   Given a user has a valid kubeconfig file
-  When they run the "Kandy: Connect to Cluster" command
+  When they run the "kube9: Connect to Cluster" command
   Then the extension should parse their kubeconfig file
-  And display available clusters in the Kandy tree view
+  And display available clusters in the kube9 tree view
 
 Scenario: Expanding a cluster shows resource categories
   Given a user has connected to a cluster

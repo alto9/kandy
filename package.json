@@ -1,13 +1,13 @@
 {
-  "name": "kandy",
-  "displayName": "Kandy - Kubernetes Cluster Manager",
+  "name": "kube9",
+  "displayName": "kube9 - Kubernetes Cluster Manager",
   "description": "An AI-powered VS Code extension for Kubernetes cluster management that makes DevOps workflows conversational and intelligent",
   "version": "0.1.0",
   "publisher": "alto9",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/alto9/kandy"
+    "url": "https://github.com/alto9/kube9"
   },
   "engines": {
     "vscode": "^1.80.0",
@@ -18,93 +18,93 @@
   ],
   "activationEvents": [
     "onStartupFinished",
-    "onView:kandyClusterView"
+    "onView:kube9ClusterView"
   ],
   "main": "./dist/extension.js",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "kandyView",
-          "title": "Kandy",
+          "id": "kube9View",
+          "title": "kube9",
           "icon": "$(kubernetes)"
         }
       ]
     },
     "views": {
-      "kandyView": [
+      "kube9View": [
         {
-          "id": "kandyClusterView",
+          "id": "kube9ClusterView",
           "name": "Clusters"
         }
       ]
     },
     "commands": [
       {
-        "command": "kandy.refreshClusters",
+        "command": "kube9.refreshClusters",
         "title": "Refresh Clusters",
-        "category": "Kandy",
+        "category": "kube9",
         "icon": "$(refresh)"
       },
       {
-        "command": "kandy.configureApiKey",
+        "command": "kube9.configureApiKey",
         "title": "Configure API Key",
-        "category": "Kandy",
+        "category": "kube9",
         "icon": "$(key)"
       },
       {
-        "command": "kandy.openNamespace",
+        "command": "kube9.openNamespace",
         "title": "Open Namespace",
-        "category": "Kandy"
+        "category": "kube9"
       },
       {
-        "command": "kandy.setActiveNamespace",
+        "command": "kube9.setActiveNamespace",
         "title": "Set as Active Namespace",
-        "category": "Kandy"
+        "category": "kube9"
       },
       {
-        "command": "kandy.clearActiveNamespace",
+        "command": "kube9.clearActiveNamespace",
         "title": "Clear Active Namespace",
-        "category": "Kandy"
+        "category": "kube9"
       }
     ],
     "menus": {
       "view/title": [
         {
-          "command": "kandy.refreshClusters",
-          "when": "view == kandyClusterView",
+          "command": "kube9.refreshClusters",
+          "when": "view == kube9ClusterView",
           "group": "navigation"
         }
       ],
       "view/item/context": [
         {
-          "command": "kandy.setActiveNamespace",
-          "when": "view == kandyClusterView && viewItem == namespace:inactive",
+          "command": "kube9.setActiveNamespace",
+          "when": "view == kube9ClusterView && viewItem == namespace:inactive",
           "group": "namespace@1"
         },
         {
-          "command": "kandy.clearActiveNamespace",
-          "when": "view == kandyClusterView && viewItem == namespace:active",
+          "command": "kube9.clearActiveNamespace",
+          "when": "view == kube9ClusterView && viewItem == namespace:active",
           "group": "namespace@1"
         }
       ]
     },
     "configuration": {
-      "title": "Kandy",
+      "title": "kube9",
       "properties": {
-        "kandy.apiKey": {
+        "kube9.apiKey": {
           "type": "string",
           "default": "",
-          "description": "Optional API key for AI-powered features. Get your key at portal.kandy.dev",
+          "description": "Optional API key for AI-powered features. Get your key at portal.kube9.dev",
           "scope": "application"
         },
-        "kandy.serverUrl": {
+        "kube9.serverUrl": {
           "type": "string",
-          "default": "https://api.kandy.dev",
-          "description": "Kandy server URL",
+          "default": "https://api.kube9.dev",
+          "description": "kube9 server URL",
           "scope": "application"
         },
-        "kandy.debugMode": {
+        "kube9.debugMode": {
           "type": "boolean",
           "default": false,
           "description": "Enable debug logging",

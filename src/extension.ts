@@ -69,7 +69,7 @@ export function getClusterTreeProvider(): ClusterTreeProvider {
  */
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
     try {
-        console.log('Kandy extension is activating...');
+        console.log('kube9 extension is activating...');
         
         // Store context globally for access by other components
         extensionContext = context;
@@ -89,7 +89,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // Initialize and register tree view provider
         clusterTreeProvider = new ClusterTreeProvider();
         const treeViewDisposable = vscode.window.registerTreeDataProvider(
-            'kandyClusterView',
+            'kube9ClusterView',
             clusterTreeProvider
         );
         context.subscriptions.push(treeViewDisposable);
@@ -126,7 +126,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         });
         context.subscriptions.push(contextChangeSubscription);
         
-        console.log('Kandy extension activated successfully!');
+        console.log('kube9 extension activated successfully!');
         
         // TODO: Initialize extension components
         // - Configuration manager
@@ -135,9 +135,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // - Tree view providers
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error('Failed to activate Kandy extension:', errorMessage);
+        console.error('Failed to activate kube9 extension:', errorMessage);
         vscode.window.showErrorMessage(
-            `Kandy extension failed to activate: ${errorMessage}`
+            `kube9 extension failed to activate: ${errorMessage}`
         );
         throw error;
     }
@@ -159,15 +159,15 @@ function createAuthStatusBarItem(): void {
     
     // Set text and icon based on API key status
     if (hasApiKey) {
-        authStatusBarItem.text = '$(check) Kandy: Authenticated';
+        authStatusBarItem.text = '$(check) kube9: Authenticated';
         authStatusBarItem.tooltip = 'API key configured. AI-powered recommendations are available.\n\nClick to manage API key settings.';
     } else {
-        authStatusBarItem.text = '$(key) Kandy: No API Key';
+        authStatusBarItem.text = '$(key) kube9: No API Key';
         authStatusBarItem.tooltip = 'No API key configured. AI features require authentication.\n\nCore cluster management works without an API key.\n\nClick to configure your API key.';
     }
     
     // Make it clickable to open settings
-    authStatusBarItem.command = 'kandy.configureApiKey';
+    authStatusBarItem.command = 'kube9.configureApiKey';
     
     // Show the status bar item
     authStatusBarItem.show();
@@ -206,14 +206,14 @@ function registerCommands(): void {
     
     // Register configure API key command
     const configureApiKeyCmd = vscode.commands.registerCommand(
-        'kandy.configureApiKey',
+        'kube9.configureApiKey',
         configureApiKeyCommand
     );
     context.subscriptions.push(configureApiKeyCmd);
     disposables.push(configureApiKeyCmd);
     
     // Register refresh clusters command
-    const refreshClustersCommand = vscode.commands.registerCommand('kandy.refreshClusters', async () => {
+    const refreshClustersCommand = vscode.commands.registerCommand('kube9.refreshClusters', async () => {
         try {
             console.log('Refreshing clusters from kubeconfig...');
             
@@ -250,7 +250,7 @@ function registerCommands(): void {
     // Register open namespace command
     // Args: contextName, clusterName, namespace (undefined for "All Namespaces")
     const openNamespaceCommand = vscode.commands.registerCommand(
-        'kandy.openNamespace', 
+        'kube9.openNamespace', 
         async (contextName: string, clusterName: string, namespace?: string) => {
             try {
                 console.log('Opening namespace webview:', {
@@ -287,7 +287,7 @@ function registerCommands(): void {
     
     // Register set active namespace command
     const setActiveNamespaceCmd = vscode.commands.registerCommand(
-        'kandy.setActiveNamespace',
+        'kube9.setActiveNamespace',
         setActiveNamespaceCommand
     );
     context.subscriptions.push(setActiveNamespaceCmd);
@@ -299,7 +299,7 @@ function registerCommands(): void {
  * Use this to clean up resources.
  */
 export async function deactivate(): Promise<void> {
-    console.log('Kandy extension is deactivating...');
+    console.log('kube9 extension is deactivating...');
     
     try {
         // Dispose of all tracked disposables
@@ -343,7 +343,7 @@ export async function deactivate(): Promise<void> {
         // Clear extension context
         extensionContext = undefined;
         
-        console.log('Kandy extension deactivated successfully.');
+        console.log('kube9 extension deactivated successfully.');
         
         // TODO: Cleanup additional resources as they are added
         // - Close Kubernetes connections

@@ -1,12 +1,12 @@
-# Kandy
+# kube9
 
 **Visual Kubernetes Management for VS Code with AI-Powered Insights**
 
-![Kandy Logo](https://img.shields.io/badge/Status-MVP-blue) ![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue) ![Kubernetes](https://img.shields.io/badge/Kubernetes-Supported-blue)
+![kube9 Logo](https://img.shields.io/badge/Status-MVP-blue) ![VS Code](https://img.shields.io/badge/VS%20Code-Extension-blue) ![Kubernetes](https://img.shields.io/badge/Kubernetes-Supported-blue)
 
 ## Overview
 
-Kandy is a VS Code extension that brings visual Kubernetes cluster management directly into your development environment. Start with powerful free features, then unlock advanced AI-powered insights and rich dashboards with a Pro account.
+kube9 is a VS Code extension that brings visual Kubernetes cluster management directly into your development environment. Start with powerful free features, then unlock advanced AI-powered insights and rich dashboards with a Pro account.
 
 ### Freemium Model
 
@@ -17,7 +17,7 @@ Kandy is a VS Code extension that brings visual Kubernetes cluster management di
 - ✅ Launch workloads with freeform YAML
 - ✅ Multi-cluster support via kubeconfig
 
-**Pro Tier** - AI-powered intelligence ([Get API Key →](https://portal.kandy.dev)):
+**Pro Tier** - AI-powered intelligence ([Get API Key →](https://portal.kube9.dev)):
 - ✨ Advanced dashboards with real-time charts
 - ✨ AI-powered recommendations and insights
 - ✨ Historical metrics and trends
@@ -27,7 +27,7 @@ Kandy is a VS Code extension that brings visual Kubernetes cluster management di
 
 ## Architecture
 
-Kandy uses a **progressive enhancement** architecture that adapts to user tier:
+kube9 uses a **progressive enhancement** architecture that adapts to user tier:
 
 ```
 ┌─────────────────────────────────────┐
@@ -40,7 +40,7 @@ Kandy uses a **progressive enhancement** architecture that adapts to user tier:
 │  └────────────────────────────────┘ │
 │  ┌────────────────────────────────┐ │
 │  │  Pro Tier (with API key):     │ │
-│  │  - Loads from kandy-server    │ │
+│  │  - Loads from kube9-server    │ │
 │  │  - Rich web applications      │ │
 │  │  - No CSP restrictions        │ │
 │  └────────────────────────────────┘ │
@@ -48,7 +48,7 @@ Kandy uses a **progressive enhancement** architecture that adapts to user tier:
                   │
                   ↓ (Pro users only)
 ┌─────────────────────────────────────┐
-│  kandy-server                       │
+│  kube9-server                       │
 │  - Receives metrics from operator   │
 │  - Serves rich UI applications      │
 │  - AI analysis and recommendations  │
@@ -56,9 +56,9 @@ Kandy uses a **progressive enhancement** architecture that adapts to user tier:
                   ↑
                   │ (Pro users only)
 ┌─────────────────────────────────────┐
-│  kandy-operator (in cluster)        │
+│  kube9-operator (in cluster)        │
 │  - Collects sanitized metrics      │
-│  - Pushes to kandy-server          │
+│  - Pushes to kube9-server          │
 │  - No cluster ingress needed       │
 └─────────────────────────────────────┘
 ```
@@ -72,9 +72,9 @@ Kandy uses a **progressive enhancement** architecture that adapts to user tier:
 - No data sent to external servers
 
 **Pro Users:**
-- Install [kandy-operator](../kandy-operator) in your cluster
-- Operator pushes sanitized metrics to [kandy-server](../kandy-server)
-- Extension loads rich web UIs from kandy-server in iframes
+- Install [kube9-operator](../kube9-operator) in your cluster
+- Operator pushes sanitized metrics to [kube9-server](../kube9-server)
+- Extension loads rich web UIs from kube9-server in iframes
 - Advanced features: AI insights, charts, historical data
 - Your kubeconfig never leaves your machine
 
@@ -85,13 +85,13 @@ Kandy uses a **progressive enhancement** architecture that adapts to user tier:
 #### From VS Code Marketplace (Recommended)
 1. Open VS Code
 2. Go to Extensions (`Ctrl/Cmd + Shift + X`)
-3. Search for "Kandy"
+3. Search for "kube9"
 4. Click Install
 
 #### For Developers
 ```bash
 git clone <repository-url>
-cd kandy
+cd kube9
 npm install
 npm run compile
 # Press F5 to launch Extension Development Host
@@ -99,8 +99,8 @@ npm run compile
 
 ### Quick Start (Free Tier)
 
-1. **Open Kandy**
-   - Look for Kandy icon in VS Code activity bar
+1. **Open kube9**
+   - Look for kube9 icon in VS Code activity bar
    - Extension automatically reads your `~/.kube/config`
 
 2. **Navigate Your Cluster**
@@ -121,7 +121,7 @@ npm run compile
 ### Upgrade to Pro
 
 #### Step 1: Get API Key
-Visit [portal.kandy.dev](https://portal.kandy.dev) to:
+Visit [portal.kube9.dev](https://portal.kube9.dev) to:
 - Create a free account
 - Generate your API key
 - View installation instructions
@@ -133,30 +133,30 @@ The operator runs in your cluster to enable Pro features:
 ```bash
 # Extension detects Helm and offers one-click install
 # Or run manually:
-helm repo add kandy https://charts.kandy.dev
-helm install kandy-operator kandy/kandy-operator \
+helm repo add kube9 https://charts.kube9.dev
+helm install kube9-operator kube9/kube9-operator \
   --set apiKey=YOUR_API_KEY \
-  --namespace kandy-system \
+  --namespace kube9-system \
   --create-namespace
 ```
 
 **Option B: Manual**
 ```bash
-kubectl apply -f https://install.kandy.dev/operator.yaml
-kubectl create secret generic kandy-config \
+kubectl apply -f https://install.kube9.dev/operator.yaml
+kubectl create secret generic kube9-config \
   --from-literal=apiKey=YOUR_API_KEY \
-  -n kandy-system
+  -n kube9-system
 ```
 
 #### Step 3: Configure Extension
 Add to VS Code settings (`settings.json`):
 ```json
 {
-  "kandy.apiKey": "kdy_prod_abc123def456"
+  "kube9.apiKey": "kdy_prod_abc123def456"
 }
 ```
 
-That's it! The extension now loads Pro features from kandy-server.
+That's it! The extension now loads Pro features from kube9-server.
 
 ## Features by Tier
 
@@ -210,7 +210,7 @@ That's it! The extension now loads Pro features from kandy-server.
 ## Project Structure
 
 ```
-kandy/
+kube9/
 ├── src/
 │   ├── extension.ts           # Main entry point
 │   ├── providers/
@@ -264,12 +264,12 @@ npm run package
 ### Testing Tiers
 
 **Testing Free Tier:**
-- Don't configure `kandy.apiKey` in settings
+- Don't configure `kube9.apiKey` in settings
 - Extension should show local webviews
 - Verify basic CRUD operations work
 
 **Testing Pro Tier:**
-- Set up local kandy-server instance
+- Set up local kube9-server instance
 - Configure API key in settings
 - Extension should load remote webviews
 - Verify advanced features appear
@@ -290,10 +290,10 @@ npm run package
 ```json
 {
   // Required for Pro tier features
-  "kandy.apiKey": "",
+  "kube9.apiKey": "",
   
   // Optional: Enable debug logging
-  "kandy.debugMode": false
+  "kube9.debugMode": false
 }
 ```
 
@@ -301,9 +301,9 @@ API keys are stored securely in VS Code's secret storage.
 
 ## Related Projects
 
-- **[kandy-server](../kandy-server)** - Backend API and UI server for Pro features
-- **[kandy-operator](../kandy-operator)** - Kubernetes operator for metrics collection
-- **[kandy-portal](../kandy-portal)** - User portal for account management
+- **[kube9-server](../kube9-server)** - Backend API and UI server for Pro features
+- **[kube9-operator](../kube9-operator)** - Kubernetes operator for metrics collection
+- **[kube9-portal](../kube9-portal)** - User portal for account management
 
 ## Contributing
 
@@ -335,10 +335,10 @@ MIT License - see LICENSE file for details
 
 ## Support
 
-- [Documentation](https://docs.kandy.dev)
-- [GitHub Issues](https://github.com/alto9/kandy/issues)
-- [Community Discussions](https://github.com/alto9/kandy/discussions)
-- [Portal Support](https://portal.kandy.dev/support)
+- [Documentation](https://docs.kube9.dev)
+- [GitHub Issues](https://github.com/alto9/kube9/issues)
+- [Community Discussions](https://github.com/alto9/kube9/discussions)
+- [Portal Support](https://portal.kube9.dev/support)
 
 ---
 

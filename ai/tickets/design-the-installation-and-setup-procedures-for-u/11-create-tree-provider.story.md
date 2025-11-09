@@ -15,7 +15,7 @@ Implement ClusterTreeProvider class that implements VS Code's TreeDataProvider i
 
 ## Context
 
-The tree view is the primary navigation interface in the Kandy side panel. The ClusterTreeProvider must implement VS Code's TreeDataProvider interface to supply data to the tree view. This story focuses on the infrastructure; actual cluster population comes in the next story.
+The tree view is the primary navigation interface in the kube9 side panel. The ClusterTreeProvider must implement VS Code's TreeDataProvider interface to supply data to the tree view. This story focuses on the infrastructure; actual cluster population comes in the next story.
 
 ## Implementation Steps
 
@@ -25,7 +25,7 @@ The tree view is the primary navigation interface in the Kandy side panel. The C
 4. Create TreeItem wrapper class for cluster data
 5. Add `_onDidChangeTreeData` event emitter for tree refresh
 6. Implement `refresh()` method to trigger tree updates
-7. Register tree view in extension activation with view ID "kandyClusterView"
+7. Register tree view in extension activation with view ID "kube9ClusterView"
 8. Configure tree view in package.json contributions
 
 ## Files Affected

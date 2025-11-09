@@ -399,7 +399,7 @@
     });
 
     // Store functions in global scope for future use
-    window.kandyNamespace = {
+    window.kube9Namespace = {
         refresh,
         openResource,
         updateButtonState,

@@ -31,8 +31,8 @@ export class WelcomeWebview {
 
         // Otherwise, create a new panel
         const panel = vscode.window.createWebviewPanel(
-            'kandyWelcome',
-            'Welcome to Kandy',
+            'kube9Welcome',
+            'Welcome to kube9',
             column,
             {
                 enableScripts: true,
@@ -60,13 +60,13 @@ export class WelcomeWebview {
                         break;
                     }
                     case 'openPortal':
-                        // Open the Kandy portal in external browser
-                        vscode.env.openExternal(vscode.Uri.parse('https://portal.kandy.dev'));
+                        // Open the kube9 portal in external browser
+                        vscode.env.openExternal(vscode.Uri.parse('https://portal.kube9.dev'));
                         break;
 
                     case 'openSettings':
-                        // Open VS Code settings for Kandy extension
-                        vscode.commands.executeCommand('workbench.action.openSettings', 'kandy');
+                        // Open VS Code settings for kube9 extension
+                        vscode.commands.executeCommand('workbench.action.openSettings', 'kube9');
                         break;
                 }
             },

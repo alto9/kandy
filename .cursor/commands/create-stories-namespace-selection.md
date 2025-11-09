@@ -12,7 +12,7 @@ STEP 2: Retrieve the required schemas:
 
 STEP 3: Review the design session:
 
-**Session File**: /home/danderson/code/alto9/opensource/kandy/ai/sessions/namespace-selection.session.md
+**Session File**: /home/danderson/code/alto9/opensource/kube9/ai/sessions/namespace-selection.session.md
 **Session ID**: namespace-selection
 
 **Session Content**:
@@ -265,13 +265,13 @@ index f73eec5..c8692ff 100644
 +"menus": {
 +  "view/item/context": [
 +    {
-+      "command": "kandy.setActiveNamespace",
-+      "when": "view == kandyTreeView && viewItem == namespace && !isActiveNamespace",
++      "command": "kube9.setActiveNamespace",
++      "when": "view == kube9TreeView && viewItem == namespace && !isActiveNamespace",
 +      "group": "namespace@1"
 +    },
 +    {
-+      "command": "kandy.clearActiveNamespace",
-+      "when": "view == kandyTreeView && viewItem == namespace && isActiveNamespace",
++      "command": "kube9.clearActiveNamespace",
++      "when": "view == kube9TreeView && viewItem == namespace && isActiveNamespace",
 +      "group": "namespace@1"
 +    }
 +  ]

@@ -16,7 +16,7 @@ Implement a manual refresh command that users can trigger to update the tree vie
 Since automatic updates are removed, users need a way to manually refresh the tree view and check cluster connectivity.
 
 ## Implementation Steps
-1. Create a new VS Code command for manual refresh (e.g., `kandy.refreshTreeView`)
+1. Create a new VS Code command for manual refresh (e.g., `kube9.refreshTreeView`)
 2. Register the command in package.json and extension activation
 3. Implement refresh handler that re-queries clusters and namespaces
 4. Add refresh button/icon to tree view toolbar

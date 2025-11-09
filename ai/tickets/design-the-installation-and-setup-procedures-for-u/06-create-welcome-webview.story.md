@@ -22,10 +22,10 @@ The welcome screen is shown on first launch to help users understand the extensi
 1. Create `src/webview/WelcomeWebview.ts` class
 2. Implement method to create webview panel with proper configuration
 3. Create HTML template with:
-   - Kandy logo and title
+   - kube9 logo and title
    - Quick start guide explaining core features
    - Authentication section explaining API keys are optional for AI features
-   - Link to portal.kandy.dev
+   - Link to portal.kube9.dev
    - Instructions for configuring API key in settings
    - Link to full documentation
    - "Do not show this again" checkbox
@@ -41,10 +41,10 @@ The welcome screen is shown on first launch to help users understand the extensi
 ## Acceptance Criteria
 
 - [ ] Welcome webview opens automatically on first activation
-- [ ] Webview displays Kandy logo and title
+- [ ] Webview displays kube9 logo and title
 - [ ] Quick start guide lists cluster viewing, resource navigation, and AI recommendations
 - [ ] Authentication section clarifies API keys are optional and only for AI features
-- [ ] Link to portal.kandy.dev is present and functional
+- [ ] Link to portal.kube9.dev is present and functional
 - [ ] Instructions for configuring API key are clear
 - [ ] Checkbox and close button are rendered properly
 - [ ] Webview can communicate with extension host

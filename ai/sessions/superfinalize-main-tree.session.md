@@ -14,7 +14,7 @@ superfinalize main tree
 
 ## Goals
 
-Finalize the options we want to see in the main Kandy tree navigation
+Finalize the options we want to see in the main kube9 tree navigation
 
 ## Approach
 

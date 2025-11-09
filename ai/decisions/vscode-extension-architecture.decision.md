@@ -8,11 +8,11 @@ status: implemented
 
 ## Context
 
-We need to decide on the architecture for the Kandy VS Code extension, including how to handle UI, cluster communication, and AI integration.
+We need to decide on the architecture for the kube9 VS Code extension, including how to handle UI, cluster communication, and AI integration.
 
 ## Decision
 
-Implement Kandy as a VS Code extension using the hybrid architecture pattern with targeted AI recommendations rather than a general chat interface.
+Implement kube9 as a VS Code extension using the hybrid architecture pattern with targeted AI recommendations rather than a general chat interface.
 
 ## Rationale
 

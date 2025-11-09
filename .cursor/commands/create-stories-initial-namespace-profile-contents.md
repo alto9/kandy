@@ -12,7 +12,7 @@ STEP 2: Retrieve the required schemas:
 
 STEP 3: Review the design session:
 
-**Session File**: /home/danderson/code/alto9/opensource/kandy/ai/sessions/initial-namespace-profile-contents.session.md
+**Session File**: /home/danderson/code/alto9/opensource/kube9/ai/sessions/initial-namespace-profile-contents.session.md
 **Session ID**: initial-namespace-profile-contents
 
 **Session Content**:
@@ -35,7 +35,7 @@ initial namespace profile contents
 
 ## Goals
 
-The goal of this session is to provide basic contents on the Namespace profile view in Kandy.
+The goal of this session is to provide basic contents on the Namespace profile view in kube9.
 
 ## Approach
 

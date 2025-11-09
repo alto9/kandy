@@ -393,7 +393,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         
         // Make "All Namespaces" clickable to open webview
         allNamespacesItem.command = {
-            command: 'kandy.openNamespace',
+            command: 'kube9.openNamespace',
             title: 'Open All Namespaces',
             arguments: [
                 contextName,
@@ -423,7 +423,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             
             // Make namespace clickable to open webview
             item.command = {
-                command: 'kandy.openNamespace',
+                command: 'kube9.openNamespace',
                 title: 'Open Namespace',
                 arguments: [
                     clusterElement.resourceData!.context.name,
@@ -574,7 +574,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             
             // Make the item clickable to open settings
             item.command = {
-                command: 'kandy.configureApiKey',
+                command: 'kube9.configureApiKey',
                 title: 'Configure API Key',
                 arguments: []
             };

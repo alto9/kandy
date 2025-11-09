@@ -12,7 +12,7 @@ STEP 2: Retrieve the required schemas:
 
 STEP 3: Review the design session:
 
-**Session File**: /home/danderson/code/alto9/opensource/kandy/ai/sessions/namespace-profile-selection-behavior.session.md
+**Session File**: /home/danderson/code/alto9/opensource/kube9/ai/sessions/namespace-profile-selection-behavior.session.md
 **Session ID**: namespace-profile-selection-behavior
 
 **Session Content**:

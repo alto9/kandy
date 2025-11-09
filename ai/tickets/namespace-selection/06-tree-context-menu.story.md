@@ -22,8 +22,8 @@ Users need to be able to right-click on namespace items in the tree view to set 
 ## Implementation Steps
 
 1. Register commands in `package.json`:
-   - `kandy.setActiveNamespace` - Set namespace as active
-   - `kandy.clearActiveNamespace` - Clear active namespace
+   - `kube9.setActiveNamespace` - Set namespace as active
+   - `kube9.clearActiveNamespace` - Clear active namespace
 2. Add menu contributions to `package.json` under `menus.view/item/context`:
    - Show "Set as Active Namespace" when `viewItem == namespace && !isActiveNamespace`
    - Show "Clear Active Namespace" when `viewItem == namespace && isActiveNamespace`

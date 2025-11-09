@@ -17,7 +17,7 @@ initial namespace profile contents
 
 ## Goals
 
-The goal of this session is to provide basic contents on the Namespace profile view in Kandy.
+The goal of this session is to provide basic contents on the Namespace profile view in kube9.
 
 ## Approach
 

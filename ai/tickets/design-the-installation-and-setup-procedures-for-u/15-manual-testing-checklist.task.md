@@ -17,18 +17,18 @@ Automated tests may not catch all integration issues and user experience problem
 ## Steps
 
 ### Fresh Installation Testing
-1. Uninstall any existing Kandy extension
-2. Clear VS Code global state related to Kandy
+1. Uninstall any existing kube9 extension
+2. Clear VS Code global state related to kube9
 3. Install extension from VSIX package
 4. Verify extension activates automatically
 5. Verify welcome screen appears on first launch
 6. Check that all welcome screen content is present and readable
 
 ### Welcome Screen Testing
-7. Verify Kandy logo and title display correctly
+7. Verify kube9 logo and title display correctly
 8. Confirm quick start guide lists core features
 9. Check authentication section explains API keys are optional
-10. Verify link to portal.kandy.dev works
+10. Verify link to portal.kube9.dev works
 11. Test "Do not show this again" checkbox (unchecked)
 12. Click Close and restart VS Code
 13. Verify welcome screen appears again

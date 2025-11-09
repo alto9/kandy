@@ -8,7 +8,7 @@ export class GlobalState {
     private static instance: GlobalState | null = null;
     private globalState: vscode.Memento;
 
-    private static readonly welcomeScreenDismissedKey = 'kandy.welcomeScreen.dismissed';
+    private static readonly welcomeScreenDismissedKey = 'kube9.welcomeScreen.dismissed';
 
     /**
      * Private constructor to enforce singleton pattern.

@@ -6,7 +6,7 @@ model_id: []
 
 ## Overview
 
-The Initial Configuration feature defines the first-time user experience when installing and launching the Kandy VS Code extension. It ensures users have a smooth onboarding process with a helpful welcome screen, automatic cluster detection from their local kubeconfig, and clear guidance on optional authentication setup for AI-powered features.
+The Initial Configuration feature defines the first-time user experience when installing and launching the kube9 VS Code extension. It ensures users have a smooth onboarding process with a helpful welcome screen, automatic cluster detection from their local kubeconfig, and clear guidance on optional authentication setup for AI-powered features.
 
 ## Behavior
 
@@ -14,25 +14,25 @@ The Initial Configuration feature defines the first-time user experience when in
 Feature: Initial Configuration
 
 Background:
-  Given the Kandy VS Code extension is available in the marketplace
+  Given the kube9 VS Code extension is available in the marketplace
   And the extension supports VS Code version 1.80.0 or higher
 
 Scenario: Installing the extension from the marketplace
   Given a user has VS Code open
-  When they search for "Kandy" in the Extensions marketplace
-  Then they should see the Kandy extension in the search results
+  When they search for "kube9" in the Extensions marketplace
+  Then they should see the kube9 extension in the search results
   And the extension listing should show it is for Kubernetes cluster management
-  When they click "Install" on the Kandy extension
+  When they click "Install" on the kube9 extension
   Then the extension should download and install successfully
   And the extension should activate automatically after installation
-  And the Kandy side panel should appear in the activity bar
+  And the kube9 side panel should appear in the activity bar
 
 Scenario: Welcome screen appears on first launch
-  Given the Kandy extension has just been installed
+  Given the kube9 extension has just been installed
   And the extension has activated for the first time
   When VS Code completes the activation
   Then a welcome screen webview should open automatically
-  And the welcome screen should display the Kandy logo and title
+  And the welcome screen should display the kube9 logo and title
   And the welcome screen should show a quick start guide
   And the welcome screen should include authentication setup instructions
   And the welcome screen should have a "Do not show this again" checkbox
@@ -44,7 +44,7 @@ Scenario: Welcome screen content provides helpful guidance
   And the guide should list cluster viewing, resource navigation, and AI recommendations
   And the authentication section should explain API keys are optional
   And the authentication section should clarify API keys are only needed for AI features
-  And the authentication section should provide a link to the Kandy portal at "portal.kandy.dev"
+  And the authentication section should provide a link to the kube9 portal at "portal.kube9.dev"
   And the authentication section should show how to configure the API key in VS Code settings
   And the welcome screen should include a link to full documentation
   And the welcome screen should have a "Get Started" or "Close" button
@@ -69,13 +69,13 @@ Scenario: User dismisses welcome screen permanently
   And the extension should proceed directly to showing clusters
 
 Scenario: Automatic cluster detection on activation
-  Given the Kandy extension has activated
+  Given the kube9 extension has activated
   And the user has a valid kubeconfig file at "~/.kube/config"
   And the kubeconfig contains one or more cluster contexts
   When the extension initializes
   Then the extension should automatically parse the kubeconfig file
   And the extension should extract all configured clusters and contexts
-  And the extension should display the clusters in the Kandy side panel tree view
+  And the extension should display the clusters in the kube9 side panel tree view
   And each cluster should be shown as a top-level tree item
   And each cluster should show its context name
   And the clusters should be displayed without requiring authentication
@@ -83,7 +83,7 @@ Scenario: Automatic cluster detection on activation
 Scenario: Side panel shows detected clusters and contexts
   Given the extension has successfully parsed the kubeconfig
   And the kubeconfig contains multiple clusters with contexts
-  When the user opens the Kandy side panel
+  When the user opens the kube9 side panel
   Then they should see all detected clusters listed
   And each cluster should have an icon indicating its connection status
   And the current context should be highlighted or marked as active
@@ -92,7 +92,7 @@ Scenario: Side panel shows detected clusters and contexts
   And this should work without requiring API key configuration
 
 Scenario: Missing kubeconfig file is handled gracefully
-  Given the Kandy extension has activated
+  Given the kube9 extension has activated
   And no kubeconfig file exists at "~/.kube/config"
   Or the kubeconfig file exists but is empty
   When the extension attempts to parse the kubeconfig
@@ -104,7 +104,7 @@ Scenario: Missing kubeconfig file is handled gracefully
   And the welcome screen should still appear with setup instructions
 
 Scenario: Invalid kubeconfig file is handled gracefully
-  Given the Kandy extension has activated
+  Given the kube9 extension has activated
   And a kubeconfig file exists at "~/.kube/config"
   But the kubeconfig file has invalid YAML syntax or structure
   When the extension attempts to parse the kubeconfig
@@ -123,10 +123,10 @@ Scenario: Authentication context is clear to users
   And there should be a message like "Configure API key to enable AI recommendations"
   And there should be a link or button to configure authentication settings
   When the user clicks on the authentication setup link
-  Then VS Code settings should open to the Kandy configuration section
+  Then VS Code settings should open to the kube9 configuration section
 
 Scenario: Extension activation performance
-  Given the Kandy extension is being activated
+  Given the kube9 extension is being activated
   When VS Code triggers the activation event
   Then the extension should activate within 2 seconds
   And the kubeconfig parsing should happen asynchronously
@@ -150,7 +150,7 @@ Scenario: Re-activating extension after initial setup
 
 ### Implementation Considerations
 
-1. **Welcome Screen Persistence**: Store the "Do not show this again" preference in VS Code's global state using `context.globalState.update()`. Key suggestion: `kandy.welcomeScreen.dismissed`.
+1. **Welcome Screen Persistence**: Store the "Do not show this again" preference in VS Code's global state using `context.globalState.update()`. Key suggestion: `kube9.welcomeScreen.dismissed`.
 
 2. **Kubeconfig Location**: The extension should check the standard kubeconfig location (`~/.kube/config`) first, but also respect the `KUBECONFIG` environment variable for custom locations.
 
@@ -164,10 +164,10 @@ Scenario: Re-activating extension after initial setup
 5. **Performance**: Cluster detection should not block the UI. Use async/await patterns and consider implementing a loading state in the tree view.
 
 6. **Authentication UI Flow**: When users need to configure authentication:
-   - Open VS Code settings to `kandy.apiKey`
+   - Open VS Code settings to `kube9.apiKey`
    - Provide inline help text explaining where to get an API key
    - Link to the portal for key generation
-   - Consider implementing a command palette command "Kandy: Configure API Key" for easier access
+   - Consider implementing a command palette command "kube9: Configure API Key" for easier access
 
 7. **Welcome Screen Design**: The webview should:
    - Match VS Code's theme (light/dark mode)

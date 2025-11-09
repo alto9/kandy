@@ -8,7 +8,7 @@ status: implemented
 
 ## Context
 
-We need to decide how to integrate AI capabilities into Kandy while maintaining security, performance, and user experience. The AI needs access to cluster data and YAML configurations to provide intelligent recommendations.
+We need to decide how to integrate AI capabilities into kube9 while maintaining security, performance, and user experience. The AI needs access to cluster data and YAML configurations to provide intelligent recommendations.
 
 ## Decision
 
@@ -59,7 +59,7 @@ Implement a hybrid architecture where the VS Code extension handles UI and clust
 
 ### Data Flow
 1. **Extension** collects cluster data and user context
-2. **Extension** sends structured request to **Kandy Server**
+2. **Extension** sends structured request to **kube9 Server**
 3. **Server** processes data and formats AI prompts
 4. **Server** calls AI service (OpenAI, Anthropic, etc.)
 5. **Server** processes and validates AI response
@@ -68,13 +68,13 @@ Implement a hybrid architecture where the VS Code extension handles UI and clust
 
 ### Component Responsibilities
 
-#### VS Code Extension (`kandy/`)
+#### VS Code Extension (`kube9/`)
 - **UI Management**: Tree views, webview panels, user interactions
 - **Cluster Communication**: kubeconfig parsing, Kubernetes API calls
 - **Data Collection**: Gather cluster state and resource information
 - **Recommendation Display**: Show AI insights in context
 
-#### Kandy Server (`kandy-server/`)
+#### kube9 Server (`kube9-server/`)
 - **AI Service Integration**: Manage connections to OpenAI, Anthropic, etc.
 - **Prompt Engineering**: Create effective prompts for different analysis types
 - **Response Processing**: Parse and validate AI responses

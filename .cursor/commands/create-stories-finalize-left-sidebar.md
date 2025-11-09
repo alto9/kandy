@@ -12,7 +12,7 @@ STEP 2: Retrieve the required schemas:
 
 STEP 3: Review the design session:
 
-**Session File**: /home/danderson/code/alto9/opensource/kandy/ai/sessions/finalize-left-sidebar.session.md
+**Session File**: /home/danderson/code/alto9/opensource/kube9/ai/sessions/finalize-left-sidebar.session.md
 **Session ID**: finalize-left-sidebar
 
 **Session Content**:
@@ -296,7 +296,7 @@ diff --git a/ai/features/navigation/tree-view-navigation.feature.md b/ai/feature
 index ad23cda..b52736c 100644
 --- a/ai/features/navigation/tree-view-navigation.feature.md
 +++ b/ai/features/navigation/tree-view-navigation.feature.md
-@@ -16,25 +16,32 @@ AND display available clusters in the Kandy tree view
+@@ -16,25 +16,32 @@ AND display available clusters in the kube9 tree view
  
  GIVEN a user has connected to a cluster
  WHEN they expand a cluster in the tree view

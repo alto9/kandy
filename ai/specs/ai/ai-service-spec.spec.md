@@ -13,7 +13,7 @@ The AI service provides intelligent analysis and recommendations for Kubernetes 
 
 ```mermaid
 graph TD
-    A[VS Code Extension] -->|HTTP/JSON| B[Kandy Server]
+    A[VS Code Extension] -->|HTTP/JSON| B[kube9 Server]
     B --> C[Request Processor]
     C --> D[Data Sanitizer]
     D --> E[Prompt Builder]
