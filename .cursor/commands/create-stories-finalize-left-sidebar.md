@@ -489,7 +489,7 @@ index c006940..1d3af40 100644
 +++ b/ai/contexts/vscode-extension-development.context.md
 @@ -17,10 +17,11 @@ THEN study the VS Code TreeView API documentation
  AND review the Webview API documentation at https://code.visualstudio.com/api/extension-guides/webview
- AND examine how the Glam VS Code extension implements similar functionality
+ AND examine how the Forge VS Code extension implements similar functionality
  
 -GIVEN we need to handle real-time cluster data
 -WHEN implementing data updates
