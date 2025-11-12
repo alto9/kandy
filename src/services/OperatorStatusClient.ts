@@ -1,3 +1,4 @@
+import * as vscode from 'vscode';
 import { ConfigurationCommands } from '../kubectl/ConfigurationCommands';
 import { KubectlError, KubectlErrorType } from '../kubernetes/KubectlError';
 import { OperatorStatusMode, OperatorStatus } from '../kubernetes/OperatorStatusTypes';
@@ -40,6 +41,24 @@ export interface CachedOperatorStatus {
     
     /** The extension-determined status mode */
     mode: OperatorStatusMode;
+}
+
+/**
+ * OutputChannel for operator status logging.
+ * Created lazily on first use.
+ */
+let outputChannel: vscode.OutputChannel | undefined;
+
+/**
+ * Gets or creates the OutputChannel for operator status logging.
+ * 
+ * @returns The OutputChannel instance
+ */
+function getOutputChannel(): vscode.OutputChannel {
+    if (!outputChannel) {
+        outputChannel = vscode.window.createOutputChannel('kube9 Operator Status');
+    }
+    return outputChannel;
 }
 
 /**
@@ -106,21 +125,51 @@ export class OperatorStatusClient {
                 contextName
             ) as ConfigMapResult;
 
-            // Handle 404 - operator not installed
+            // Handle errors from getConfigMap
             if (result.error) {
-                const isNotFound = this.isNotFoundError(result.error);
+                const error = result.error;
+                const isNotFound = this.isNotFoundError(error);
+                
                 if (isNotFound) {
+                    // 404 - operator not installed (expected behavior)
                     const basicStatus: CachedOperatorStatus = {
                         status: null,
                         timestamp: Date.now(),
                         mode: OperatorStatusMode.Basic
                     };
                     this.cache.set(cacheKey, basicStatus);
+                    getOutputChannel().appendLine(
+                        `[DEBUG] Operator status ConfigMap not found for context ${contextName} (expected if operator not installed)`
+                    );
                     return basicStatus;
                 }
                 
-                // Other errors - fall back to cache or basic status
+                // Categorize and handle other errors
+                const errorType = error.type;
+                const errorDetails = error.getDetails();
+                
+                if (errorType === KubectlErrorType.PermissionDenied) {
+                    // RBAC permission error - log warning and fall back
+                    getOutputChannel().appendLine(
+                        `[WARNING] RBAC permission denied when checking operator status for context ${contextName}: ${errorDetails}`
+                    );
+                } else if (errorType === KubectlErrorType.ConnectionFailed || errorType === KubectlErrorType.Timeout) {
+                    // Network/connectivity error - log error and fall back
+                    getOutputChannel().appendLine(
+                        `[ERROR] Network/connectivity error when checking operator status for context ${contextName}: ${errorDetails}`
+                    );
+                } else {
+                    // Unknown error - log error and fall back
+                    getOutputChannel().appendLine(
+                        `[ERROR] Unexpected error when checking operator status for context ${contextName}: ${error.getUserMessage()} (${errorDetails})`
+                    );
+                }
+                
+                // Fall back to cache if available
                 if (this.cache.has(cacheKey)) {
+                    getOutputChannel().appendLine(
+                        `[INFO] Falling back to cached operator status for context ${contextName}`
+                    );
                     return this.cache.get(cacheKey)!;
                 }
                 
@@ -131,6 +180,9 @@ export class OperatorStatusClient {
                     mode: OperatorStatusMode.Basic
                 };
                 this.cache.set(cacheKey, basicStatus);
+                getOutputChannel().appendLine(
+                    `[INFO] No cached status available for context ${contextName}, using basic status`
+                );
                 return basicStatus;
             }
 
@@ -163,14 +215,44 @@ export class OperatorStatusClient {
             try {
                 operatorStatus = JSON.parse(statusJson) as OperatorStatus;
             } catch (parseError) {
-                // Invalid JSON - log error and fall back to basic status
-                console.error(
-                    `Failed to parse operator status JSON for context ${contextName}:`,
-                    parseError instanceof Error ? parseError.message : String(parseError)
+                // Invalid JSON - log error and fall back
+                const errorMessage = parseError instanceof Error ? parseError.message : String(parseError);
+                getOutputChannel().appendLine(
+                    `[ERROR] Failed to parse operator status JSON for context ${contextName}: ${errorMessage}`
+                );
+                getOutputChannel().appendLine(`[ERROR] Invalid JSON content: ${statusJson.substring(0, 200)}...`);
+                
+                // Fall back to cache if available
+                if (this.cache.has(cacheKey)) {
+                    getOutputChannel().appendLine(
+                        `[INFO] Falling back to cached operator status for context ${contextName} after JSON parse error`
+                    );
+                    return this.cache.get(cacheKey)!;
+                }
+                
+                // No cache - return basic status
+                const basicStatus: CachedOperatorStatus = {
+                    status: null,
+                    timestamp: Date.now(),
+                    mode: OperatorStatusMode.Basic
+                };
+                this.cache.set(cacheKey, basicStatus);
+                return basicStatus;
+            }
+
+            // Validate required fields in parsed status JSON
+            const validationError = this.validateStatusFields(operatorStatus, contextName);
+            if (validationError) {
+                // Missing required fields - log error and fall back
+                getOutputChannel().appendLine(
+                    `[ERROR] Invalid operator status for context ${contextName}: ${validationError}`
                 );
                 
                 // Fall back to cache if available
                 if (this.cache.has(cacheKey)) {
+                    getOutputChannel().appendLine(
+                        `[INFO] Falling back to cached operator status for context ${contextName} after validation error`
+                    );
                     return this.cache.get(cacheKey)!;
                 }
                 
@@ -197,14 +279,22 @@ export class OperatorStatusClient {
             return cachedStatus;
 
         } catch (error) {
-            // Unexpected error - fall back to cache or basic status
-            console.error(
-                `Unexpected error querying operator status for context ${contextName}:`,
-                error instanceof Error ? error.message : String(error)
+            // Unexpected error - log and fall back to cache or basic status
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const errorStack = error instanceof Error ? error.stack : undefined;
+            
+            getOutputChannel().appendLine(
+                `[ERROR] Unexpected error querying operator status for context ${contextName}: ${errorMessage}`
             );
+            if (errorStack) {
+                getOutputChannel().appendLine(`[ERROR] Stack trace: ${errorStack}`);
+            }
 
             // Fall back to cache if available
             if (this.cache.has(cacheKey)) {
+                getOutputChannel().appendLine(
+                    `[INFO] Falling back to cached operator status for context ${contextName} after unexpected error`
+                );
                 return this.cache.get(cacheKey)!;
             }
 
@@ -215,6 +305,9 @@ export class OperatorStatusClient {
                 mode: OperatorStatusMode.Basic
             };
             this.cache.set(cacheKey, basicStatus);
+            getOutputChannel().appendLine(
+                `[INFO] No cached status available for context ${contextName}, using basic status after unexpected error`
+            );
             return basicStatus;
         }
     }
@@ -255,7 +348,10 @@ export class OperatorStatusClient {
             }
         } catch (error) {
             // Invalid timestamp - treat as degraded
-            console.error('Failed to parse operator status lastUpdate timestamp:', error);
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            getOutputChannel().appendLine(
+                `[ERROR] Failed to parse operator status lastUpdate timestamp: ${errorMessage}`
+            );
             return OperatorStatusMode.Degraded;
         }
 
@@ -287,6 +383,43 @@ export class OperatorStatusClient {
     }
 
     /**
+     * Validates that the operator status contains all required fields.
+     * 
+     * @param status The operator status to validate
+     * @param contextName The context name for error messages
+     * @returns Error message if validation fails, null if valid
+     */
+    private validateStatusFields(status: OperatorStatus, contextName: string): string | null {
+        const missingFields: string[] = [];
+        
+        // Check required fields
+        if (status.mode === undefined || status.mode === null) {
+            missingFields.push('mode');
+        }
+        if (status.tier === undefined || status.tier === null) {
+            missingFields.push('tier');
+        }
+        if (status.version === undefined || status.version === null || status.version === '') {
+            missingFields.push('version');
+        }
+        if (status.health === undefined || status.health === null) {
+            missingFields.push('health');
+        }
+        if (status.lastUpdate === undefined || status.lastUpdate === null || status.lastUpdate === '') {
+            missingFields.push('lastUpdate');
+        }
+        if (status.registered === undefined || status.registered === null) {
+            missingFields.push('registered');
+        }
+        
+        if (missingFields.length > 0) {
+            return `Missing required fields: ${missingFields.join(', ')}`;
+        }
+        
+        return null;
+    }
+
+    /**
      * Checks if a kubectl error indicates the ConfigMap was not found (404).
      * 
      * @param error The kubectl error to check
@@ -301,5 +434,14 @@ export class OperatorStatusClient {
             error.type === KubectlErrorType.Unknown && details.includes('configmap') && details.includes('not found')
         );
     }
+}
+
+/**
+ * Exports the OutputChannel for use by other components.
+ * 
+ * @returns The OutputChannel instance
+ */
+export function getOperatorStatusOutputChannel(): vscode.OutputChannel {
+    return getOutputChannel();
 }
 

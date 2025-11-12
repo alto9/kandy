@@ -23,7 +23,7 @@ import { SecretsSubcategory } from './categories/configuration/SecretsSubcategor
 import { HelmCategory } from './categories/HelmCategory';
 import { CustomResourcesCategory } from './categories/CustomResourcesCategory';
 import { namespaceWatcher } from '../services/namespaceCache';
-import { OperatorStatusClient } from '../services/OperatorStatusClient';
+import { OperatorStatusClient, getOperatorStatusOutputChannel } from '../services/OperatorStatusClient';
 import { OperatorStatusMode } from '../kubernetes/OperatorStatusTypes';
 
 /**
@@ -780,6 +780,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
 
         try {
             // Query operator status (uses caching internally)
+            // OperatorStatusClient handles all errors internally and returns a valid CachedOperatorStatus
             const cachedStatus = await this.operatorStatusClient.getStatus(
                 kubeconfigPath,
                 contextName
@@ -797,12 +798,22 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             // Refresh just this tree item
             this._onDidChangeTreeData.fire(item);
         } catch (error) {
-            // Handle errors gracefully - leave operatorStatus undefined if check fails
+            // Handle unexpected errors gracefully - leave operatorStatus undefined if check fails
             // This prevents operator status check failures from breaking the tree view
-            console.error(
-                `Error checking operator status for cluster ${contextName}:`,
-                error instanceof Error ? error.message : String(error)
+            // Note: OperatorStatusClient.getStatus() should never throw, but we handle it defensively
+            const outputChannel = getOperatorStatusOutputChannel();
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const errorStack = error instanceof Error ? error.stack : undefined;
+            
+            outputChannel.appendLine(
+                `[ERROR] Unexpected error in checkOperatorStatus for cluster ${contextName}: ${errorMessage}`
             );
+            if (errorStack) {
+                outputChannel.appendLine(`[ERROR] Stack trace: ${errorStack}`);
+            }
+            
+            // Leave operatorStatus undefined - tree will show connectivity-based icon
+            // No error dialogs shown to users - errors are logged to OutputChannel only
         }
     }
 
