@@ -1,5 +1,6 @@
 import { ConfigurationCommands } from '../kubectl/ConfigurationCommands';
 import { KubectlError, KubectlErrorType } from '../kubernetes/KubectlError';
+import { OperatorStatusMode, OperatorStatus } from '../kubernetes/OperatorStatusTypes';
 
 /**
  * ConfigMap response structure from kubectl.
@@ -26,41 +27,6 @@ interface ConfigMapResult {
 
 // Note: getConfigMap will be added to ConfigurationCommands in story 002.
 // We use a type assertion to call it until story 002 is complete.
-
-/**
- * Operator status mode as determined by the extension.
- */
-export type OperatorStatusMode = 'basic' | 'operated' | 'enabled' | 'degraded';
-
-/**
- * Operator status as returned by the kube9-operator-status ConfigMap.
- * Matches the operator's OperatorStatus interface.
- */
-export interface OperatorStatus {
-    /** Operator mode: "operated" (free) or "enabled" (pro) */
-    mode: 'operated' | 'enabled';
-    
-    /** User-facing tier name */
-    tier: 'free' | 'pro';
-    
-    /** Operator version (semver) */
-    version: string;
-    
-    /** Health status */
-    health: 'healthy' | 'degraded' | 'unhealthy';
-    
-    /** ISO 8601 timestamp of last status update */
-    lastUpdate: string;
-    
-    /** Whether operator is registered with kube9-server (pro tier only) */
-    registered: boolean;
-    
-    /** Error message if unhealthy or degraded */
-    error: string | null;
-    
-    /** Optional: Server-provided cluster ID (pro tier only) */
-    clusterId?: string;
-}
 
 /**
  * Cached operator status with metadata.
@@ -147,7 +113,7 @@ export class OperatorStatusClient {
                     const basicStatus: CachedOperatorStatus = {
                         status: null,
                         timestamp: Date.now(),
-                        mode: 'basic'
+                        mode: OperatorStatusMode.Basic
                     };
                     this.cache.set(cacheKey, basicStatus);
                     return basicStatus;
@@ -162,7 +128,7 @@ export class OperatorStatusClient {
                 const basicStatus: CachedOperatorStatus = {
                     status: null,
                     timestamp: Date.now(),
-                    mode: 'basic'
+                    mode: OperatorStatusMode.Basic
                 };
                 this.cache.set(cacheKey, basicStatus);
                 return basicStatus;
@@ -174,7 +140,7 @@ export class OperatorStatusClient {
                 const basicStatus: CachedOperatorStatus = {
                     status: null,
                     timestamp: Date.now(),
-                    mode: 'basic'
+                    mode: OperatorStatusMode.Basic
                 };
                 this.cache.set(cacheKey, basicStatus);
                 return basicStatus;
@@ -186,7 +152,7 @@ export class OperatorStatusClient {
                 const basicStatus: CachedOperatorStatus = {
                     status: null,
                     timestamp: Date.now(),
-                    mode: 'basic'
+                    mode: OperatorStatusMode.Basic
                 };
                 this.cache.set(cacheKey, basicStatus);
                 return basicStatus;
@@ -212,7 +178,7 @@ export class OperatorStatusClient {
                 const basicStatus: CachedOperatorStatus = {
                     status: null,
                     timestamp: Date.now(),
-                    mode: 'basic'
+                    mode: OperatorStatusMode.Basic
                 };
                 this.cache.set(cacheKey, basicStatus);
                 return basicStatus;
@@ -246,7 +212,7 @@ export class OperatorStatusClient {
             const basicStatus: CachedOperatorStatus = {
                 status: null,
                 timestamp: Date.now(),
-                mode: 'basic'
+                mode: OperatorStatusMode.Basic
             };
             this.cache.set(cacheKey, basicStatus);
             return basicStatus;
@@ -285,39 +251,39 @@ export class OperatorStatusClient {
             const isStale = statusAge > this.CACHE_TTL_MS;
             
             if (isStale) {
-                return 'degraded';
+                return OperatorStatusMode.Degraded;
             }
         } catch (error) {
             // Invalid timestamp - treat as degraded
             console.error('Failed to parse operator status lastUpdate timestamp:', error);
-            return 'degraded';
+            return OperatorStatusMode.Degraded;
         }
 
         // Check health status
         if (status.health === 'degraded' || status.health === 'unhealthy') {
-            return 'degraded';
+            return OperatorStatusMode.Degraded;
         }
 
         // Check enabled mode (pro tier)
         if (status.mode === 'enabled') {
             if (status.tier === 'pro' && status.registered && status.health === 'healthy') {
-                return 'enabled';
+                return OperatorStatusMode.Enabled;
             }
             // Enabled mode but not properly registered or healthy - degraded
-            return 'degraded';
+            return OperatorStatusMode.Degraded;
         }
 
         // Check operated mode (free tier)
         if (status.mode === 'operated') {
             if (status.tier === 'free' && status.health === 'healthy') {
-                return 'operated';
+                return OperatorStatusMode.Operated;
             }
             // Operated mode but not healthy - degraded
-            return 'degraded';
+            return OperatorStatusMode.Degraded;
         }
 
         // Unknown mode - treat as degraded
-        return 'degraded';
+        return OperatorStatusMode.Degraded;
     }
 
     /**
