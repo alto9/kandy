@@ -3,7 +3,7 @@ story_id: add-periodic-status-refresh
 session_id: operator-presence-awareness-and-reporting
 feature_id: [operator-presence-awareness]
 spec_id: [operator-status-api-spec]
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 20
 ---

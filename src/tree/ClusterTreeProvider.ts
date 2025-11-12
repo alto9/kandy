@@ -627,8 +627,10 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     }
 
     /**
-     * Start periodic connectivity checks for all clusters.
+     * Start periodic connectivity and operator status checks for all clusters.
      * Checks cluster connectivity every 60 seconds automatically.
+     * Also checks operator status periodically (cache TTL is 5 minutes, so checks
+     * will only query the cluster when cache expires).
      * Clears any existing interval before starting a new one.
      */
     private startPeriodicRefresh(): void {
@@ -662,6 +664,19 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 
                 // Run connectivity check (this will update cache and refresh tree)
                 this.checkAllClustersConnectivity(clusterItems);
+                
+                // Check operator status for all clusters asynchronously
+                // Filter to only valid cluster items (exclude auth status item)
+                const validClusters = clusterItems.filter(item => 
+                    item.type === 'cluster' && 
+                    item.resourceData?.context?.name
+                );
+                
+                // Check operator status for each cluster asynchronously (fire-and-forget)
+                // The OperatorStatusClient will check cache TTL and refresh if needed
+                validClusters.forEach(item => {
+                    void this.checkOperatorStatus(item);
+                });
             }
         }, 60000); // 60 seconds = 60000 milliseconds
     }
