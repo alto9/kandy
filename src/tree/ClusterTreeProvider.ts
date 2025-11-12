@@ -23,6 +23,8 @@ import { SecretsSubcategory } from './categories/configuration/SecretsSubcategor
 import { HelmCategory } from './categories/HelmCategory';
 import { CustomResourcesCategory } from './categories/CustomResourcesCategory';
 import { namespaceWatcher } from '../services/namespaceCache';
+import { OperatorStatusClient } from '../services/OperatorStatusClient';
+import { OperatorStatusMode } from '../kubernetes/OperatorStatusTypes';
 
 /**
  * Tree data provider for displaying Kubernetes clusters in the VS Code sidebar.
@@ -76,6 +78,12 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      * Allows the tree to refresh when kubectl context changes externally.
      */
     private contextSubscription?: vscode.Disposable;
+
+    /**
+     * Client for querying and caching operator status from clusters.
+     * Used to determine operator presence and status for each cluster.
+     */
+    private operatorStatusClient: OperatorStatusClient = new OperatorStatusClient();
 
     /**
      * Get the UI representation of a tree element.
@@ -534,6 +542,18 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         // Check connectivity for all clusters asynchronously
         this.checkAllClustersConnectivity(clusterItems);
 
+        // Check operator status for all clusters asynchronously
+        // Filter to only valid cluster items (exclude auth status item)
+        const validClusters = clusterItems.filter(item => 
+            item.type === 'cluster' && 
+            item.resourceData?.context?.name
+        );
+        
+        // Check operator status for each cluster asynchronously (fire-and-forget)
+        validClusters.forEach(item => {
+            void this.checkOperatorStatus(item);
+        });
+
         // Add authentication status message at the bottom of the cluster list
         const authStatusItem = this.createAuthStatusItem();
         clusterItems.push(authStatusItem);
@@ -732,6 +752,50 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             }
         } catch (error) {
             console.error('Error checking cluster connectivity:', error);
+        }
+    }
+
+    /**
+     * Check operator status for a single cluster and update the tree item.
+     * This method runs asynchronously and updates the cluster item with operator status
+     * information when available.
+     * 
+     * @param item The cluster tree item to check operator status for
+     */
+    private async checkOperatorStatus(item: ClusterTreeItem): Promise<void> {
+        // Validate prerequisites
+        if (!this.kubeconfig || !item.resourceData?.context?.name) {
+            return;
+        }
+
+        const kubeconfigPath = this.kubeconfig.filePath;
+        const contextName = item.resourceData.context.name;
+
+        try {
+            // Query operator status (uses caching internally)
+            const cachedStatus = await this.operatorStatusClient.getStatus(
+                kubeconfigPath,
+                contextName
+            );
+
+            // Update item with operator status
+            item.operatorStatus = cachedStatus.mode;
+            item.operatorStatusDetails = cachedStatus.status ?? undefined;
+
+            // Update appearance (note: story 005 will update this method to accept operatorStatus)
+            const isCurrentContext = contextName === this.kubeconfig.currentContext;
+            const currentStatus = item.status || ClusterStatus.Unknown;
+            this.updateTreeItemAppearance(item, isCurrentContext, currentStatus);
+
+            // Refresh just this tree item
+            this._onDidChangeTreeData.fire(item);
+        } catch (error) {
+            // Handle errors gracefully - leave operatorStatus undefined if check fails
+            // This prevents operator status check failures from breaking the tree view
+            console.error(
+                `Error checking operator status for cluster ${contextName}:`,
+                error instanceof Error ? error.message : String(error)
+            );
         }
     }
 
