@@ -3,7 +3,7 @@ story_id: update-cluster-icons-based-on-status
 session_id: operator-presence-awareness-and-reporting
 feature_id: [operator-presence-awareness]
 spec_id: [operator-status-api-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 20
 ---

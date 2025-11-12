@@ -511,7 +511,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             
             // Set initial icon and tooltip (will be updated after connectivity check)
             const isCurrentContext = context.name === this.kubeconfig!.currentContext;
-            this.updateTreeItemAppearance(item, isCurrentContext, ClusterStatus.Unknown);
+            this.updateTreeItemAppearance(item, isCurrentContext, ClusterStatus.Unknown, item.operatorStatus);
 
             // Add server URL to tooltip if available
             if (cluster) {
@@ -534,7 +534,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                     // Use cached status if available
                     item.status = cachedStatus;
                     const isCurrentContext = contextName === this.kubeconfig!.currentContext;
-                    this.updateTreeItemAppearance(item, isCurrentContext, cachedStatus);
+                    this.updateTreeItemAppearance(item, isCurrentContext, cachedStatus, item.operatorStatus);
                 }
             }
         });
@@ -741,7 +741,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 const isCurrentContext = contextName === this.kubeconfig?.currentContext;
 
                 // Update the item's appearance based on its status
-                this.updateTreeItemAppearance(item, isCurrentContext, result.status);
+                this.updateTreeItemAppearance(item, isCurrentContext, result.status, item.operatorStatus);
             });
 
             // Only refresh the tree view if status actually changed
@@ -782,10 +782,10 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             item.operatorStatus = cachedStatus.mode;
             item.operatorStatusDetails = cachedStatus.status ?? undefined;
 
-            // Update appearance (note: story 005 will update this method to accept operatorStatus)
+            // Update appearance with operator status (prioritizes operator status over connectivity)
             const isCurrentContext = contextName === this.kubeconfig.currentContext;
             const currentStatus = item.status || ClusterStatus.Unknown;
-            this.updateTreeItemAppearance(item, isCurrentContext, currentStatus);
+            this.updateTreeItemAppearance(item, isCurrentContext, currentStatus, item.operatorStatus);
 
             // Refresh just this tree item
             this._onDidChangeTreeData.fire(item);
@@ -801,42 +801,78 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
 
     /**
      * Updates a tree item's icon and tooltip based on its status.
+     * Prioritizes operator status over connectivity status when operator status is available.
      * 
      * @param item The tree item to update
      * @param isCurrentContext Whether this cluster is the current context
      * @param status The connection status of the cluster
+     * @param operatorStatus Optional operator status mode (takes priority over connectivity status)
      */
     private updateTreeItemAppearance(
         item: ClusterTreeItem, 
         isCurrentContext: boolean, 
-        status: ClusterStatus
+        status: ClusterStatus,
+        operatorStatus?: OperatorStatusMode
     ): void {
-        // Determine the appropriate icon based on status and current context
+        // Determine the appropriate icon based on operator status (if available) or connectivity status
         let iconId: string;
         let statusText: string;
+        let iconColor: vscode.ThemeColor | undefined;
 
-        if (status === ClusterStatus.Unknown) {
-            iconId = 'loading~spin';
-            statusText = 'Checking connection...';
-        } else if (status === ClusterStatus.Connected) {
-            if (isCurrentContext) {
-                iconId = 'vm-active'; // Active VM icon for current + connected
-                statusText = 'Current context (connected)';
-            } else {
-                iconId = 'vm-connect'; // Connected VM icon
-                statusText = 'Connected';
+        // Prioritize operator status over connectivity status when operator status is available
+        if (operatorStatus !== undefined) {
+            switch (operatorStatus) {
+                case OperatorStatusMode.Basic:
+                    iconId = 'circle-outline';
+                    statusText = 'Operator not installed';
+                    // No color - use default
+                    break;
+                case OperatorStatusMode.Operated:
+                    iconId = 'shield';
+                    statusText = 'Operator installed (free tier)';
+                    // No color - use default
+                    break;
+                case OperatorStatusMode.Enabled:
+                    iconId = 'verified';
+                    statusText = 'Operator enabled (pro tier)';
+                    iconColor = new vscode.ThemeColor('testing.iconPassed');
+                    break;
+                case OperatorStatusMode.Degraded:
+                    iconId = 'warning';
+                    statusText = 'Operator degraded';
+                    iconColor = new vscode.ThemeColor('editorWarning.foreground');
+                    break;
             }
-        } else { // Disconnected
-            if (isCurrentContext) {
-                iconId = 'warning'; // Warning icon for current + disconnected
-                statusText = 'Current context (disconnected)';
-            } else {
-                iconId = 'warning'; // Warning icon for disconnected clusters
-                statusText = 'Disconnected';
+        } else {
+            // Fall back to connectivity-based icons when operator status is not available
+            if (status === ClusterStatus.Unknown) {
+                iconId = 'loading~spin';
+                statusText = 'Checking connection...';
+            } else if (status === ClusterStatus.Connected) {
+                if (isCurrentContext) {
+                    iconId = 'vm-active'; // Active VM icon for current + connected
+                    statusText = 'Current context (connected)';
+                } else {
+                    iconId = 'vm-connect'; // Connected VM icon
+                    statusText = 'Connected';
+                }
+            } else { // Disconnected
+                if (isCurrentContext) {
+                    iconId = 'warning'; // Warning icon for current + disconnected
+                    statusText = 'Current context (disconnected)';
+                } else {
+                    iconId = 'warning'; // Warning icon for disconnected clusters
+                    statusText = 'Disconnected';
+                }
             }
         }
 
-        item.iconPath = new vscode.ThemeIcon(iconId);
+        // Set icon with color if specified
+        if (iconColor) {
+            item.iconPath = new vscode.ThemeIcon(iconId, iconColor);
+        } else {
+            item.iconPath = new vscode.ThemeIcon(iconId);
+        }
         
         // Update tooltip with status information
         const contextName = item.resourceData?.context?.name || item.label;
