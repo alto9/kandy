@@ -1,4 +1,4 @@
-<!-- forge-hash: b4349bfcd4ef32d092b2b1e48ec0cbb2f51e2e6a87fb8c67da4b6bf910a8ffad -->
+<!-- forge-hash: bf72e59eb0b2e68dc1866f092fe017a8192c987d5c4d328fd2038357a79cb831 -->
 
 # Forge Design
 
@@ -13,7 +13,7 @@ You must have an active design session before making changes to AI documentation
 1. **Calls MCP Tools**: Uses `get_forge_about` to understand the Forge workflow and session-driven approach
 2. **Checks for active session**: Ensures you're working within a structured design workflow
 3. **Reads AI documentation**: Understands existing design patterns and structure
-4. **Guides documentation updates**: Helps create or modify features, diagrams, specs, models, actors, and contexts
+4. **Guides documentation updates**: Helps create or modify features, diagrams, specs, actors, and contexts
 5. **Tracks all changes**: Ensures changed files are tracked in the active session's `changed_files` array
 
 ## File Type Guidance
@@ -40,11 +40,6 @@ When working in design sessions, use the correct file type for each purpose:
 - **Does NOT contain**: Diagrams (use diagram files instead), implementation code (use context files)
 - **Example**: "Login API endpoint accepts email/password, returns JWT token"
 
-### Models (*.model.md)
-- **Purpose**: Define data structures and their properties
-- **Format**: Markdown tables with property definitions
-- **Contains**: Properties, relationships, validation rules, constraints
-
 ### Actors (*.actor.md)
 - **Purpose**: Define who/what interacts with the system
 - **Format**: Markdown descriptions
@@ -57,11 +52,24 @@ When working in design sessions, use the correct file type for each purpose:
 - **Contains**: When to use patterns, code examples, best practices
 - **Note**: Always editable (no session required)
 
+## Intelligent Linkage and Grouping
+
+When working with Forge documentation, it's essential to understand and respect the existing organizational structure:
+
+- **Analyze folder structure**: Before creating new files, examine the existing `ai/` subfolder structure to understand how elements are logically grouped
+- **Follow existing patterns**: Contribute to existing grouping patterns rather than creating new arbitrary structures
+- **Respect nesting**: Folder nesting reflects logical relationships - preserve and extend these relationships when adding new files
+- **Utilize linkages effectively**: Use all element linkages (feature_id, spec_id, context_id) to build complete context, but avoid over-verbosity
+- **Group logically**: Place related files together in nested folders that reflect their relationships and dependencies
+- **Maintain consistency**: When adding new documentation, follow the same organizational patterns already established in the project
+
+Understanding the existing structure helps maintain coherence and makes the documentation easier to navigate and understand.
+
 ## Important Constraints
 
 - **This is a Forge design session**: You are working within a structured design workflow
 - **Only modify AI documentation files**: Work exclusively within the `ai/` folder
-- **Do NOT modify implementation code**: This command is for updating features, diagrams, specs, models, actors, and contexts only
+- **Do NOT modify implementation code**: This command is for updating features, diagrams, specs, actors, and contexts only
 - **Track all changes**: Ensure changed files are tracked in the active session's `changed_files` array
 - **Use proper formats**: Features use Gherkin in code blocks, Diagrams use single nomnoml diagrams, Specs use markdown only
 - **Call MCP tools**: Always start by calling `get_forge_about` to understand the current Forge workflow

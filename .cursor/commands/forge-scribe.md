@@ -1,4 +1,4 @@
-<!-- forge-hash: 9d8a56fec34d1fc06ac0e7c60c8100eb52a79457480f5920edba35e1f995e097 -->
+<!-- forge-hash: e530b84f038f37c4dd1e69416cbbff7c4410b61cf36700a4086f46eade642f16 -->
 
 # Forge Scribe
 
@@ -78,8 +78,8 @@ The command will:
    - This provides just-in-time technical guidance for each technology involved
 
 ### Phase 5: Architectural Understanding
-1. **Read all Mermaid diagrams**
-   - Examine every Mermaid diagram in modified specs
+1. **Read all nomnoml diagrams**
+   - Examine every nomnoml diagram in modified specs
    - Understand:
      - System architecture
      - Component relationships
@@ -110,7 +110,7 @@ Before creating tickets, verify:
 - [ ] All feature/spec `context_id` references read
 - [ ] All `spec_id` linkages followed
 - [ ] All object types extracted and queried via `get_forge_context`
-- [ ] All Mermaid diagrams analyzed
+- [ ] All nomnoml diagrams analyzed
 - [ ] Complete architectural understanding achieved
 - [ ] Context map synthesized
 
@@ -143,10 +143,26 @@ Each story must include:
 - Clear objective
 - Acceptance criteria
 - File paths involved
-- Links to feature_id, spec_id, model_id
+- Links to feature_id, spec_id
 - Link to session_id
 
-### 3. Proper File Structure
+### 3. Sequential Numbering
+All stories and tasks must use sequential numbering in their filenames to indicate implementation order:
+
+- **Format**: Use three-digit numbers with leading zeros (001-, 002-, 003-, etc.)
+- **Sequential dependencies**: Tickets that must be done in order get sequential numbers
+- **Parallel work**: Tickets that can be done synchronously (no dependencies) share the same number
+- **Example**: 
+  - `001-implement-user-login.story.md` (must be done first)
+  - `002-add-jwt-validation.story.md` (depends on 001)
+  - `003-setup-auth0-integration.task.md` (can be done in parallel with next two)
+  - `003-add-error-handling.story.md` (can be done in parallel with previous)
+  - `003-update-documentation.task.md` (can be done in parallel with previous two)
+  - `004-add-logging.story.md` (depends on 003 tickets being complete)
+
+This numbering system helps track implementation order and identifies opportunities for parallel work.
+
+### 4. Proper File Structure
 All tickets go in: `ai/sessions/<session-id>/tickets/`
 
 Example structure:
@@ -155,18 +171,18 @@ ai/sessions/
   └── session-123/
       ├── session-123.session.md
       └── tickets/
-          ├── implement-user-login.story.md
-          ├── setup-auth0-integration.task.md
-          ├── add-jwt-validation.story.md
+          ├── 001-implement-user-login.story.md
+          ├── 002-setup-auth0-integration.task.md
+          ├── 003-add-jwt-validation.story.md
           └── ...
 ```
 
-### 4. Follow Schemas
+### 5. Follow Schemas
 All files must adhere to:
 - Story schema (call `get_forge_schema story`)
 - Task schema (call `get_forge_schema task`)
 
-### 5. Link Everything
+### 6. Link Everything
 Every story/task MUST include:
 ```yaml
 session_id: '<session-id>'
