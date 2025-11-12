@@ -513,14 +513,6 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             const isCurrentContext = context.name === this.kubeconfig!.currentContext;
             this.updateTreeItemAppearance(item, isCurrentContext, ClusterStatus.Unknown, item.operatorStatus);
 
-            // Add server URL to tooltip if available
-            if (cluster) {
-                item.tooltip += `\nServer: ${cluster.server}`;
-                if (context.namespace) {
-                    item.tooltip += `\nNamespace: ${context.namespace}`;
-                }
-            }
-
             return item;
         }).filter((item): item is ClusterTreeItem => item !== null);
 
@@ -800,6 +792,138 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     }
 
     /**
+     * Formats an ISO 8601 timestamp into a human-readable string.
+     * For recent times (< 1 hour), shows relative time (e.g., "2 minutes ago").
+     * For older times, shows ISO date string.
+     * 
+     * @param timestamp ISO 8601 timestamp string
+     * @returns Human-readable timestamp string
+     */
+    private formatTimestamp(timestamp: string): string {
+        try {
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diffMs = now.getTime() - date.getTime();
+            const diffMinutes = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+
+            // Show relative time for recent updates (< 1 hour)
+            if (diffMinutes < 1) {
+                return 'Just now';
+            } else if (diffMinutes < 60) {
+                return `${diffMinutes} minute${diffMinutes !== 1 ? 's' : ''} ago`;
+            } else if (diffHours < 24) {
+                return `${diffHours} hour${diffHours !== 1 ? 's' : ''} ago`;
+            }
+
+            // For older times, show ISO date
+            return date.toISOString();
+        } catch (error) {
+            // Fall back to original timestamp if parsing fails
+            return timestamp;
+        }
+    }
+
+    /**
+     * Builds a comprehensive tooltip for a cluster tree item.
+     * Includes cluster name, connection status, server URL, namespace, and operator status details.
+     * 
+     * @param item The cluster tree item to build tooltip for
+     * @param isCurrentContext Whether this cluster is the current context
+     * @param status The connection status of the cluster
+     * @returns Formatted tooltip string
+     */
+    private buildOperatorStatusTooltip(
+        item: ClusterTreeItem,
+        isCurrentContext: boolean,
+        status: ClusterStatus
+    ): string {
+        const contextName = item.resourceData?.context?.name || item.label;
+        const parts: string[] = [];
+
+        // Cluster name
+        parts.push(`Cluster: ${contextName}`);
+
+        // Connection status
+        let connectionStatus: string;
+        if (status === ClusterStatus.Unknown) {
+            connectionStatus = 'Checking connection...';
+        } else if (status === ClusterStatus.Connected) {
+            connectionStatus = isCurrentContext ? 'Current context (connected)' : 'Connected';
+        } else {
+            connectionStatus = isCurrentContext ? 'Current context (disconnected)' : 'Disconnected';
+        }
+        parts.push(`Connection: ${connectionStatus}`);
+
+        // Server URL (if available)
+        if (item.resourceData?.cluster?.server) {
+            parts.push(`Server: ${item.resourceData.cluster.server}`);
+        }
+
+        // Namespace (if available)
+        if (item.resourceData?.context?.namespace) {
+            parts.push(`Namespace: ${item.resourceData.context.namespace}`);
+        }
+
+        // Operator status section (if operator status is available)
+        if (item.operatorStatus !== undefined) {
+            // Operator Status mode
+            let operatorStatusText: string;
+            switch (item.operatorStatus) {
+                case OperatorStatusMode.Basic:
+                    operatorStatusText = 'basic';
+                    break;
+                case OperatorStatusMode.Operated:
+                    operatorStatusText = 'operated';
+                    break;
+                case OperatorStatusMode.Enabled:
+                    operatorStatusText = 'enabled';
+                    break;
+                case OperatorStatusMode.Degraded:
+                    operatorStatusText = 'degraded';
+                    break;
+            }
+            parts.push(`Operator Status: ${operatorStatusText}`);
+
+            // Additional operator details (if available)
+            if (item.operatorStatusDetails) {
+                const details = item.operatorStatusDetails;
+
+                // Tier
+                if (details.tier) {
+                    parts.push(`Tier: ${details.tier}`);
+                }
+
+                // Version
+                if (details.version) {
+                    parts.push(`Version: ${details.version}`);
+                }
+
+                // Health
+                if (details.health) {
+                    parts.push(`Health: ${details.health}`);
+                }
+
+                // Last Update
+                if (details.lastUpdate) {
+                    const formattedTime = this.formatTimestamp(details.lastUpdate);
+                    parts.push(`Last Update: ${formattedTime}`);
+                }
+
+                // Error message (if degraded/unhealthy and error exists)
+                if ((item.operatorStatus === OperatorStatusMode.Degraded || 
+                     details.health === 'degraded' || 
+                     details.health === 'unhealthy') && 
+                    details.error) {
+                    parts.push(`Error: ${details.error}`);
+                }
+            }
+        }
+
+        return parts.join('\n');
+    }
+
+    /**
      * Updates a tree item's icon and tooltip based on its status.
      * Prioritizes operator status over connectivity status when operator status is available.
      * 
@@ -874,9 +998,8 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             item.iconPath = new vscode.ThemeIcon(iconId);
         }
         
-        // Update tooltip with status information
-        const contextName = item.resourceData?.context?.name || item.label;
-        item.tooltip = `${contextName}\nStatus: ${statusText}`;
+        // Update tooltip with comprehensive operator status information
+        item.tooltip = this.buildOperatorStatusTooltip(item, isCurrentContext, status);
     }
 
     /**
