@@ -232,6 +232,8 @@ function registerCommands(): void {
                     // Update tree provider with new data
                     if (clusterTreeProvider) {
                         clusterTreeProvider.setKubeconfig(kubeconfig);
+                        // Force refresh operator status on manual refresh
+                        clusterTreeProvider.refresh(true);
                     }
                 }
             );

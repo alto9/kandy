@@ -86,6 +86,12 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     private operatorStatusClient: OperatorStatusClient = new OperatorStatusClient();
 
     /**
+     * Flag to indicate that operator status should be force refreshed.
+     * Set to true during manual refresh to bypass cache.
+     */
+    private forceOperatorRefreshFlag: boolean = false;
+
+    /**
      * Get the UI representation of a tree element.
      * This method is called by VS Code to render each tree item.
      * 
@@ -542,9 +548,16 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         );
         
         // Check operator status for each cluster asynchronously (fire-and-forget)
+        // Use forceOperatorRefreshFlag if set (for manual refresh), otherwise use cache
+        const forceRefresh = this.forceOperatorRefreshFlag;
         validClusters.forEach(item => {
-            void this.checkOperatorStatus(item);
+            void this.checkOperatorStatus(item, forceRefresh);
         });
+        
+        // Clear the flag after use
+        if (this.forceOperatorRefreshFlag) {
+            this.forceOperatorRefreshFlag = false;
+        }
 
         // Add authentication status message at the bottom of the cluster list
         const authStatusItem = this.createAuthStatusItem();
@@ -621,8 +634,19 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      * Refresh the tree view.
      * Call this method to trigger a complete refresh of the tree view.
      * VS Code will call getChildren() again to rebuild the tree.
+     * 
+     * @param forceOperatorRefresh If true, forces operator status refresh for all clusters, bypassing cache
      */
-    refresh(): void {
+    refresh(forceOperatorRefresh = false): void {
+        // If manual refresh is requested, set flag to force refresh operator status
+        // The flag will be checked in getClusters() when cluster items are created
+        if (forceOperatorRefresh) {
+            this.forceOperatorRefreshFlag = true;
+        }
+        
+        // Fire tree data change event to refresh the tree view
+        // This will trigger getChildren() which calls getClusters()
+        // getClusters() will check forceOperatorRefreshFlag and pass it to checkOperatorStatus()
         this._onDidChangeTreeData.fire();
     }
 
@@ -675,7 +699,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                 // Check operator status for each cluster asynchronously (fire-and-forget)
                 // The OperatorStatusClient will check cache TTL and refresh if needed
                 validClusters.forEach(item => {
-                    void this.checkOperatorStatus(item);
+                    void this.checkOperatorStatus(item, false);
                 });
             }
         }, 60000); // 60 seconds = 60000 milliseconds
@@ -768,8 +792,9 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      * information when available.
      * 
      * @param item The cluster tree item to check operator status for
+     * @param forceRefresh If true, bypasses cache and queries the cluster directly
      */
-    private async checkOperatorStatus(item: ClusterTreeItem): Promise<void> {
+    private async checkOperatorStatus(item: ClusterTreeItem, forceRefresh = false): Promise<void> {
         // Validate prerequisites
         if (!this.kubeconfig || !item.resourceData?.context?.name) {
             return;
@@ -779,11 +804,12 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         const contextName = item.resourceData.context.name;
 
         try {
-            // Query operator status (uses caching internally)
+            // Query operator status (uses caching internally unless forceRefresh=true)
             // OperatorStatusClient handles all errors internally and returns a valid CachedOperatorStatus
             const cachedStatus = await this.operatorStatusClient.getStatus(
                 kubeconfigPath,
-                contextName
+                contextName,
+                forceRefresh
             );
 
             // Update item with operator status
