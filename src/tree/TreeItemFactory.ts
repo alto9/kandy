@@ -139,5 +139,24 @@ export class TreeItemFactory {
         item.tooltip = 'View Custom Resource Definitions (CRDs)';
         return item;
     }
+
+    /**
+     * Creates the Reports category tree item.
+     * Displays reports subcategories (Compliance).
+     * 
+     * @param resourceData Cluster context and cluster information
+     * @returns Configured Reports category tree item
+     */
+    static createReportsCategory(resourceData: TreeItemData): ClusterTreeItem {
+        const item = new ClusterTreeItem(
+            'Reports',
+            'reports',
+            vscode.TreeItemCollapsibleState.Collapsed,
+            resourceData
+        );
+        item.iconPath = new vscode.ThemeIcon('graph');
+        item.tooltip = 'View cluster reports and compliance information';
+        return item;
+    }
 }
 

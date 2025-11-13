@@ -3,7 +3,7 @@ story_id: add-reports-factory-methods
 session_id: operated-tree-menu-reports-section
 feature_id: [reports-menu]
 spec_id: [tree-view-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 15
 ---
