@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { GlobalState } from './state/GlobalState';
 import { WelcomeWebview } from './webview/WelcomeWebview';
 import { NamespaceWebview } from './webview/NamespaceWebview';
+import { DataCollectionReportPanel } from './webview/DataCollectionReportPanel';
 import { KubeconfigParser } from './kubernetes/KubeconfigParser';
 import { ClusterTreeProvider } from './tree/ClusterTreeProvider';
 import { Settings } from './config/Settings';
@@ -286,6 +287,28 @@ function registerCommands(): void {
     
     context.subscriptions.push(openNamespaceCommand);
     disposables.push(openNamespaceCommand);
+    
+    // Register open Data Collection report command
+    const openDataCollectionReportCommand = vscode.commands.registerCommand(
+        'kube9.openDataCollectionReport',
+        async () => {
+            try {
+                console.log('Opening Data Collection report webview...');
+                
+                // Show the Data Collection report webview
+                DataCollectionReportPanel.show(context);
+                
+                console.log('Opened Data Collection report webview');
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to open Data Collection report webview:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to open Data Collection report: ${errorMessage}`);
+            }
+        }
+    );
+    
+    context.subscriptions.push(openDataCollectionReportCommand);
+    disposables.push(openDataCollectionReportCommand);
     
     // Register set active namespace command
     const setActiveNamespaceCmd = vscode.commands.registerCommand(

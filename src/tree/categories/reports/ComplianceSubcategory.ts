@@ -36,6 +36,14 @@ export class ComplianceSubcategory {
         );
         item.iconPath = new vscode.ThemeIcon('database');
         item.tooltip = 'Data Collection report (coming soon)';
+        
+        // Make Data Collection report clickable to open webview
+        item.command = {
+            command: 'kube9.openDataCollectionReport',
+            title: 'Open Data Collection Report',
+            arguments: []
+        };
+        
         return item;
     }
 }

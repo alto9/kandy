@@ -58,6 +58,11 @@
         "category": "kube9"
       },
       {
+        "command": "kube9.openDataCollectionReport",
+        "title": "Open Data Collection Report",
+        "category": "kube9"
+      },
+      {
         "command": "kube9.setActiveNamespace",
         "title": "Set as Active Namespace",
         "category": "kube9"
