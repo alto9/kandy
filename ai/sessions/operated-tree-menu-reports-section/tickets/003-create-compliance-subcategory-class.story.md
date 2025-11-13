@@ -3,7 +3,7 @@ story_id: create-compliance-subcategory-class
 session_id: operated-tree-menu-reports-section
 feature_id: [reports-menu]
 spec_id: [tree-view-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 20
 ---
