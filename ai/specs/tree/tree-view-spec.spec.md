@@ -1,6 +1,6 @@
 ---
 spec_id: tree-view-spec
-feature_id: [tree-view-navigation]
+feature_id: [tree-view-navigation, reports-menu]
 model_id: [namespace-selection-state]
 context_id: [kubernetes-cluster-management]
 ---
@@ -9,7 +9,7 @@ context_id: [kubernetes-cluster-management]
 
 ## Overview
 
-The tree view provides simplified navigation of Kubernetes clusters and namespaces. It displays a 2-level hierarchy: clusters at the top level, with namespaces listed underneath when expanded. Clicking on any namespace opens a webview for detailed resource navigation and management.
+The tree view provides simplified navigation of Kubernetes clusters and namespaces. It displays a hierarchical structure: clusters at the top level, with resource categories listed underneath when expanded. The tree view conditionally displays a Reports menu at the top when the kube9-operator is installed and functioning. Clicking on namespaces opens a webview for detailed resource navigation and management.
 
 ## Architecture
 
@@ -37,18 +37,38 @@ graph TD
   - Parse kubeconfig files and extract cluster information
   - Use kubectl commands to verify cluster connectivity
   - Query namespaces using kubectl
-  - Build simple 2-level tree structure (Clusters → Namespaces)
+  - Check operator status for each cluster
+  - Build hierarchical tree structure (Clusters → Categories → Resources)
+  - Conditionally display Reports category based on operator status
   - Manage tree item icons and status indicators
-  - Open webviews when namespaces are clicked
+  - Open webviews when namespaces or reports are clicked
 
 ### Tree Items Hierarchy
-1. **Cluster Items**: Top-level nodes representing configured clusters
-2. **Namespace Items**: Child nodes under each cluster
-   - "All Namespaces" appears as the first option under each cluster
-   - Individual namespaces follow alphabetically
-   - Clicking any namespace opens a webview for navigation
-   - Active namespace shows checkmark icon indicator
-   - Right-click context menu provides namespace selection options
+
+#### Category Level (under clusters)
+1. **Reports Category** (conditional): Appears only when cluster operator status is NOT 'basic'
+   - Position: First category (before Nodes)
+   - Visibility: Only when `operatorStatus !== OperatorStatusMode.Basic`
+   - Structure: Reports → Compliance → Data Collection
+   - Reports subcategory: Compliance
+     - Compliance report item: Data Collection (placeholder, non-functional)
+
+2. **Resource Categories**: Always visible when cluster is expanded
+   - Nodes
+   - Namespaces
+   - Workloads
+   - Storage
+   - Helm
+   - Configuration
+   - Custom Resources
+
+#### Resource Level (under categories)
+- **Namespace Items**: Child nodes under Namespaces category
+  - "All Namespaces" appears as the first option under Namespaces category
+  - Individual namespaces follow alphabetically
+  - Clicking any namespace opens a webview for navigation
+  - Active namespace shows checkmark icon indicator
+  - Right-click context menu provides namespace selection options
 
 ## Data Flow
 
@@ -99,16 +119,41 @@ sequenceDiagram
 ### Tree Item Structure
 ```typescript
 interface TreeItemData {
-  type: 'cluster' | 'namespace' | 'allNamespaces';
+  type: 'cluster' | 'namespace' | 'allNamespaces' | 'reports' | 'compliance' | 'dataCollection';
   name: string;
   status?: 'connected' | 'disconnected';
   isActiveNamespace?: boolean; // True if this namespace is set in kubectl context
+  operatorStatus?: OperatorStatusMode; // Only relevant for cluster items
   metadata?: {
     context: string;
     cluster: string;
   };
 }
 ```
+
+### Reports Category Conditional Display
+
+#### Display Logic
+- **Condition**: Reports category appears when `clusterElement.operatorStatus !== OperatorStatusMode.Basic`
+- **Operator Status Modes**:
+  - `Basic`: No operator installed → Reports NOT shown
+  - `Operated`: Operator installed, no API key → Reports shown
+  - `Enabled`: Operator installed with valid API key → Reports shown
+  - `Degraded`: Operator installed but has issues → Reports shown
+
+#### Reports Menu Structure
+```
+Reports (category)
+  └── Compliance (subcategory)
+      └── Data Collection (report item - placeholder)
+```
+
+#### Implementation Details
+- Reports category is prepended to the category list when operator status is not Basic
+- Reports category follows the same expandable pattern as other categories
+- Compliance subcategory follows the same pattern as other subcategories (e.g., Workloads → Deployments)
+- Data Collection report item is a placeholder with no functionality
+- Clicking Data Collection should display a placeholder message indicating future functionality
 
 ### Namespace Listing
 - Namespaces are queried using `kubectl get namespaces --output=json`
@@ -163,11 +208,14 @@ interface TreeItemData {
 - **Tooltips**: Display additional information on hover
 
 ### Interactions
-- **Click cluster**: Expand to show namespaces
+- **Click cluster**: Expand to show resource categories (and Reports if operator installed)
+- **Click Reports category**: Expand to show Compliance subcategory
+- **Click Compliance subcategory**: Expand to show Data Collection report
+- **Click Data Collection**: Display placeholder message (non-functional)
 - **Click namespace**: Open webview panel for namespace navigation
 - **Click "All Namespaces"**: Open webview showing cluster-wide resource view
 - **Right-click namespace**: Context menu with namespace selection actions
-- **Manual Refresh**: User-triggered refresh command updates tree
+- **Manual Refresh**: User-triggered refresh command updates tree and operator status
 
 ### Context Menu Actions
 
@@ -248,6 +296,9 @@ interface TreeItemData {
 - Namespace context setting and clearing
 - Active namespace indicator logic
 - Context state caching and invalidation
+- Reports category conditional display logic
+- Operator status-based category filtering
+- Reports menu hierarchy construction
 
 ### Integration Tests
 - kubeconfig parsing
@@ -266,3 +317,7 @@ interface TreeItemData {
 - Visual indicator updates when context changes
 - External context change detection and UI update
 - Status bar namespace display updates
+- Reports category visibility based on operator status
+- Reports menu expansion and navigation
+- Data Collection placeholder display
+- Reports category updates when operator status changes
