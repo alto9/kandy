@@ -15,7 +15,7 @@ GIVEN we need to implement tree views and webview panels
 WHEN looking for implementation examples
 THEN study the VS Code TreeView API documentation
 AND review the Webview API documentation at https://code.visualstudio.com/api/extension-guides/webview
-AND examine how the Glam VS Code extension implements similar functionality
+AND examine how the Forge VS Code extension implements similar functionality
 
 GIVEN we need to retrieve cluster data
 WHEN implementing data access

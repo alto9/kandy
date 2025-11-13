@@ -41,9 +41,37 @@ export interface ConfigMapsResult {
 }
 
 /**
+ * Result of a single ConfigMap query operation.
+ */
+export interface ConfigMapResult {
+    /**
+     * The ConfigMap data, or null if query failed or ConfigMap not found.
+     */
+    configMap: ConfigMapResponse | null;
+    
+    /**
+     * Error information if the ConfigMap query failed.
+     */
+    error?: KubectlError;
+}
+
+/**
  * Interface for kubectl configmap response items.
  */
 interface ConfigMapItem {
+    metadata?: {
+        name?: string;
+        namespace?: string;
+    };
+    data?: {
+        [key: string]: string;
+    };
+}
+
+/**
+ * Interface for kubectl configmap response (single ConfigMap).
+ */
+interface ConfigMapResponse {
     metadata?: {
         name?: string;
         namespace?: string;
@@ -232,6 +260,78 @@ export class ConfigurationCommands {
             
             return {
                 configMaps: [],
+                error: kubectlError
+            };
+        }
+    }
+
+    /**
+     * Retrieves a specific ConfigMap by name and namespace using kubectl.
+     * Uses kubectl get configmap command with JSON output for parsing.
+     * 
+     * @param name Name of the ConfigMap to retrieve
+     * @param namespace Namespace where the ConfigMap is located
+     * @param kubeconfigPath Path to the kubeconfig file
+     * @param contextName Name of the context to query
+     * @returns ConfigMapResult with configMap data and optional error information
+     */
+    public static async getConfigMap(
+        name: string,
+        namespace: string,
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<ConfigMapResult> {
+        try {
+            // Build kubectl command arguments
+            const args = [
+                'get',
+                'configmap',
+                name,
+                `--namespace=${namespace}`,
+                '--output=json',
+                `--kubeconfig=${kubeconfigPath}`,
+                `--context=${contextName}`
+            ];
+
+            // Execute kubectl get configmap with JSON output
+            const { stdout } = await execFileAsync(
+                'kubectl',
+                args,
+                {
+                    timeout: KUBECTL_TIMEOUT_MS,
+                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer for very large clusters
+                    env: { ...process.env }
+                }
+            );
+
+            // Parse the JSON response
+            const response: ConfigMapResponse = JSON.parse(stdout);
+            
+            return { configMap: response };
+        } catch (error: unknown) {
+            // Check if stdout contains valid JSON even though an error was thrown
+            // This can happen if kubectl writes warnings to stderr but valid data to stdout
+            const err = error as { stdout?: Buffer | string; stderr?: Buffer | string };
+            const stdout = err.stdout 
+                ? (Buffer.isBuffer(err.stdout) ? err.stdout.toString() : err.stdout).trim()
+                : '';
+            
+            if (stdout) {
+                try {
+                    // Try to parse stdout as valid JSON
+                    const response: ConfigMapResponse = JSON.parse(stdout);
+                    return { configMap: response };
+                } catch (parseError) {
+                    // stdout is not valid JSON, treat as real error
+                }
+            }
+            
+            // kubectl failed - create structured error for detailed handling
+            // 404 errors will be detected by caller using isNotFoundError()
+            const kubectlError = KubectlError.fromExecError(error, contextName);
+            
+            return {
+                configMap: null,
                 error: kubectlError
             };
         }

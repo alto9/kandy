@@ -224,7 +224,7 @@ kube9/
 │   │   ├── free/              # Local HTML generators
 │   │   └── pro/               # Remote URL loaders
 │   └── utils/
-├── ai/                        # Glam context files
+├── ai/                        # Forge context files
 │   ├── contexts/
 │   ├── decisions/
 │   ├── features/
@@ -312,7 +312,7 @@ API keys are stored securely in VS Code's secret storage.
 3. Follow specifications in `ai/specs/`
 4. Update progress in `ai/tasks/`
 
-This project uses the [Glam methodology](https://github.com/your-glam-repo) for context engineering.
+This project uses the [Forge methodology](https://github.com/alto9/forge) for context engineering.
 
 ## Security
 

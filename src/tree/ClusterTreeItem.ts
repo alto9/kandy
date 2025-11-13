@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { TreeItemType, TreeItemData, ClusterStatus } from './TreeItemTypes';
+import { OperatorStatusMode, OperatorStatus } from '../kubernetes/OperatorStatusTypes';
 
 /**
  * Re-export types for convenience.
@@ -39,6 +40,21 @@ export class ClusterTreeItem extends vscode.TreeItem {
      * Only relevant for namespace-type tree items.
      */
     public isActiveNamespace?: boolean;
+
+    /**
+     * Operator status mode for the cluster.
+     * Only relevant for cluster-type tree items.
+     * Indicates whether the kube9-operator is installed and its operational status.
+     */
+    public operatorStatus?: OperatorStatusMode;
+
+    /**
+     * Full operator status details from the kube9-operator-status ConfigMap.
+     * Only relevant for cluster-type tree items.
+     * Contains detailed information about operator tier, version, health, and registration status.
+     * Used for displaying detailed tooltip information.
+     */
+    public operatorStatusDetails?: OperatorStatus;
 
     /**
      * Creates a new ClusterTreeItem.

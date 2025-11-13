@@ -1,4 +1,4 @@
-<!-- forge-hash: 77e6863d672e5ea1b2deec479b63610ab5aefd206e31e74bf9eba9044ab516a6 -->
+<!-- forge-hash: 269c4810aaac74237fa5c20ecdbaabda4cb33caddf2cf30e57119fdf0afa053b -->
 
 # Forge Build
 
@@ -29,6 +29,8 @@ You must provide a story file (*.story.md) when running this command.
 - **Match existing patterns**: Follow the codebase's existing architecture and conventions
 - **Write tests**: Include unit tests as specified in the story
 - **Stay focused**: If the story is too large, break it into smaller stories
+- **Run tests**: After implementing changes, always run the test suite to verify the implementation works correctly
+- **Mark story as completed**: Update the story file's status field to 'completed' when all work is done and tests pass
 
 ## Usage
 
