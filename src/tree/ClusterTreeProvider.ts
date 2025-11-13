@@ -135,8 +135,10 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     }
 
     /**
-     * Get the 7 resource categories for a cluster.
-     * Returns categories in the exact order: Nodes, Namespaces, Workloads, Storage, Helm, Configuration, Custom Resources.
+     * Get resource categories for a cluster.
+     * Returns categories conditionally based on operator status:
+     * - If operator status is NOT Basic: Reports appears first, followed by Nodes, Namespaces, Workloads, Storage, Helm, Configuration, Custom Resources
+     * - If operator status is Basic or undefined: Returns Nodes, Namespaces, Workloads, Storage, Helm, Configuration, Custom Resources (no Reports)
      * 
      * @param clusterElement The cluster tree item to get categories for
      * @returns Array of category tree items
@@ -146,7 +148,7 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             return [];
         }
 
-        return [
+        const categories = [
             TreeItemFactory.createNodesCategory(clusterElement.resourceData),
             TreeItemFactory.createNamespacesCategory(clusterElement.resourceData),
             TreeItemFactory.createWorkloadsCategory(clusterElement.resourceData),
@@ -155,6 +157,16 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             TreeItemFactory.createConfigurationCategory(clusterElement.resourceData),
             TreeItemFactory.createCustomResourcesCategory(clusterElement.resourceData)
         ];
+
+        // Prepend Reports category if operator is installed (status is NOT Basic)
+        if (clusterElement.operatorStatus !== undefined && clusterElement.operatorStatus !== OperatorStatusMode.Basic) {
+            return [
+                TreeItemFactory.createReportsCategory(clusterElement.resourceData),
+                ...categories
+            ];
+        }
+
+        return categories;
     }
 
     /**
