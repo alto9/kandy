@@ -22,6 +22,8 @@ import { ConfigMapsSubcategory } from './categories/configuration/ConfigMapsSubc
 import { SecretsSubcategory } from './categories/configuration/SecretsSubcategory';
 import { HelmCategory } from './categories/HelmCategory';
 import { CustomResourcesCategory } from './categories/CustomResourcesCategory';
+import { ReportsCategory } from './categories/ReportsCategory';
+import { ComplianceSubcategory } from './categories/reports/ComplianceSubcategory';
 import { namespaceWatcher } from '../services/namespaceCache';
 import { OperatorStatusClient, getOperatorStatusOutputChannel } from '../services/OperatorStatusClient';
 import { OperatorStatusMode } from '../kubernetes/OperatorStatusTypes';
@@ -199,7 +201,10 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                type === 'configmaps' ||
                type === 'secrets' ||
                type === 'configmap' ||
-               type === 'customResources';
+               type === 'customResources' ||
+               type === 'reports' ||
+               type === 'compliance' ||
+               type === 'dataCollection';
     }
 
     /**
@@ -361,6 +366,19 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
                     this.kubeconfig.filePath,
                     (error, clusterName) => this.handleKubectlError(error, clusterName)
                 );
+            
+            case 'reports':
+                return ReportsCategory.getReportsSubcategories(
+                    categoryElement.resourceData
+                );
+            
+            case 'compliance':
+                return ComplianceSubcategory.getComplianceReportItems(
+                    categoryElement.resourceData
+                );
+            
+            case 'dataCollection':
+                return [];
             
             default:
                 return [];
