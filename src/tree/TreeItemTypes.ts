@@ -26,6 +26,8 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - configmaps: ConfigMaps subcategory (under Configuration)
  * - secrets: Secrets subcategory (under Configuration)
  * - customResources: Custom Resources category
+ * - reports: Reports category
+ * - compliance: Compliance subcategory (under Reports)
  * 
  * Individual resource types (items within categories):
  * - deployment: Individual deployment item
@@ -39,6 +41,7 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - configmap: Individual configmap item
  * - secret: Individual secret item
  * - crd: Individual Custom Resource Definition item
+ * - dataCollection: Individual data collection report item (under Compliance)
  */
 export type TreeItemType = 
     | 'cluster' 
@@ -71,7 +74,10 @@ export type TreeItemType =
     | 'configmap'
     | 'secret'
     | 'customResources'
-    | 'crd';
+    | 'reports'
+    | 'compliance'
+    | 'crd'
+    | 'dataCollection';
 
 /**
  * Re-export ClusterStatus for convenience.
