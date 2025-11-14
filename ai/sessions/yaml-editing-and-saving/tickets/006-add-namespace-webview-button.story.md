@@ -3,7 +3,7 @@ story_id: add-namespace-webview-button
 session_id: yaml-editing-and-saving
 feature_id: [yaml-editor, namespace-detail-view]
 spec_id: [yaml-editor-spec, webview-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 25
 ---

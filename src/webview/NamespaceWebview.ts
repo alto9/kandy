@@ -5,7 +5,7 @@ import { getContextInfo, getCurrentNamespace, setNamespace } from '../utils/kube
 import { NamespaceCommands } from '../kubectl/NamespaceCommands';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
 import { WebviewMessage } from '../types/webviewMessages';
-import { getClusterTreeProvider } from '../extension';
+import { getClusterTreeProvider, getYAMLEditorManager } from '../extension';
 import { WorkloadCommands } from '../kubectl/WorkloadCommands';
 import { PodHealthAnalyzer } from '../kubernetes/PodHealthAnalyzer';
 import { calculateHealthStatus } from '../kubernetes/HealthCalculator';
@@ -165,6 +165,42 @@ export class NamespaceWebview {
                                     `Failed to set namespace to: ${message.data.namespace}`
                                 );
                             }
+                        }
+                        break;
+                    
+                    case 'openYAML':
+                        // Open YAML editor for the namespace resource
+                        if (!panelInfo) {
+                            console.error('Panel info not found for openYAML');
+                            break;
+                        }
+                        
+                        try {
+                            // Extract resource info from message
+                            const resourceData = message.resource;
+                            if (!resourceData || !resourceData.kind || !resourceData.name) {
+                                throw new Error('Invalid resource data in openYAML message');
+                            }
+                            
+                            // Build complete ResourceIdentifier
+                            const resource = {
+                                kind: resourceData.kind,
+                                name: resourceData.name,
+                                namespace: resourceData.namespace,
+                                apiVersion: resourceData.apiVersion || 'v1',
+                                cluster: panelInfo.namespaceContext.contextName
+                            };
+                            
+                            console.log('Opening YAML editor for namespace resource:', resource);
+                            
+                            // Get YAML editor manager and open editor
+                            const yamlEditorManager = getYAMLEditorManager();
+                            await yamlEditorManager.openYAMLEditor(resource);
+                            
+                        } catch (error) {
+                            const errorMessage = error instanceof Error ? error.message : String(error);
+                            console.error('Failed to open YAML editor from namespace webview:', errorMessage);
+                            vscode.window.showErrorMessage(`Failed to open YAML editor: ${errorMessage}`);
                         }
                         break;
                     

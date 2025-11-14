@@ -334,6 +334,30 @@
         });
     }
 
+    // Handle button click for viewing namespace YAML
+    const viewNamespaceYamlButton = document.getElementById('view-namespace-yaml');
+    if (viewNamespaceYamlButton) {
+        viewNamespaceYamlButton.addEventListener('click', () => {
+            // Read namespace name from the title element
+            const namespaceName = namespaceTitle?.textContent?.trim();
+            
+            // For "All Namespaces" view, don't show YAML
+            if (isAllNamespaces || !namespaceName || namespaceName === 'All Namespaces') {
+                return;
+            }
+
+            // Send openYAML message to extension
+            vscode.postMessage({
+                command: 'openYAML',
+                resource: {
+                    kind: 'Namespace',
+                    name: namespaceName,
+                    apiVersion: 'v1'
+                }
+            });
+        });
+    }
+
     // Initialize pill selector event listeners
     const pillSelectors = document.querySelectorAll('.pill-selector');
     pillSelectors.forEach(pill => {

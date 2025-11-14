@@ -74,6 +74,18 @@ export function getClusterTreeProvider(): ClusterTreeProvider {
 }
 
 /**
+ * Get the YAML editor manager instance.
+ * @returns The YAML editor manager
+ * @throws Error if YAML editor manager has not been initialized
+ */
+export function getYAMLEditorManager(): YAMLEditorManager {
+    if (!yamlEditorManager) {
+        throw new Error('YAMLEditorManager not initialized');
+    }
+    return yamlEditorManager;
+}
+
+/**
  * This method is called when the extension is activated.
  * The extension is activated when VS Code starts up (onStartupFinished).
  */
