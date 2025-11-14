@@ -63,6 +63,9 @@ export class DeploymentsSubcategory {
                     labelSelector: deploymentInfo.selector
                 }
             );
+            
+            // Set context value for "View YAML" menu
+            item.contextValue = 'resource:Deployment';
 
             // Set description to show namespace and replica status
             const replicaStatus = `${deploymentInfo.readyReplicas}/${deploymentInfo.replicas} ready`;

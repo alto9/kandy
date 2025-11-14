@@ -54,8 +54,14 @@ export class NodesCategory {
                 nodeInfo.name,
                 'nodes',
                 vscode.TreeItemCollapsibleState.None,
-                resourceData
+                {
+                    ...resourceData,
+                    resourceName: nodeInfo.name
+                }
             );
+            
+            // Set context value for "View YAML" menu
+            item.contextValue = 'resource:Node';
 
             // Set description to show roles
             if (nodeInfo.roles.length > 0) {

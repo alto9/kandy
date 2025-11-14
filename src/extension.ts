@@ -10,8 +10,9 @@ import { configureApiKeyCommand } from './commands/ConfigureApiKey';
 import { setActiveNamespaceCommand } from './commands/namespaceCommands';
 import { namespaceWatcher } from './services/namespaceCache';
 import { NamespaceStatusBar } from './ui/statusBar';
-import { YAMLEditorManager } from './yaml/YAMLEditorManager';
+import { YAMLEditorManager, ResourceIdentifier } from './yaml/YAMLEditorManager';
 import { Kube9YAMLFileSystemProvider } from './yaml/Kube9YAMLFileSystemProvider';
+import { ClusterTreeItem } from './tree/ClusterTreeItem';
 
 /**
  * Global extension context accessible to all components.
@@ -166,6 +167,49 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         );
         throw error;
     }
+}
+
+/**
+ * Extract the Kubernetes kind from a context value string.
+ * Handles the 'resource:Kind' pattern used in tree items.
+ * 
+ * @param contextValue The context value string (e.g., 'resource:Pod')
+ * @returns The extracted kind (e.g., 'Pod')
+ */
+function extractKindFromContextValue(contextValue: string | undefined): string {
+    if (!contextValue) {
+        return 'Unknown';
+    }
+    // Extract kind from 'resource:Pod' → 'Pod'
+    const parts = contextValue.split(':');
+    return parts.length > 1 ? parts[1] : contextValue;
+}
+
+/**
+ * Get the API version for a given Kubernetes resource kind.
+ * Maps common Kubernetes resource kinds to their appropriate API versions.
+ * 
+ * @param kind The Kubernetes resource kind (e.g., 'Deployment', 'Pod')
+ * @returns The API version for that kind (e.g., 'apps/v1', 'v1')
+ */
+function getApiVersionForKind(kind: string): string {
+    // Map Kubernetes kinds to their API versions
+    const apiVersionMap: { [key: string]: string } = {
+        'Deployment': 'apps/v1',
+        'StatefulSet': 'apps/v1',
+        'DaemonSet': 'apps/v1',
+        'Pod': 'v1',
+        'Service': 'v1',
+        'ConfigMap': 'v1',
+        'Secret': 'v1',
+        'Namespace': 'v1',
+        'Node': 'v1',
+        'PersistentVolume': 'v1',
+        'PersistentVolumeClaim': 'v1',
+        'StorageClass': 'storage.k8s.io/v1',
+        'CronJob': 'batch/v1'
+    };
+    return apiVersionMap[kind] || 'v1';
 }
 
 /**
@@ -341,6 +385,43 @@ function registerCommands(): void {
     );
     context.subscriptions.push(setActiveNamespaceCmd);
     disposables.push(setActiveNamespaceCmd);
+    
+    // Register view resource YAML command
+    const viewResourceYAMLCmd = vscode.commands.registerCommand(
+        'kube9.viewResourceYAML',
+        async (treeItem: ClusterTreeItem) => {
+            try {
+                // Extract resource information from tree item
+                if (!treeItem || !treeItem.resourceData) {
+                    throw new Error('Invalid tree item: missing resource data');
+                }
+                
+                // Build ResourceIdentifier from tree item
+                const resource: ResourceIdentifier = {
+                    kind: extractKindFromContextValue(treeItem.contextValue),
+                    name: treeItem.resourceData.resourceName || treeItem.label as string,
+                    namespace: treeItem.resourceData.namespace,
+                    apiVersion: getApiVersionForKind(extractKindFromContextValue(treeItem.contextValue)),
+                    cluster: treeItem.resourceData.context.name
+                };
+                
+                console.log('Opening YAML editor for resource:', resource);
+                
+                // Open YAML editor
+                if (yamlEditorManager) {
+                    await yamlEditorManager.openYAMLEditor(resource);
+                } else {
+                    throw new Error('YAML editor manager not initialized');
+                }
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to open YAML editor from tree view:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to open YAML editor: ${errorMessage}`);
+            }
+        }
+    );
+    context.subscriptions.push(viewResourceYAMLCmd);
+    disposables.push(viewResourceYAMLCmd);
 }
 
 /**

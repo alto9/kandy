@@ -61,6 +61,9 @@ export class SecretsSubcategory {
                     namespace: secretInfo.namespace
                 }
             );
+            
+            // Set context value for "View YAML" menu
+            item.contextValue = 'resource:Secret';
 
             // Set description to show secret type
             item.description = secretInfo.type;

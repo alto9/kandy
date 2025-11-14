@@ -71,6 +71,11 @@
         "command": "kube9.clearActiveNamespace",
         "title": "Clear Active Namespace",
         "category": "kube9"
+      },
+      {
+        "command": "kube9.viewResourceYAML",
+        "title": "View YAML",
+        "category": "Kube9"
       }
     ],
     "menus": {
@@ -91,6 +96,11 @@
           "command": "kube9.clearActiveNamespace",
           "when": "view == kube9ClusterView && viewItem == namespace:active",
           "group": "namespace@1"
+        },
+        {
+          "command": "kube9.viewResourceYAML",
+          "when": "view == kube9ClusterView && viewItem =~ /^resource/",
+          "group": "kube9@1"
         }
       ]
     },
