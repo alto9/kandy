@@ -3,7 +3,7 @@ story_id: implement-yaml-syntax-validation
 session_id: yaml-editing-and-saving
 feature_id: [yaml-editor]
 spec_id: [yaml-editor-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 20
 ---
@@ -44,11 +44,11 @@ Before applying YAML to the cluster, we need to validate that the YAML syntax is
 
 ## Acceptance Criteria
 
-- [ ] validateYAMLSyntax correctly identifies valid YAML
-- [ ] validateYAMLSyntax correctly identifies invalid YAML
-- [ ] Error messages include line and column information
-- [ ] Returns structured validation result
-- [ ] js-yaml dependency properly installed
+- [x] validateYAMLSyntax correctly identifies valid YAML
+- [x] validateYAMLSyntax correctly identifies invalid YAML
+- [x] Error messages include line and column information
+- [x] Returns structured validation result
+- [x] js-yaml dependency properly installed (was already installed)
 
 ## Dependencies
 
