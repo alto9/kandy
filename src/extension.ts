@@ -11,6 +11,7 @@ import { setActiveNamespaceCommand } from './commands/namespaceCommands';
 import { namespaceWatcher } from './services/namespaceCache';
 import { NamespaceStatusBar } from './ui/statusBar';
 import { YAMLEditorManager } from './yaml/YAMLEditorManager';
+import { Kube9YAMLFileSystemProvider } from './yaml/Kube9YAMLFileSystemProvider';
 
 /**
  * Global extension context accessible to all components.
@@ -117,6 +118,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         yamlEditorManager = new YAMLEditorManager(context);
         disposables.push(yamlEditorManager);
         console.log('YAML editor manager initialized successfully.');
+        
+        // Register custom file system provider for kube9-yaml:// URI scheme
+        const yamlFsProvider = new Kube9YAMLFileSystemProvider();
+        const yamlFsProviderDisposable = vscode.workspace.registerFileSystemProvider(
+            'kube9-yaml',
+            yamlFsProvider,
+            { isCaseSensitive: true, isReadonly: false }
+        );
+        context.subscriptions.push(yamlFsProviderDisposable);
+        disposables.push(yamlFsProviderDisposable);
+        console.log('YAML file system provider registered successfully.');
         
         // Show welcome screen on first activation
         const globalState = GlobalState.getInstance();
