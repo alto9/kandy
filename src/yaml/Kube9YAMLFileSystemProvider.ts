@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { ResourceIdentifier } from './YAMLEditorManager';
 import { YAMLContentProvider } from './YAMLContentProvider';
+import { YAMLSaveHandler } from './YAMLSaveHandler';
 
 /**
  * Custom FileSystemProvider for kube9-yaml:// URI scheme.
@@ -11,6 +12,7 @@ import { YAMLContentProvider } from './YAMLContentProvider';
  */
 export class Kube9YAMLFileSystemProvider implements vscode.FileSystemProvider {
     private contentProvider: YAMLContentProvider;
+    private saveHandler: YAMLSaveHandler;
     
     /**
      * Event emitter for file system changes.
@@ -24,6 +26,7 @@ export class Kube9YAMLFileSystemProvider implements vscode.FileSystemProvider {
      */
     constructor() {
         this.contentProvider = new YAMLContentProvider();
+        this.saveHandler = new YAMLSaveHandler();
     }
 
     /**
@@ -92,34 +95,49 @@ export class Kube9YAMLFileSystemProvider implements vscode.FileSystemProvider {
 
     /**
      * Write file content to Kubernetes cluster.
-     * Stub implementation - full implementation will be added in story 008.
+     * Validates YAML, performs dry-run, and applies changes using kubectl.
      * 
      * @param uri - The URI to write to
      * @param content - The content to write
      * @param options - Write options
+     * @throws Error if save fails
      */
     async writeFile(
         uri: vscode.Uri,
         content: Uint8Array,
         options: { create: boolean; overwrite: boolean }
     ): Promise<void> {
-        // Stub implementation - will be fully implemented in story 008 (implement-yaml-save-handler)
-        // For now, this allows VS Code to call save without errors
-        // The actual kubectl apply logic will be added later
-        
         // Parse resource to validate URI format
         const resource = parseResourceFromUri(uri);
         
         // Convert content to string
         const yamlContent = Buffer.from(content).toString('utf-8');
         
-        // TODO: Implement in story 008
-        // - Validate YAML syntax
-        // - Perform dry-run validation
-        // - Apply changes using kubectl apply
-        // - Trigger refresh of tree view and webviews
+        console.log(`writeFile called for ${resource.kind}/${resource.name} (${yamlContent.length} bytes) [options: ${JSON.stringify(options)}]`);
         
-        console.log(`writeFile stub called for ${resource.kind}/${resource.name} (${yamlContent.length} bytes) [options: ${JSON.stringify(options)}]`);
+        // Create a temporary document-like object for the save handler
+        // This allows us to reuse the handleSave logic which expects a TextDocument
+        const document: vscode.TextDocument = {
+            uri,
+            getText: () => yamlContent,
+            // Other TextDocument properties are not used by handleSave
+        } as vscode.TextDocument;
+        
+        // Handle save using YAMLSaveHandler
+        const saveSuccess = await this.saveHandler.handleSave(document);
+        
+        if (!saveSuccess) {
+            // Save failed - error messages already shown by saveHandler
+            throw vscode.FileSystemError.Unavailable(uri);
+        }
+        
+        // Notify file system watchers that the file changed
+        this._emitter.fire([{
+            type: vscode.FileChangeType.Changed,
+            uri
+        }]);
+        
+        console.log(`Successfully wrote file for ${resource.kind}/${resource.name}`);
     }
 
     /**
