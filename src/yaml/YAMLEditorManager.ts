@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { YAMLContentProvider } from './YAMLContentProvider';
 
 /**
  * Identifies a Kubernetes resource for YAML editing operations.
@@ -36,12 +37,19 @@ export class YAMLEditorManager {
     private context: vscode.ExtensionContext;
 
     /**
+     * Content provider for fetching YAML from Kubernetes cluster.
+     * Used to retrieve resource YAML when opening editors.
+     */
+    private contentProvider: YAMLContentProvider;
+
+    /**
      * Creates a new YAMLEditorManager instance.
      * 
      * @param context - The VS Code extension context
      */
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
+        this.contentProvider = new YAMLContentProvider();
     }
 
     /**
