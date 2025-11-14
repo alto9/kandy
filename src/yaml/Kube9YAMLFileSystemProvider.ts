@@ -30,10 +30,11 @@ export class Kube9YAMLFileSystemProvider implements vscode.FileSystemProvider {
      * Watch for file changes.
      * Minimal implementation - returns empty disposable.
      * 
-     * @param uri - The URI to watch
+     * @param _uri - The URI to watch (unused in minimal implementation)
      * @returns A disposable to stop watching
      */
-    watch(uri: vscode.Uri): vscode.Disposable {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    watch(_uri: vscode.Uri): vscode.Disposable {
         // Minimal implementation - no active watching needed for now
         return new vscode.Disposable(() => {});
     }
@@ -118,7 +119,7 @@ export class Kube9YAMLFileSystemProvider implements vscode.FileSystemProvider {
         // - Apply changes using kubectl apply
         // - Trigger refresh of tree view and webviews
         
-        console.log(`writeFile stub called for ${resource.kind}/${resource.name} (${yamlContent.length} bytes)`);
+        console.log(`writeFile stub called for ${resource.kind}/${resource.name} (${yamlContent.length} bytes) [options: ${JSON.stringify(options)}]`);
     }
 
     /**
@@ -156,9 +157,10 @@ export class Kube9YAMLFileSystemProvider implements vscode.FileSystemProvider {
      * Not supported for kube9-yaml:// scheme.
      * 
      * @param oldUri - The old URI
-     * @param newUri - The new URI
+     * @param _newUri - The new URI (unused - operation not supported)
      */
-    rename(oldUri: vscode.Uri, newUri: vscode.Uri): void {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    rename(oldUri: vscode.Uri, _newUri: vscode.Uri): void {
         throw vscode.FileSystemError.NoPermissions(oldUri);
     }
 }

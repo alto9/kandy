@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { YAMLContentProvider } from './YAMLContentProvider';
+import { createResourceUri } from './Kube9YAMLFileSystemProvider';
 
 /**
  * Identifies a Kubernetes resource for YAML editing operations.
@@ -50,17 +51,35 @@ export class YAMLEditorManager {
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
         this.contentProvider = new YAMLContentProvider();
+        
+        // Track editor lifecycle - remove from map when documents close
+        const closeDisposable = vscode.workspace.onDidCloseTextDocument((document) => {
+            // Check if this is a kube9-yaml document
+            if (document.uri.scheme === 'kube9-yaml') {
+                // Find and remove this editor from our tracking map
+                for (const [key, editor] of this.openEditors.entries()) {
+                    if (editor.document.uri.toString() === document.uri.toString()) {
+                        this.openEditors.delete(key);
+                        console.log(`YAML editor closed: ${key}`);
+                        break;
+                    }
+                }
+            }
+        });
+        
+        context.subscriptions.push(closeDisposable);
     }
 
     /**
      * Opens a YAML editor for the specified Kubernetes resource.
-     * This is a stub implementation - full implementation will be added in story 004.
+     * Creates a new editor tab with YAML content fetched from the cluster.
+     * If an editor for this resource is already open, focuses that editor instead.
      * 
      * @param resource - The resource identifier for the resource to open
      * @returns Promise that resolves when the editor is opened
+     * @throws Error if opening the editor fails
      */
     public async openYAMLEditor(resource: ResourceIdentifier): Promise<void> {
-        // Stub implementation - will be fully implemented in story 004
         const resourceKey = this.getResourceKey(resource);
         
         // Check if editor is already open
@@ -71,14 +90,43 @@ export class YAMLEditorManager {
                 preview: false,
                 preserveFocus: false
             });
+            console.log(`YAML editor already open: ${resourceKey}`);
             return;
         }
 
-        // TODO: Full implementation in story 004
-        // - Create custom URI using createResourceUri helper
-        // - Fetch YAML content using YAMLContentProvider
-        // - Open text document with YAML language mode
-        // - Track editor in openEditors Map
+        try {
+            // Create custom URI using the kube9-yaml:// scheme
+            const uri = createResourceUri(resource);
+            console.log(`Opening YAML editor with URI: ${uri.toString()}`);
+            
+            // Open text document - VS Code FileSystemProvider will fetch content
+            const document = await vscode.workspace.openTextDocument(uri);
+            
+            // Show document in editor (permanent tab, not preview)
+            const editor = await vscode.window.showTextDocument(document, {
+                preview: false,
+                preserveFocus: false
+            });
+            
+            // Track editor in our map
+            this.openEditors.set(resourceKey, editor);
+            console.log(`YAML editor opened successfully: ${resourceKey}`);
+            
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`Failed to open YAML editor for ${resourceKey}:`, errorMessage);
+            
+            // Provide user-friendly error messages based on error type
+            if (errorMessage.includes('NotFound') || errorMessage.includes('not found')) {
+                throw new Error(`Resource not found: ${resource.kind} '${resource.name}' does not exist in the cluster.`);
+            } else if (errorMessage.includes('Unauthorized') || errorMessage.includes('Forbidden') || errorMessage.includes('permission')) {
+                throw new Error(`Insufficient permissions to view ${resource.kind} '${resource.name}'.`);
+            } else if (errorMessage.includes('connection') || errorMessage.includes('timeout')) {
+                throw new Error(`Unable to connect to cluster '${resource.cluster}'. Please check your connection.`);
+            } else {
+                throw new Error(`Failed to open YAML editor for ${resource.kind} '${resource.name}': ${errorMessage}`);
+            }
+        }
     }
 
     /**
@@ -92,6 +140,53 @@ export class YAMLEditorManager {
     public getResourceKey(resource: ResourceIdentifier): string {
         const namespace = resource.namespace || '_cluster';
         return `${resource.cluster}:${namespace}:${resource.kind}:${resource.name}`;
+    }
+
+    /**
+     * Checks if a YAML editor is currently open for the specified resource.
+     * 
+     * @param resource - The resource identifier to check
+     * @returns True if an editor is open for this resource, false otherwise
+     */
+    public isEditorOpen(resource: ResourceIdentifier): boolean {
+        const resourceKey = this.getResourceKey(resource);
+        return this.openEditors.has(resourceKey);
+    }
+
+    /**
+     * Closes the YAML editor for the specified resource if it's open.
+     * 
+     * @param resource - The resource identifier for the editor to close
+     * @returns Promise that resolves when the editor is closed
+     */
+    public async closeEditor(resource: ResourceIdentifier): Promise<void> {
+        const resourceKey = this.getResourceKey(resource);
+        const editor = this.openEditors.get(resourceKey);
+        
+        if (!editor) {
+            console.log(`No editor open for resource: ${resourceKey}`);
+            return;
+        }
+        
+        try {
+            // Focus the editor first
+            await vscode.window.showTextDocument(editor.document, {
+                preview: false,
+                preserveFocus: false
+            });
+            
+            // Execute close command
+            await vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+            
+            // Remove from tracking map
+            this.openEditors.delete(resourceKey);
+            console.log(`YAML editor closed: ${resourceKey}`);
+            
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error(`Failed to close YAML editor for ${resourceKey}:`, errorMessage);
+            throw new Error(`Failed to close editor: ${errorMessage}`);
+        }
     }
 
     /**

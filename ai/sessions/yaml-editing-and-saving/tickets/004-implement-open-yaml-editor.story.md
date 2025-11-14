@@ -3,7 +3,7 @@ story_id: implement-open-yaml-editor
 session_id: yaml-editing-and-saving
 feature_id: [yaml-editor]
 spec_id: [yaml-editor-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 30
 ---
