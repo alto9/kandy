@@ -1,7 +1,7 @@
 ---
 session_id: operated-tree-menu-reports-section
 start_time: '2025-11-13T15:32:31.441Z'
-status: development
+status: completed
 problem_statement: operated tree menu reports section
 changed_files:
   - path: ai/features/navigation/reports-menu.feature.md
