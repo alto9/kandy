@@ -10,6 +10,7 @@ import { configureApiKeyCommand } from './commands/ConfigureApiKey';
 import { setActiveNamespaceCommand } from './commands/namespaceCommands';
 import { namespaceWatcher } from './services/namespaceCache';
 import { NamespaceStatusBar } from './ui/statusBar';
+import { YAMLEditorManager } from './yaml/YAMLEditorManager';
 
 /**
  * Global extension context accessible to all components.
@@ -39,6 +40,12 @@ let authStatusBarItem: vscode.StatusBarItem | undefined;
  * Displays the active namespace or "All" if no namespace is set.
  */
 let namespaceStatusBar: NamespaceStatusBar | undefined;
+
+/**
+ * Global YAML editor manager instance.
+ * Manages YAML editor instances for Kubernetes resources.
+ */
+let yamlEditorManager: YAMLEditorManager | undefined;
 
 /**
  * Get the extension context.
@@ -105,6 +112,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         
         // Create and show status bar item for namespace context
         await createNamespaceStatusBarItem();
+        
+        // Initialize YAML editor manager
+        yamlEditorManager = new YAMLEditorManager(context);
+        disposables.push(yamlEditorManager);
+        console.log('YAML editor manager initialized successfully.');
         
         // Show welcome screen on first activation
         const globalState = GlobalState.getInstance();
@@ -345,6 +357,11 @@ export async function deactivate(): Promise<void> {
             clusterTreeProvider.dispose();
         }
         
+        // Dispose YAML editor manager
+        if (yamlEditorManager) {
+            yamlEditorManager.dispose();
+        }
+        
         // Stop watching for namespace context changes
         namespaceWatcher.stopWatching();
         console.log('Namespace context watcher stopped.');
@@ -364,6 +381,9 @@ export async function deactivate(): Promise<void> {
         // Clear status bar item references
         authStatusBarItem = undefined;
         namespaceStatusBar = undefined;
+        
+        // Clear manager references
+        yamlEditorManager = undefined;
         
         // Clear extension context
         extensionContext = undefined;
