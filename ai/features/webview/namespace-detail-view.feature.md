@@ -1,6 +1,6 @@
 ---
 feature_id: namespace-detail-view
-spec_id: [webview-spec, namespace-workloads-table-spec]
+spec_id: [webview-spec, namespace-workloads-table-spec, yaml-editor-spec]
 model_id: [namespace-selection-state]
 context_id: [kubernetes-cluster-management]
 ---
@@ -160,5 +160,28 @@ Scenario: Clean namespace button display
   When viewing the "Set as Default Namespace" button area
   Then the button should be visible
   And the button area should be clean and uncluttered
+
+Scenario: View YAML button appears in namespace header
+  Given a user has opened a namespace webview for "production"
+  When viewing the namespace header
+  Then a "View YAML" button should appear next to the "Set as Default Namespace" button
+  And the button should have a document icon
+  And the button should be clearly labeled "View YAML"
+
+Scenario: Clicking View YAML button opens namespace YAML editor
+  Given a user has opened a namespace webview for "production"
+  When the user clicks the "View YAML" button in the header
+  Then a new editor tab should open
+  And the tab should display "production.yaml"
+  And the editor should show the full YAML configuration for the namespace
+  And the editor should be in editable mode
+
+Scenario: View YAML button respects namespace permissions
+  Given a user has opened a namespace webview for "production"
+  And the user has read-only permissions for the namespace
+  When the user clicks the "View YAML" button in the header
+  Then the YAML editor should open
+  But the editor should be in read-only mode
+  And a message should indicate insufficient permissions to edit
 ```
 

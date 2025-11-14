@@ -139,10 +139,16 @@ interface NamespaceContextChangedMessage extends ExtensionMessage {
   <!-- Header Section with Namespace Title -->
   <div class="namespace-header">
     <h1 class="namespace-title">production</h1>
-    <button id="set-default-namespace" class="default-namespace-btn" disabled>
-      <span class="btn-icon">✓</span>
-      <span class="btn-text">Default Namespace</span>
-    </button>
+    <div class="header-actions">
+      <button id="set-default-namespace" class="default-namespace-btn" disabled>
+        <span class="btn-icon">✓</span>
+        <span class="btn-text">Default Namespace</span>
+      </button>
+      <button id="view-namespace-yaml" class="view-yaml-btn">
+        <span class="btn-icon">📄</span>
+        <span class="btn-text">View YAML</span>
+      </button>
+    </div>
   </div>
 
   <!-- Workloads Section -->
@@ -301,18 +307,23 @@ Users can switch between 4 types of workloads using pill selectors:
 .namespace-header {
   display: flex;
   align-items: center;
-  gap: 15px;
+  justify-content: space-between;
   padding: 15px;
   background-color: var(--vscode-editor-background);
   border-bottom: 2px solid var(--vscode-panel-border);
 }
 
 .namespace-title {
-  flex: 1;
   margin: 0;
   font-size: 1.5em;
   font-weight: 600;
   color: var(--vscode-foreground);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .default-namespace-btn {
@@ -345,6 +356,28 @@ Users can switch between 4 types of workloads using pill selectors:
 
 .default-namespace-btn:not(:disabled) .btn-icon {
   display: none;
+}
+
+.view-yaml-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background-color: var(--vscode-button-secondaryBackground);
+  color: var(--vscode-button-secondaryForeground);
+  border: 1px solid var(--vscode-button-border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.95em;
+}
+
+.view-yaml-btn:hover {
+  background-color: var(--vscode-button-secondaryHoverBackground);
+  border-color: var(--vscode-focusBorder);
+}
+
+.view-yaml-btn .btn-icon {
+  font-size: 1.1em;
 }
 
 /* Workloads Section Styling */

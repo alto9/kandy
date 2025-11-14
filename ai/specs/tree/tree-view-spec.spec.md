@@ -119,7 +119,7 @@ sequenceDiagram
 ### Tree Item Structure
 ```typescript
 interface TreeItemData {
-  type: 'cluster' | 'namespace' | 'allNamespaces' | 'reports' | 'compliance' | 'dataCollection';
+  type: 'cluster' | 'namespace' | 'allNamespaces' | 'reports' | 'compliance' | 'dataCollection' | 'resource';
   name: string;
   status?: 'connected' | 'disconnected';
   isActiveNamespace?: boolean; // True if this namespace is set in kubectl context
@@ -128,6 +128,10 @@ interface TreeItemData {
     context: string;
     cluster: string;
   };
+  // For resource items
+  resourceType?: string;       // e.g., "Deployment", "Pod", "Service"
+  resourceNamespace?: string;  // Namespace containing the resource
+  resourceApiVersion?: string; // e.g., "apps/v1"
 }
 ```
 
@@ -214,7 +218,9 @@ Reports (category)
 - **Click Data Collection**: Display placeholder message (non-functional)
 - **Click namespace**: Open webview panel for namespace navigation
 - **Click "All Namespaces"**: Open webview showing cluster-wide resource view
+- **Click resource**: Context-dependent action (may expand or open details)
 - **Right-click namespace**: Context menu with namespace selection actions
+- **Right-click resource**: Context menu with "View YAML" and resource-specific actions
 - **Manual Refresh**: User-triggered refresh command updates tree and operator status
 
 ### Context Menu Actions
@@ -228,6 +234,11 @@ Reports (category)
 - **Clear Active Namespace**: Removes namespace from kubectl context
 - **Open in Webview**: Opens webview for this namespace
 - **Refresh**: Refreshes this namespace's data
+
+#### For Resource Items (Deployments, Pods, Services, etc.)
+- **View YAML**: Opens YAML editor for the resource in a new tab
+- **Refresh**: Refreshes this resource's data
+- **Delete Resource**: Deletes the resource from the cluster (with confirmation)
 
 #### Context Menu Registration
 ```typescript
@@ -243,6 +254,11 @@ Reports (category)
       "command": "kube9.clearActiveNamespace",
       "when": "view == kube9TreeView && viewItem == namespace && isActiveNamespace",
       "group": "namespace@1"
+    },
+    {
+      "command": "kube9.viewResourceYAML",
+      "when": "view == kube9TreeView && viewItem =~ /^resource/",
+      "group": "kube9@1"
     }
   ]
 }
