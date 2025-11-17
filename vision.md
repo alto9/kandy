@@ -19,6 +19,17 @@ kube9-vscode will become the **default Kubernetes management tool for VS Code us
 3. **Intelligent Assistance**: AI-powered recommendations help developers make better decisions about their clusters
 4. **Multi-Cluster Mastery**: Manage multiple clusters and contexts effortlessly from a single interface
 5. **Visual Clarity**: Complex Kubernetes relationships become understandable through visual representations
+6. **GitOps Integration**: Native GitOps capabilities eliminate the need for separate deployment tools
+
+### GitOps Developer Experience
+
+**The Problem**: Developers want GitOps capabilities but ArgoCD introduces complexity with separate UIs, learning curves, and operational overhead.
+
+**The kube9 Solution**: Integrated GitOps through Application CRDs managed directly in VS Code, providing:
+- **Zero Additional Tools**: No separate ArgoCD installation or management
+- **VS Code Native**: Create, monitor, and manage GitOps deployments in your IDE
+- **Unified Workflow**: Cluster management and GitOps in one interface
+- **Simplified Operations**: Point to git repos, automatic drift detection and correction
 
 ### Strategic Goals
 
@@ -31,7 +42,8 @@ kube9-vscode will become the **default Kubernetes management tool for VS Code us
 **Medium-Term (1-2 years)**
 - Expand beyond VS Code to other IDEs (JetBrains, Neovim, etc.)
 - Build a plugin ecosystem for extensibility
-- Integrate with CI/CD pipelines and GitOps workflows
+- **Native GitOps through Application CRDs** - Replace ArgoCD with integrated GitOps management
+- Integrate with CI/CD pipelines and deployment workflows
 - Develop team collaboration features for shared cluster management
 
 **Long-Term (2+ years)**
