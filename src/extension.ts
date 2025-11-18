@@ -438,6 +438,43 @@ function registerCommands(): void {
     );
     context.subscriptions.push(viewResourceYAMLCmd);
     disposables.push(viewResourceYAMLCmd);
+    
+    // Register view resource YAML from palette command
+    const viewResourceYAMLFromPaletteCmd = vscode.commands.registerCommand(
+        'kube9.viewResourceYAMLFromPalette',
+        async () => {
+            try {
+                // Dynamic import to avoid circular dependencies
+                const { ResourceQuickPick } = await import('./yaml/ResourceQuickPick');
+                
+                console.log('Opening resource YAML quick pick...');
+                
+                // Execute quick pick flow
+                const resource = await ResourceQuickPick.executeQuickPickFlow();
+                
+                // Check if user cancelled
+                if (!resource) {
+                    console.log('Resource selection cancelled by user');
+                    return;
+                }
+                
+                console.log('Opening YAML editor for resource:', resource);
+                
+                // Open YAML editor
+                if (yamlEditorManager) {
+                    await yamlEditorManager.openYAMLEditor(resource);
+                } else {
+                    throw new Error('YAML editor manager not initialized');
+                }
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to open YAML editor from palette:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to open YAML editor: ${errorMessage}`);
+            }
+        }
+    );
+    context.subscriptions.push(viewResourceYAMLFromPaletteCmd);
+    disposables.push(viewResourceYAMLFromPaletteCmd);
 }
 
 /**
