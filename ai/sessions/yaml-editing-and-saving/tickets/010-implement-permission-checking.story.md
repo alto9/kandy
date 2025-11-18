@@ -3,7 +3,7 @@ story_id: implement-permission-checking
 session_id: yaml-editing-and-saving
 feature_id: [yaml-editor]
 spec_id: [yaml-editor-spec]
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 25
 ---
@@ -39,11 +39,11 @@ Not all users have edit permissions for all resources. We should check permissio
 
 ## Acceptance Criteria
 
-- [ ] Permission checking uses kubectl auth can-i
-- [ ] Read-only editors cannot be edited
-- [ ] Read-only notification displayed
-- [ ] Save commands disabled for read-only editors
-- [ ] Read-write permissions allow normal editing
+- [x] Permission checking uses kubectl auth can-i
+- [x] Read-only editors cannot be edited
+- [x] Read-only notification displayed
+- [x] Save commands disabled for read-only editors
+- [x] Read-write permissions allow normal editing
 
 ## Dependencies
 

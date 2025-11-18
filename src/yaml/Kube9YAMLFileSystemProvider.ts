@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ResourceIdentifier } from './YAMLEditorManager';
+import { ResourceIdentifier, YAMLEditorManager } from './YAMLEditorManager';
 import { YAMLContentProvider } from './YAMLContentProvider';
 import { YAMLSaveHandler } from './YAMLSaveHandler';
 
@@ -27,6 +27,16 @@ export class Kube9YAMLFileSystemProvider implements vscode.FileSystemProvider {
     constructor() {
         this.contentProvider = new YAMLContentProvider();
         this.saveHandler = new YAMLSaveHandler();
+    }
+
+    /**
+     * Sets the YAML editor manager for read-only checks during save operations.
+     * This must be called after the YAMLEditorManager is initialized.
+     * 
+     * @param manager - The YAML editor manager instance
+     */
+    public setEditorManager(manager: YAMLEditorManager): void {
+        this.saveHandler.setEditorManager(manager);
     }
 
     /**

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { YAMLContentProvider } from './YAMLContentProvider';
 import { createResourceUri } from './Kube9YAMLFileSystemProvider';
+import { PermissionChecker, PermissionLevel } from './PermissionChecker';
 
 /**
  * Identifies a Kubernetes resource for YAML editing operations.
@@ -32,6 +33,12 @@ export class YAMLEditorManager {
     private openEditors: Map<string, vscode.TextEditor> = new Map();
 
     /**
+     * Map tracking read-only status of open editors by resource key.
+     * Key format: `${cluster}:${namespace || '_cluster'}:${kind}:${name}`
+     */
+    private readOnlyEditors: Map<string, boolean> = new Map();
+
+    /**
      * The VS Code extension context.
      * Used for registering disposables and managing lifecycle.
      */
@@ -44,6 +51,12 @@ export class YAMLEditorManager {
     private contentProvider: YAMLContentProvider;
 
     /**
+     * Permission checker for verifying resource access levels.
+     * Used to determine if resources should be opened as read-only.
+     */
+    private permissionChecker: PermissionChecker;
+
+    /**
      * Creates a new YAMLEditorManager instance.
      * 
      * @param context - The VS Code extension context
@@ -51,6 +64,7 @@ export class YAMLEditorManager {
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
         this.contentProvider = new YAMLContentProvider();
+        this.permissionChecker = new PermissionChecker();
         
         // Track editor lifecycle - remove from map when documents close
         const closeDisposable = vscode.workspace.onDidCloseTextDocument((document) => {
@@ -60,6 +74,7 @@ export class YAMLEditorManager {
                 for (const [key, editor] of this.openEditors.entries()) {
                     if (editor.document.uri.toString() === document.uri.toString()) {
                         this.openEditors.delete(key);
+                        this.readOnlyEditors.delete(key);
                         console.log(`YAML editor closed: ${key}`);
                         break;
                     }
@@ -95,6 +110,16 @@ export class YAMLEditorManager {
         }
 
         try {
+            // Check permissions before opening editor
+            console.log(`Checking permissions for ${resource.kind}/${resource.name}`);
+            const permissionLevel = await this.permissionChecker.checkResourcePermissions(resource);
+            
+            // Handle different permission levels
+            if (permissionLevel === PermissionLevel.None) {
+                // User has no access to this resource at all
+                throw new Error(`Insufficient permissions to view ${resource.kind} '${resource.name}'.`);
+            }
+            
             // Create custom URI using the kube9-yaml:// scheme
             const uri = createResourceUri(resource);
             console.log(`Opening YAML editor with URI: ${uri.toString()}`);
@@ -110,7 +135,18 @@ export class YAMLEditorManager {
             
             // Track editor in our map
             this.openEditors.set(resourceKey, editor);
-            console.log(`YAML editor opened successfully: ${resourceKey}`);
+            
+            // Track read-only status and show notification if read-only
+            if (permissionLevel === PermissionLevel.ReadOnly || permissionLevel === PermissionLevel.Unknown) {
+                this.readOnlyEditors.set(resourceKey, true);
+                vscode.window.showWarningMessage(
+                    `Read-only: Insufficient permissions to edit ${resource.kind} '${resource.name}'`
+                );
+                console.log(`YAML editor opened in read-only mode: ${resourceKey}`);
+            } else {
+                this.readOnlyEditors.set(resourceKey, false);
+                console.log(`YAML editor opened successfully: ${resourceKey}`);
+            }
             
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
@@ -154,6 +190,17 @@ export class YAMLEditorManager {
     }
 
     /**
+     * Checks if a YAML editor is in read-only mode for the specified resource.
+     * 
+     * @param resource - The resource identifier to check
+     * @returns True if the editor is read-only, false otherwise (or if no editor is open)
+     */
+    public isEditorReadOnly(resource: ResourceIdentifier): boolean {
+        const resourceKey = this.getResourceKey(resource);
+        return this.readOnlyEditors.get(resourceKey) === true;
+    }
+
+    /**
      * Closes the YAML editor for the specified resource if it's open.
      * 
      * @param resource - The resource identifier for the editor to close
@@ -194,8 +241,9 @@ export class YAMLEditorManager {
      * Should be called during extension deactivation.
      */
     public dispose(): void {
-        // Clear the editors map
+        // Clear the editors maps
         this.openEditors.clear();
+        this.readOnlyEditors.clear();
     }
 }
 

@@ -134,6 +134,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         
         // Register custom file system provider for kube9-yaml:// URI scheme
         const yamlFsProvider = new Kube9YAMLFileSystemProvider();
+        
+        // Wire up editor manager for permission checks during save operations
+        yamlFsProvider.setEditorManager(yamlEditorManager);
+        
         const yamlFsProviderDisposable = vscode.workspace.registerFileSystemProvider(
             'kube9-yaml',
             yamlFsProvider,

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { spawn } from 'child_process';
 import { validateYAMLSyntax } from './YAMLValidator';
 import { KubectlError } from '../kubernetes/KubectlError';
-import { ResourceIdentifier } from './YAMLEditorManager';
+import { ResourceIdentifier, YAMLEditorManager } from './YAMLEditorManager';
 import { parseResourceFromUri } from './Kube9YAMLFileSystemProvider';
 
 /**
@@ -15,6 +15,19 @@ const KUBECTL_TIMEOUT_MS = 5000;
  * Validates YAML syntax, performs dry-run validation, and applies changes using kubectl.
  */
 export class YAMLSaveHandler {
+    /**
+     * The YAML editor manager for checking read-only status.
+     */
+    private editorManager: YAMLEditorManager | null = null;
+    
+    /**
+     * Sets the YAML editor manager for read-only checks.
+     * 
+     * @param manager - The YAML editor manager instance
+     */
+    public setEditorManager(manager: YAMLEditorManager): void {
+        this.editorManager = manager;
+    }
     /**
      * Handles saving a YAML document to the Kubernetes cluster.
      * 
@@ -34,6 +47,14 @@ export class YAMLSaveHandler {
             
             // Parse resource identifier from document URI
             const resource = parseResourceFromUri(document.uri);
+            
+            // Step 0: Check if editor is read-only
+            if (this.editorManager && this.editorManager.isEditorReadOnly(resource)) {
+                const errorMessage = `Cannot save: Resource is read-only due to insufficient permissions`;
+                vscode.window.showErrorMessage(errorMessage);
+                console.error(`Save blocked for ${resource.kind}/${resource.name}: read-only mode`);
+                return false;
+            }
             
             // Step 1: Validate YAML syntax
             const validationResult = validateYAMLSyntax(yamlContent);
