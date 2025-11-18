@@ -3,7 +3,7 @@ story_id: implement-conflict-detection
 session_id: yaml-editing-and-saving
 feature_id: [yaml-editor]
 spec_id: [yaml-editor-spec]
-status: pending
+status: completed
 priority: low
 estimated_minutes: 30
 ---

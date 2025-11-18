@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { YAMLContentProvider } from './YAMLContentProvider';
 import { createResourceUri } from './Kube9YAMLFileSystemProvider';
 import { PermissionChecker, PermissionLevel } from './PermissionChecker';
+import { ConflictDetector } from './ConflictDetector';
 
 /**
  * Identifies a Kubernetes resource for YAML editing operations.
@@ -57,6 +58,12 @@ export class YAMLEditorManager {
     private permissionChecker: PermissionChecker;
 
     /**
+     * Conflict detector for monitoring external changes to resources.
+     * Used to detect when resources are modified outside the editor.
+     */
+    private conflictDetector: ConflictDetector;
+
+    /**
      * Creates a new YAMLEditorManager instance.
      * 
      * @param context - The VS Code extension context
@@ -65,6 +72,7 @@ export class YAMLEditorManager {
         this.context = context;
         this.contentProvider = new YAMLContentProvider();
         this.permissionChecker = new PermissionChecker();
+        this.conflictDetector = new ConflictDetector();
         
         // Track editor lifecycle - remove from map when documents close
         const closeDisposable = vscode.workspace.onDidCloseTextDocument((document) => {
@@ -75,6 +83,10 @@ export class YAMLEditorManager {
                     if (editor.document.uri.toString() === document.uri.toString()) {
                         this.openEditors.delete(key);
                         this.readOnlyEditors.delete(key);
+                        
+                        // Stop conflict monitoring for this resource
+                        this.conflictDetector.stopMonitoring(key);
+                        
                         console.log(`YAML editor closed: ${key}`);
                         break;
                     }
@@ -146,6 +158,9 @@ export class YAMLEditorManager {
             } else {
                 this.readOnlyEditors.set(resourceKey, false);
                 console.log(`YAML editor opened successfully: ${resourceKey}`);
+                
+                // Start conflict monitoring for writable editors only
+                this.conflictDetector.startMonitoring(resource, document, resourceKey);
             }
             
         } catch (error) {
@@ -241,6 +256,9 @@ export class YAMLEditorManager {
      * Should be called during extension deactivation.
      */
     public dispose(): void {
+        // Dispose conflict detector
+        this.conflictDetector.dispose();
+        
         // Clear the editors maps
         this.openEditors.clear();
         this.readOnlyEditors.clear();
