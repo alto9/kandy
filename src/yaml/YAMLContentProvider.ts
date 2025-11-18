@@ -3,6 +3,7 @@ import { promisify } from 'util';
 import { KubectlError } from '../kubernetes/KubectlError';
 import { ResourceIdentifier } from './YAMLEditorManager';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
+import { showErrorWithDetails } from './ErrorHandler';
 
 /**
  * Timeout for kubectl commands in milliseconds.
@@ -66,7 +67,17 @@ export class YAMLContentProvider {
             // Log error details for debugging
             console.error(`Failed to fetch YAML for ${resource.kind}/${resource.name}: ${kubectlError.getDetails()}`);
             
-            // Throw error with user-friendly message
+            // Show enhanced error message with retry option
+            await showErrorWithDetails(
+                kubectlError,
+                `Failed to fetch YAML for ${resource.kind} '${resource.name}'`,
+                async () => {
+                    // Retry by calling fetchYAML again
+                    await this.fetchYAML(resource);
+                }
+            );
+            
+            // Throw error for caller to handle
             throw new Error(`Failed to fetch YAML for ${resource.kind} '${resource.name}': ${kubectlError.getUserMessage()}`);
         }
     }

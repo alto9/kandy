@@ -2,6 +2,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { ResourceIdentifier } from './YAMLEditorManager';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
+import { logError } from './ErrorHandler';
 
 /**
  * Timeout for kubectl commands in milliseconds.
@@ -78,9 +79,15 @@ export class PermissionChecker {
             
         } catch (error) {
             // If permission checking fails, default to Unknown for safety
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            console.warn(`Failed to check permissions for ${resource.kind}/${resource.name}: ${errorMessage}`);
+            console.warn(`Failed to check permissions for ${resource.kind}/${resource.name}`);
             console.warn('Defaulting to Unknown permission level for safety');
+            
+            // Log error to output channel for debugging
+            logError(
+                `checking permissions for ${resource.kind}/${resource.name}`,
+                error instanceof Error ? error : String(error)
+            );
+            
             return PermissionLevel.Unknown;
         }
     }
@@ -145,8 +152,14 @@ export class PermissionChecker {
             // - Authentication problems
             // - Invalid resource type
             // Return null to indicate we couldn't determine permissions
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            console.warn(`kubectl auth can-i ${verb} failed: ${errorMessage}`);
+            console.warn(`kubectl auth can-i ${verb} failed`);
+            
+            // Log error to output channel for debugging
+            logError(
+                `kubectl auth can-i ${verb} for ${resource.kind}/${resource.name}`,
+                error instanceof Error ? error : String(error)
+            );
+            
             return null;
         }
     }

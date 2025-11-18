@@ -5,6 +5,7 @@ import { KubectlError } from '../kubernetes/KubectlError';
 import { ResourceIdentifier, YAMLEditorManager } from './YAMLEditorManager';
 import { parseResourceFromUri } from './Kube9YAMLFileSystemProvider';
 import { RefreshCoordinator } from './RefreshCoordinator';
+import { showErrorWithDetails } from './ErrorHandler';
 
 /**
  * Timeout for kubectl commands in milliseconds.
@@ -154,12 +155,18 @@ export class YAMLSaveHandler {
             // kubectl dry-run failed - create structured error
             const kubectlError = KubectlError.fromExecError(error, resource.cluster);
             
-            // Show user-friendly error message
-            const errorMessage = `Validation failed: ${kubectlError.getUserMessage()}`;
-            vscode.window.showErrorMessage(errorMessage);
-            
             // Log detailed error for debugging
             console.error(`Dry-run validation failed for ${resource.kind}/${resource.name}: ${kubectlError.getDetails()}`);
+            
+            // Show enhanced error message with retry option
+            await showErrorWithDetails(
+                kubectlError,
+                `Validation failed for ${resource.kind} '${resource.name}'`,
+                async () => {
+                    // Retry by calling performDryRun again
+                    await this.performDryRun(yamlContent, resource);
+                }
+            );
             
             return false;
         }
@@ -198,7 +205,17 @@ export class YAMLSaveHandler {
             // Log detailed error for debugging
             console.error(`Apply failed for ${resource.kind}/${resource.name}: ${kubectlError.getDetails()}`);
             
-            // Throw error with user-friendly message
+            // Show enhanced error message with retry option
+            await showErrorWithDetails(
+                kubectlError,
+                `Failed to apply changes to ${resource.kind} '${resource.name}'`,
+                async () => {
+                    // Retry by calling applyChanges again
+                    await this.applyChanges(yamlContent, resource);
+                }
+            );
+            
+            // Throw error with user-friendly message for caller
             throw new Error(`Failed to apply changes: ${kubectlError.getUserMessage()}`);
         }
     }
