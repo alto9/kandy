@@ -649,5 +649,35 @@ export class NamespaceWebview {
             await NamespaceWebview.sendNamespaceContextChanged(panelInfo.panel, panelInfo.namespaceContext, source);
         }
     }
+
+    /**
+     * Sends a resource updated message to webviews displaying the affected namespace.
+     * This triggers webviews to refresh their resource lists.
+     * 
+     * @param namespace - The namespace where the resource was updated (undefined for cluster-scoped resources)
+     */
+    public static async sendResourceUpdated(namespace?: string): Promise<void> {
+        console.log(`Sending resource updated message to webviews for namespace: ${namespace || 'cluster-scoped'}`);
+        
+        for (const panelInfo of NamespaceWebview.openPanels.values()) {
+            // Only send to webviews that match the namespace
+            // For cluster-scoped resources (namespace undefined), we could skip or send to all
+            // For simplicity, we'll send to matching namespace webviews only
+            if (namespace && panelInfo.namespaceContext.namespace === namespace) {
+                try {
+                    panelInfo.panel.webview.postMessage({
+                        command: 'resourceUpdated',
+                        data: {
+                            namespace: namespace
+                        }
+                    });
+                    console.log(`Sent resourceUpdated message to webview for namespace: ${namespace}`);
+                } catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    console.error(`Failed to send resourceUpdated message to webview: ${errorMessage}`);
+                }
+            }
+        }
+    }
 }
 

@@ -3,7 +3,7 @@ story_id: implement-post-save-refresh
 session_id: yaml-editing-and-saving
 feature_id: [yaml-editor]
 spec_id: [yaml-editor-spec]
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 15
 ---
@@ -37,11 +37,11 @@ After YAML changes are applied to the cluster, the tree view and any open webvie
 
 ## Acceptance Criteria
 
-- [ ] Tree view refreshes after successful YAML save
-- [ ] Open webviews refresh after successful save
-- [ ] Refresh happens automatically without user action
-- [ ] Refresh errors don't prevent save from completing
-- [ ] Success notification includes resource name
+- [x] Tree view refreshes after successful YAML save
+- [x] Open webviews refresh after successful save
+- [x] Refresh happens automatically without user action
+- [x] Refresh errors don't prevent save from completing
+- [x] Success notification includes resource name
 
 ## Dependencies
 

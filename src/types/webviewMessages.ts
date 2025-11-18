@@ -146,10 +146,23 @@ export interface WorkloadsDataMessage {
 }
 
 /**
+ * Message sent when a resource has been updated (e.g., via YAML editor save).
+ * Instructs the webview to refresh its resource lists to reflect changes.
+ */
+export interface ResourceUpdatedMessage {
+    command: 'resourceUpdated';
+    data: {
+        /** The namespace where the resource was updated */
+        namespace: string;
+    };
+}
+
+/**
  * Union type of all messages that can be sent from extension to webview.
  */
 export type ExtensionMessage = 
     | NamespaceDataMessage 
     | NamespaceContextChangedMessage
-    | WorkloadsDataMessage;
+    | WorkloadsDataMessage
+    | ResourceUpdatedMessage;
 

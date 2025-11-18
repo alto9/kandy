@@ -4,6 +4,7 @@ import { validateYAMLSyntax } from './YAMLValidator';
 import { KubectlError } from '../kubernetes/KubectlError';
 import { ResourceIdentifier, YAMLEditorManager } from './YAMLEditorManager';
 import { parseResourceFromUri } from './Kube9YAMLFileSystemProvider';
+import { RefreshCoordinator } from './RefreshCoordinator';
 
 /**
  * Timeout for kubectl commands in milliseconds.
@@ -19,6 +20,18 @@ export class YAMLSaveHandler {
      * The YAML editor manager for checking read-only status.
      */
     private editorManager: YAMLEditorManager | null = null;
+    
+    /**
+     * The refresh coordinator for triggering UI refreshes after successful saves.
+     */
+    private refreshCoordinator: RefreshCoordinator;
+    
+    /**
+     * Creates a new YAMLSaveHandler instance.
+     */
+    constructor() {
+        this.refreshCoordinator = new RefreshCoordinator();
+    }
     
     /**
      * Sets the YAML editor manager for read-only checks.
@@ -89,8 +102,17 @@ export class YAMLSaveHandler {
                 }
             );
             
-            // Step 4: Show success notification
-            vscode.window.showInformationMessage('YAML saved successfully');
+            // Step 4: Coordinate UI refresh after successful save
+            // Wrap in try-catch to ensure refresh errors don't affect save status
+            try {
+                await this.refreshCoordinator.coordinateRefresh(resource);
+            } catch (refreshError) {
+                // Log refresh error but don't fail the save operation
+                const refreshErrorMessage = refreshError instanceof Error ? refreshError.message : String(refreshError);
+                console.error(`Refresh coordination failed: ${refreshErrorMessage}`);
+                // Note: coordinateRefresh already shows success notification, so we don't need to show it again
+            }
+            
             console.log(`Successfully saved ${resource.kind}/${resource.name}`);
             return true;
             
