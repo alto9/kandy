@@ -1,6 +1,6 @@
 ---
 spec_id: tree-view-spec
-feature_id: [tree-view-navigation, reports-menu]
+feature_id: [tree-view-navigation, reports-menu, free-dashboard, operated-dashboard]
 model_id: [namespace-selection-state]
 context_id: [kubernetes-cluster-management]
 ---
@@ -9,7 +9,7 @@ context_id: [kubernetes-cluster-management]
 
 ## Overview
 
-The tree view provides simplified navigation of Kubernetes clusters and namespaces. It displays a hierarchical structure: clusters at the top level, with resource categories listed underneath when expanded. The tree view conditionally displays a Reports menu at the top when the kube9-operator is installed and functioning. Clicking on namespaces opens a webview for detailed resource navigation and management.
+The tree view provides simplified navigation of Kubernetes clusters and namespaces. It displays a hierarchical structure: clusters at the top level, with resource categories listed underneath when expanded. The tree view displays a Dashboard menu item as the first item under each cluster, and conditionally displays a Reports menu when the kube9-operator is installed and functioning. Clicking on namespaces opens a webview for detailed resource navigation and management.
 
 ## Architecture
 
@@ -38,22 +38,29 @@ graph TD
   - Use kubectl commands to verify cluster connectivity
   - Query namespaces using kubectl
   - Check operator status for each cluster
-  - Build hierarchical tree structure (Clusters → Categories → Resources)
+  - Build hierarchical tree structure (Clusters → Dashboard → Categories → Resources)
+  - Display Dashboard menu item as first item under each cluster
   - Conditionally display Reports category based on operator status
   - Manage tree item icons and status indicators
-  - Open webviews when namespaces or reports are clicked
+  - Open webviews when namespaces, dashboard, or reports are clicked
 
 ### Tree Items Hierarchy
 
 #### Category Level (under clusters)
-1. **Reports Category** (conditional): Appears only when cluster operator status is NOT 'basic'
-   - Position: First category (before Nodes)
+1. **Dashboard**: Always visible as the first item under each cluster
+   - Position: First item (before Reports and all other categories)
+   - Visibility: Always visible regardless of operator status
+   - Behavior: Clicking opens a dashboard webview
+   - Dashboard content varies based on operator status (Free Non-Operated vs Free Operated)
+
+2. **Reports Category** (conditional): Appears only when cluster operator status is NOT 'basic'
+   - Position: Second item (after Dashboard, before Nodes)
    - Visibility: Only when `operatorStatus !== OperatorStatusMode.Basic`
    - Structure: Reports → Compliance → Data Collection
    - Reports subcategory: Compliance
      - Compliance report item: Data Collection (placeholder, non-functional)
 
-2. **Resource Categories**: Always visible when cluster is expanded
+3. **Resource Categories**: Always visible when cluster is expanded
    - Nodes
    - Namespaces
    - Workloads
@@ -119,7 +126,7 @@ sequenceDiagram
 ### Tree Item Structure
 ```typescript
 interface TreeItemData {
-  type: 'cluster' | 'namespace' | 'allNamespaces' | 'reports' | 'compliance' | 'dataCollection' | 'resource';
+  type: 'cluster' | 'dashboard' | 'namespace' | 'allNamespaces' | 'reports' | 'compliance' | 'dataCollection' | 'resource';
   name: string;
   status?: 'connected' | 'disconnected';
   isActiveNamespace?: boolean; // True if this namespace is set in kubectl context
@@ -212,7 +219,8 @@ Reports (category)
 - **Tooltips**: Display additional information on hover
 
 ### Interactions
-- **Click cluster**: Expand to show resource categories (and Reports if operator installed)
+- **Click cluster**: Expand to show Dashboard, Reports (if operator installed), and other resource categories
+- **Click Dashboard**: Open dashboard webview (Free Non-Operated or Free Operated based on operator status)
 - **Click Reports category**: Expand to show Compliance subcategory
 - **Click Compliance subcategory**: Expand to show Data Collection report
 - **Click Data Collection**: Display placeholder message (non-functional)
@@ -312,6 +320,8 @@ Reports (category)
 - Namespace context setting and clearing
 - Active namespace indicator logic
 - Context state caching and invalidation
+- Dashboard menu item display logic
+- Dashboard type resolution based on operator status
 - Reports category conditional display logic
 - Operator status-based category filtering
 - Reports menu hierarchy construction
@@ -326,6 +336,14 @@ Reports (category)
 ### E2E Tests
 - Tree navigation to namespaces
 - Webview panel opening from namespace clicks
+- Dashboard menu item visibility for all clusters
+- Dashboard webview opening from Dashboard click
+- Dashboard type switching based on operator status
+- Free Non-Operated dashboard data display
+- Free Operated dashboard data display
+- AI recommendations panel display (with API key)
+- Upsell CTA panel display (without API key)
+- Dashboard auto-refresh behavior
 - Manual refresh behavior
 - Connection failure handling
 - Setting active namespace from context menu

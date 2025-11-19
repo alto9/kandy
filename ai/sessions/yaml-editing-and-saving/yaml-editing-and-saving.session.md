@@ -1,7 +1,7 @@
 ---
 session_id: yaml-editing-and-saving
 start_time: '2025-11-14T15:13:19.220Z'
-status: development
+status: completed
 problem_statement: yaml editing and saving
 changed_files:
   - path: ai/features/webview/yaml-editor.feature.md
