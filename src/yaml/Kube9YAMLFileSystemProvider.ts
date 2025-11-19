@@ -7,8 +7,10 @@ import { YAMLSaveHandler } from './YAMLSaveHandler';
  * Custom FileSystemProvider for kube9-yaml:// URI scheme.
  * Enables VS Code integration for YAML editor documents with proper save functionality.
  * 
- * URI Format: kube9-yaml://<cluster>/<namespace>/<kind>/<name>.yaml
- * For cluster-scoped resources (no namespace), use '_cluster' as the namespace segment.
+ * URI Format: kube9-yaml://<cluster>/<namespace>/<kind>/<name>.yaml?<apiVersion>
+ * - Cluster name is used as the URI authority (properly handles special characters like ARNs)
+ * - For cluster-scoped resources (no namespace), use '_cluster' as the namespace segment
+ * - API version is passed as a query parameter
  */
 export class Kube9YAMLFileSystemProvider implements vscode.FileSystemProvider {
     private contentProvider: YAMLContentProvider;
@@ -213,8 +215,10 @@ export class Kube9YAMLFileSystemProvider implements vscode.FileSystemProvider {
 /**
  * Parse a ResourceIdentifier from a kube9-yaml:// URI.
  * 
- * URI Format: kube9-yaml://<cluster>/<namespace>/<kind>/<name>.yaml
- * For cluster-scoped resources, namespace segment is '_cluster'.
+ * URI Format: kube9-yaml://<cluster>/<namespace>/<kind>/<name>.yaml?<apiVersion>
+ * - Cluster name is extracted from the URI authority
+ * - For cluster-scoped resources, namespace segment is '_cluster'
+ * - API version is extracted from query parameter
  * 
  * @param uri - The URI to parse
  * @returns The parsed ResourceIdentifier
@@ -225,16 +229,22 @@ export function parseResourceFromUri(uri: vscode.Uri): ResourceIdentifier {
         throw new Error(`Invalid URI scheme: expected 'kube9-yaml', got '${uri.scheme}'`);
     }
 
-    // Parse path: /<cluster>/<namespace>/<kind>/<name>.yaml
+    // Extract cluster from authority (URL-decoded)
+    const cluster = decodeURIComponent(uri.authority);
+    if (!cluster) {
+        throw new Error(`Invalid URI: missing cluster authority in '${uri.toString()}'`);
+    }
+
+    // Parse path: /<namespace>/<kind>/<name>.yaml
     const pathParts = uri.path.split('/').filter(part => part.length > 0);
     
-    if (pathParts.length !== 4) {
+    if (pathParts.length !== 3) {
         throw new Error(
-            `Invalid URI path format: expected '/<cluster>/<namespace>/<kind>/<name>.yaml', got '${uri.path}'`
+            `Invalid URI path format: expected '/<namespace>/<kind>/<name>.yaml', got '${uri.path}'`
         );
     }
 
-    const [cluster, namespaceOrCluster, kind, nameWithExtension] = pathParts;
+    const [namespaceOrCluster, kind, nameWithExtension] = pathParts;
     
     // Remove .yaml extension from name
     const name = nameWithExtension.endsWith('.yaml')
@@ -260,7 +270,8 @@ export function parseResourceFromUri(uri: vscode.Uri): ResourceIdentifier {
  * Create a kube9-yaml:// URI from a ResourceIdentifier.
  * 
  * URI Format: kube9-yaml://<cluster>/<namespace>/<kind>/<name>.yaml?<apiVersion>
- * For cluster-scoped resources (no namespace), use '_cluster' as the namespace segment.
+ * - Cluster name is used as the URI authority (handles special chars like ARNs)
+ * - For cluster-scoped resources (no namespace), use '_cluster' as the namespace segment
  * 
  * @param resource - The resource identifier
  * @returns The created URI
@@ -269,12 +280,13 @@ export function createResourceUri(resource: ResourceIdentifier): vscode.Uri {
     // Use '_cluster' for cluster-scoped resources
     const namespaceSegment = resource.namespace || '_cluster';
     
-    // Build path: /<cluster>/<namespace>/<kind>/<name>.yaml
-    const path = `/${resource.cluster}/${namespaceSegment}/${resource.kind}/${resource.name}.yaml`;
-    
-    // Include apiVersion as query parameter
-    const query = resource.apiVersion;
-    
-    return vscode.Uri.parse(`kube9-yaml://${path}?${query}`);
+    // Use cluster as the authority to avoid issues with special characters in cluster names (like ARNs)
+    // Path contains namespace/kind/name
+    return vscode.Uri.from({
+        scheme: 'kube9-yaml',
+        authority: encodeURIComponent(resource.cluster),
+        path: `/${namespaceSegment}/${resource.kind}/${resource.name}.yaml`,
+        query: resource.apiVersion
+    });
 }
 
