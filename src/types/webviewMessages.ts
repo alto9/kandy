@@ -58,13 +58,32 @@ export interface FetchWorkloadsMessage {
 }
 
 /**
+ * Message sent when user clicks "View YAML" button for a namespace.
+ * Instructs the extension to open a YAML editor for the specified resource.
+ */
+export interface OpenYAMLMessage {
+    command: 'openYAML';
+    resource: {
+        /** The Kubernetes resource kind (e.g., 'Namespace', 'Pod', 'Deployment') */
+        kind: string;
+        /** The name of the resource */
+        name: string;
+        /** The namespace containing the resource (optional for cluster-scoped resources) */
+        namespace?: string;
+        /** The API version of the resource (e.g., 'v1', 'apps/v1') */
+        apiVersion?: string;
+    };
+}
+
+/**
  * Union type of all messages that can be sent from webview to extension.
  */
 export type WebviewMessage = 
     | SetActiveNamespaceMessage 
     | RefreshMessage
     | OpenResourceMessage
-    | FetchWorkloadsMessage;
+    | FetchWorkloadsMessage
+    | OpenYAMLMessage;
 
 // ============================================================================
 // Extension to Webview Messages
@@ -127,10 +146,23 @@ export interface WorkloadsDataMessage {
 }
 
 /**
+ * Message sent when a resource has been updated (e.g., via YAML editor save).
+ * Instructs the webview to refresh its resource lists to reflect changes.
+ */
+export interface ResourceUpdatedMessage {
+    command: 'resourceUpdated';
+    data: {
+        /** The namespace where the resource was updated */
+        namespace: string;
+    };
+}
+
+/**
  * Union type of all messages that can be sent from extension to webview.
  */
 export type ExtensionMessage = 
     | NamespaceDataMessage 
     | NamespaceContextChangedMessage
-    | WorkloadsDataMessage;
+    | WorkloadsDataMessage
+    | ResourceUpdatedMessage;
 

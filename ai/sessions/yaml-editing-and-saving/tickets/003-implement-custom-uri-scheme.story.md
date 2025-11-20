@@ -3,7 +3,7 @@ story_id: implement-custom-uri-scheme
 session_id: yaml-editing-and-saving
 feature_id: [yaml-editor]
 spec_id: [yaml-editor-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 25
 ---
@@ -38,11 +38,11 @@ VS Code requires custom URI schemes to be handled by FileSystemProvider. This al
 
 ## Acceptance Criteria
 
-- [ ] Custom URI scheme `kube9-yaml://` registered with VS Code
-- [ ] Can parse resource information from URI
-- [ ] Can create URI from resource identifier
-- [ ] readFile works and returns YAML content
-- [ ] VS Code can open documents with custom URI scheme
+- [x] Custom URI scheme `kube9-yaml://` registered with VS Code
+- [x] Can parse resource information from URI
+- [x] Can create URI from resource identifier
+- [x] readFile works and returns YAML content
+- [x] VS Code can open documents with custom URI scheme
 
 ## Dependencies
 

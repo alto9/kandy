@@ -61,6 +61,9 @@ export class ConfigMapsSubcategory {
                     namespace: configMapInfo.namespace
                 }
             );
+            
+            // Set context value for "View YAML" menu
+            item.contextValue = 'resource:ConfigMap';
 
             // Set description to show number of data keys
             const keyLabel = configMapInfo.dataKeys === 1 ? 'key' : 'keys';

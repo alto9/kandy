@@ -334,6 +334,30 @@
         });
     }
 
+    // Handle button click for viewing namespace YAML
+    const viewNamespaceYamlButton = document.getElementById('view-namespace-yaml');
+    if (viewNamespaceYamlButton) {
+        viewNamespaceYamlButton.addEventListener('click', () => {
+            // Read namespace name from the title element
+            const namespaceName = namespaceTitle?.textContent?.trim();
+            
+            // For "All Namespaces" view, don't show YAML
+            if (isAllNamespaces || !namespaceName || namespaceName === 'All Namespaces') {
+                return;
+            }
+
+            // Send openYAML message to extension
+            vscode.postMessage({
+                command: 'openYAML',
+                resource: {
+                    kind: 'Namespace',
+                    name: namespaceName,
+                    apiVersion: 'v1'
+                }
+            });
+        });
+    }
+
     // Initialize pill selector event listeners
     const pillSelectors = document.querySelectorAll('.pill-selector');
     pillSelectors.forEach(pill => {
@@ -393,6 +417,27 @@
             case 'workloadsData':
                 if (message.data) {
                     renderWorkloadsTable(message.data);
+                }
+                break;
+            
+            case 'resourceUpdated':
+                // Resource was updated (e.g., via YAML editor save)
+                // Refresh the current workload view to reflect changes
+                console.log('Resource updated, refreshing workload data');
+                
+                // Get the currently selected workload type pill
+                const selectedPill = document.querySelector('.workload-type-pill.selected');
+                if (selectedPill) {
+                    const workloadType = selectedPill.dataset.type;
+                    console.log(`Fetching updated workload data for type: ${workloadType}`);
+                    
+                    // Request fresh workload data from extension
+                    vscode.postMessage({
+                        command: 'fetchWorkloads',
+                        data: { workloadType }
+                    });
+                } else {
+                    console.log('No workload type selected, skipping refresh');
                 }
                 break;
         }

@@ -3,7 +3,7 @@ story_id: add-command-palette-integration
 session_id: yaml-editing-and-saving
 feature_id: [yaml-editor]
 spec_id: [yaml-editor-spec]
-status: pending
+status: completed
 priority: low
 estimated_minutes: 25
 ---
@@ -45,13 +45,13 @@ Users should be able to open YAML editors via the command palette (Ctrl+Shift+P 
 
 ## Acceptance Criteria
 
-- [ ] Command appears in command palette
-- [ ] Quick pick flow shows namespace selection
-- [ ] Quick pick flow shows resource kind selection
-- [ ] Quick pick flow shows resource name selection
-- [ ] Selected resource opens in YAML editor
-- [ ] Can cancel at any step
-- [ ] Loading indicators shown during queries
+- [x] Command appears in command palette
+- [x] Quick pick flow shows namespace selection
+- [x] Quick pick flow shows resource kind selection
+- [x] Quick pick flow shows resource name selection
+- [x] Selected resource opens in YAML editor
+- [x] Can cancel at any step
+- [x] Loading indicators shown during queries
 
 ## Dependencies
 

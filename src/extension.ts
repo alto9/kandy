@@ -10,6 +10,9 @@ import { configureApiKeyCommand } from './commands/ConfigureApiKey';
 import { setActiveNamespaceCommand } from './commands/namespaceCommands';
 import { namespaceWatcher } from './services/namespaceCache';
 import { NamespaceStatusBar } from './ui/statusBar';
+import { YAMLEditorManager, ResourceIdentifier } from './yaml/YAMLEditorManager';
+import { Kube9YAMLFileSystemProvider } from './yaml/Kube9YAMLFileSystemProvider';
+import { ClusterTreeItem } from './tree/ClusterTreeItem';
 
 /**
  * Global extension context accessible to all components.
@@ -41,6 +44,12 @@ let authStatusBarItem: vscode.StatusBarItem | undefined;
 let namespaceStatusBar: NamespaceStatusBar | undefined;
 
 /**
+ * Global YAML editor manager instance.
+ * Manages YAML editor instances for Kubernetes resources.
+ */
+let yamlEditorManager: YAMLEditorManager | undefined;
+
+/**
  * Get the extension context.
  * @returns The extension context
  * @throws Error if context has not been initialized
@@ -62,6 +71,18 @@ export function getClusterTreeProvider(): ClusterTreeProvider {
         throw new Error('Cluster tree provider has not been initialized');
     }
     return clusterTreeProvider;
+}
+
+/**
+ * Get the YAML editor manager instance.
+ * @returns The YAML editor manager
+ * @throws Error if YAML editor manager has not been initialized
+ */
+export function getYAMLEditorManager(): YAMLEditorManager {
+    if (!yamlEditorManager) {
+        throw new Error('YAMLEditorManager not initialized');
+    }
+    return yamlEditorManager;
 }
 
 /**
@@ -106,6 +127,26 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         // Create and show status bar item for namespace context
         await createNamespaceStatusBarItem();
         
+        // Initialize YAML editor manager
+        yamlEditorManager = new YAMLEditorManager(context);
+        disposables.push(yamlEditorManager);
+        console.log('YAML editor manager initialized successfully.');
+        
+        // Register custom file system provider for kube9-yaml:// URI scheme
+        const yamlFsProvider = new Kube9YAMLFileSystemProvider();
+        
+        // Wire up editor manager for permission checks during save operations
+        yamlFsProvider.setEditorManager(yamlEditorManager);
+        
+        const yamlFsProviderDisposable = vscode.workspace.registerFileSystemProvider(
+            'kube9-yaml',
+            yamlFsProvider,
+            { isCaseSensitive: true, isReadonly: false }
+        );
+        context.subscriptions.push(yamlFsProviderDisposable);
+        disposables.push(yamlFsProviderDisposable);
+        console.log('YAML file system provider registered successfully.');
+        
         // Show welcome screen on first activation
         const globalState = GlobalState.getInstance();
         if (!globalState.getWelcomeScreenDismissed()) {
@@ -142,6 +183,49 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         );
         throw error;
     }
+}
+
+/**
+ * Extract the Kubernetes kind from a context value string.
+ * Handles the 'resource:Kind' pattern used in tree items.
+ * 
+ * @param contextValue The context value string (e.g., 'resource:Pod')
+ * @returns The extracted kind (e.g., 'Pod')
+ */
+function extractKindFromContextValue(contextValue: string | undefined): string {
+    if (!contextValue) {
+        return 'Unknown';
+    }
+    // Extract kind from 'resource:Pod' → 'Pod'
+    const parts = contextValue.split(':');
+    return parts.length > 1 ? parts[1] : contextValue;
+}
+
+/**
+ * Get the API version for a given Kubernetes resource kind.
+ * Maps common Kubernetes resource kinds to their appropriate API versions.
+ * 
+ * @param kind The Kubernetes resource kind (e.g., 'Deployment', 'Pod')
+ * @returns The API version for that kind (e.g., 'apps/v1', 'v1')
+ */
+function getApiVersionForKind(kind: string): string {
+    // Map Kubernetes kinds to their API versions
+    const apiVersionMap: { [key: string]: string } = {
+        'Deployment': 'apps/v1',
+        'StatefulSet': 'apps/v1',
+        'DaemonSet': 'apps/v1',
+        'Pod': 'v1',
+        'Service': 'v1',
+        'ConfigMap': 'v1',
+        'Secret': 'v1',
+        'Namespace': 'v1',
+        'Node': 'v1',
+        'PersistentVolume': 'v1',
+        'PersistentVolumeClaim': 'v1',
+        'StorageClass': 'storage.k8s.io/v1',
+        'CronJob': 'batch/v1'
+    };
+    return apiVersionMap[kind] || 'v1';
 }
 
 /**
@@ -317,6 +401,80 @@ function registerCommands(): void {
     );
     context.subscriptions.push(setActiveNamespaceCmd);
     disposables.push(setActiveNamespaceCmd);
+    
+    // Register view resource YAML command
+    const viewResourceYAMLCmd = vscode.commands.registerCommand(
+        'kube9.viewResourceYAML',
+        async (treeItem: ClusterTreeItem) => {
+            try {
+                // Extract resource information from tree item
+                if (!treeItem || !treeItem.resourceData) {
+                    throw new Error('Invalid tree item: missing resource data');
+                }
+                
+                // Build ResourceIdentifier from tree item
+                const resource: ResourceIdentifier = {
+                    kind: extractKindFromContextValue(treeItem.contextValue),
+                    name: treeItem.resourceData.resourceName || treeItem.label as string,
+                    namespace: treeItem.resourceData.namespace,
+                    apiVersion: getApiVersionForKind(extractKindFromContextValue(treeItem.contextValue)),
+                    cluster: treeItem.resourceData.context.name
+                };
+                
+                console.log('Opening YAML editor for resource:', resource);
+                
+                // Open YAML editor
+                if (yamlEditorManager) {
+                    await yamlEditorManager.openYAMLEditor(resource);
+                } else {
+                    throw new Error('YAML editor manager not initialized');
+                }
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to open YAML editor from tree view:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to open YAML editor: ${errorMessage}`);
+            }
+        }
+    );
+    context.subscriptions.push(viewResourceYAMLCmd);
+    disposables.push(viewResourceYAMLCmd);
+    
+    // Register view resource YAML from palette command
+    const viewResourceYAMLFromPaletteCmd = vscode.commands.registerCommand(
+        'kube9.viewResourceYAMLFromPalette',
+        async () => {
+            try {
+                // Dynamic import to avoid circular dependencies
+                const { ResourceQuickPick } = await import('./yaml/ResourceQuickPick');
+                
+                console.log('Opening resource YAML quick pick...');
+                
+                // Execute quick pick flow
+                const resource = await ResourceQuickPick.executeQuickPickFlow();
+                
+                // Check if user cancelled
+                if (!resource) {
+                    console.log('Resource selection cancelled by user');
+                    return;
+                }
+                
+                console.log('Opening YAML editor for resource:', resource);
+                
+                // Open YAML editor
+                if (yamlEditorManager) {
+                    await yamlEditorManager.openYAMLEditor(resource);
+                } else {
+                    throw new Error('YAML editor manager not initialized');
+                }
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to open YAML editor from palette:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to open YAML editor: ${errorMessage}`);
+            }
+        }
+    );
+    context.subscriptions.push(viewResourceYAMLFromPaletteCmd);
+    disposables.push(viewResourceYAMLFromPaletteCmd);
 }
 
 /**
@@ -345,6 +503,11 @@ export async function deactivate(): Promise<void> {
             clusterTreeProvider.dispose();
         }
         
+        // Dispose YAML editor manager
+        if (yamlEditorManager) {
+            yamlEditorManager.dispose();
+        }
+        
         // Stop watching for namespace context changes
         namespaceWatcher.stopWatching();
         console.log('Namespace context watcher stopped.');
@@ -364,6 +527,9 @@ export async function deactivate(): Promise<void> {
         // Clear status bar item references
         authStatusBarItem = undefined;
         namespaceStatusBar = undefined;
+        
+        // Clear manager references
+        yamlEditorManager = undefined;
         
         // Clear extension context
         extensionContext = undefined;

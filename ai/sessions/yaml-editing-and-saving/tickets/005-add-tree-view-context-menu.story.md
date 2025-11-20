@@ -3,7 +3,7 @@ story_id: add-tree-view-context-menu
 session_id: yaml-editing-and-saving
 feature_id: [yaml-editor]
 spec_id: [yaml-editor-spec, tree-view-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 20
 ---

@@ -3,7 +3,7 @@ story_id: implement-yaml-save-handler
 session_id: yaml-editing-and-saving
 feature_id: [yaml-editor]
 spec_id: [yaml-editor-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 30
 ---
@@ -41,12 +41,12 @@ When users save YAML changes, we need to: validate syntax, dry-run with kubectl,
 
 ## Acceptance Criteria
 
-- [ ] Syntax validation runs before dry-run
-- [ ] Dry-run validation prevents invalid changes
-- [ ] kubectl apply successfully applies valid changes
-- [ ] Error messages are user-friendly
-- [ ] Progress indicator shows during save
-- [ ] Success notification displayed on successful save
+- [x] Syntax validation runs before dry-run
+- [x] Dry-run validation prevents invalid changes
+- [x] kubectl apply successfully applies valid changes
+- [x] Error messages are user-friendly
+- [x] Progress indicator shows during save
+- [x] Success notification displayed on successful save
 
 ## Dependencies
 

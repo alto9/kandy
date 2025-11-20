@@ -5,7 +5,7 @@ import { getContextInfo, getCurrentNamespace, setNamespace } from '../utils/kube
 import { NamespaceCommands } from '../kubectl/NamespaceCommands';
 import { KubeconfigParser } from '../kubernetes/KubeconfigParser';
 import { WebviewMessage } from '../types/webviewMessages';
-import { getClusterTreeProvider } from '../extension';
+import { getClusterTreeProvider, getYAMLEditorManager } from '../extension';
 import { WorkloadCommands } from '../kubectl/WorkloadCommands';
 import { PodHealthAnalyzer } from '../kubernetes/PodHealthAnalyzer';
 import { calculateHealthStatus } from '../kubernetes/HealthCalculator';
@@ -165,6 +165,42 @@ export class NamespaceWebview {
                                     `Failed to set namespace to: ${message.data.namespace}`
                                 );
                             }
+                        }
+                        break;
+                    
+                    case 'openYAML':
+                        // Open YAML editor for the namespace resource
+                        if (!panelInfo) {
+                            console.error('Panel info not found for openYAML');
+                            break;
+                        }
+                        
+                        try {
+                            // Extract resource info from message
+                            const resourceData = message.resource;
+                            if (!resourceData || !resourceData.kind || !resourceData.name) {
+                                throw new Error('Invalid resource data in openYAML message');
+                            }
+                            
+                            // Build complete ResourceIdentifier
+                            const resource = {
+                                kind: resourceData.kind,
+                                name: resourceData.name,
+                                namespace: resourceData.namespace,
+                                apiVersion: resourceData.apiVersion || 'v1',
+                                cluster: panelInfo.namespaceContext.contextName
+                            };
+                            
+                            console.log('Opening YAML editor for namespace resource:', resource);
+                            
+                            // Get YAML editor manager and open editor
+                            const yamlEditorManager = getYAMLEditorManager();
+                            await yamlEditorManager.openYAMLEditor(resource);
+                            
+                        } catch (error) {
+                            const errorMessage = error instanceof Error ? error.message : String(error);
+                            console.error('Failed to open YAML editor from namespace webview:', errorMessage);
+                            vscode.window.showErrorMessage(`Failed to open YAML editor: ${errorMessage}`);
                         }
                         break;
                     
@@ -611,6 +647,36 @@ export class NamespaceWebview {
     ): Promise<void> {
         for (const panelInfo of NamespaceWebview.openPanels.values()) {
             await NamespaceWebview.sendNamespaceContextChanged(panelInfo.panel, panelInfo.namespaceContext, source);
+        }
+    }
+
+    /**
+     * Sends a resource updated message to webviews displaying the affected namespace.
+     * This triggers webviews to refresh their resource lists.
+     * 
+     * @param namespace - The namespace where the resource was updated (undefined for cluster-scoped resources)
+     */
+    public static async sendResourceUpdated(namespace?: string): Promise<void> {
+        console.log(`Sending resource updated message to webviews for namespace: ${namespace || 'cluster-scoped'}`);
+        
+        for (const panelInfo of NamespaceWebview.openPanels.values()) {
+            // Only send to webviews that match the namespace
+            // For cluster-scoped resources (namespace undefined), we could skip or send to all
+            // For simplicity, we'll send to matching namespace webviews only
+            if (namespace && panelInfo.namespaceContext.namespace === namespace) {
+                try {
+                    panelInfo.panel.webview.postMessage({
+                        command: 'resourceUpdated',
+                        data: {
+                            namespace: namespace
+                        }
+                    });
+                    console.log(`Sent resourceUpdated message to webview for namespace: ${namespace}`);
+                } catch (error) {
+                    const errorMessage = error instanceof Error ? error.message : String(error);
+                    console.error(`Failed to send resourceUpdated message to webview: ${errorMessage}`);
+                }
+            }
         }
     }
 }

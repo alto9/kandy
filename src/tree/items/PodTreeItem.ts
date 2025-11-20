@@ -50,6 +50,9 @@ export class PodTreeItem extends ClusterTreeItem {
         
         this.podInfo = podInfo;
         
+        // Set context value for "View YAML" menu
+        this.contextValue = 'resource:Pod';
+        
         // Set description to show namespace
         this.description = podInfo.namespace;
         

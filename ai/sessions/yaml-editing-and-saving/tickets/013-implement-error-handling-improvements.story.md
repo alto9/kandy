@@ -3,7 +3,7 @@ story_id: implement-error-handling-improvements
 session_id: yaml-editing-and-saving
 feature_id: [yaml-editor]
 spec_id: [yaml-editor-spec]
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 20
 ---
@@ -43,13 +43,13 @@ kubectl can fail in various ways (connection issues, permission errors, resource
 
 ## Acceptance Criteria
 
-- [ ] Common kubectl errors parsed to friendly messages
-- [ ] "View Details" button shows full error
-- [ ] Output channel used for detailed error logs
-- [ ] Retry button available for transient failures
-- [ ] Connection errors clearly identified
-- [ ] Permission errors clearly identified
-- [ ] Resource not found errors clearly identified
+- [x] Common kubectl errors parsed to friendly messages
+- [x] "View Details" button shows full error
+- [x] Output channel used for detailed error logs
+- [x] Retry button available for transient failures
+- [x] Connection errors clearly identified
+- [x] Permission errors clearly identified
+- [x] Resource not found errors clearly identified
 
 ## Dependencies
 

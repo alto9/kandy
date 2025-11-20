@@ -3,7 +3,7 @@ story_id: add-unsaved-changes-warning
 session_id: yaml-editing-and-saving
 feature_id: [yaml-editor]
 spec_id: [yaml-editor-spec]
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 15
 ---
@@ -35,13 +35,13 @@ VS Code should prompt users with "Save", "Don't Save", "Cancel" options when the
 
 ## Acceptance Criteria
 
-- [ ] Unsaved changes show dirty indicator (dot on tab)
-- [ ] Closing dirty tab shows "Save / Don't Save / Cancel" prompt
-- [ ] "Save" option saves and closes editor
-- [ ] "Don't Save" option closes without saving
-- [ ] "Cancel" option keeps editor open
-- [ ] Save failures prevent editor from closing
-- [ ] Prompt matches standard VS Code behavior
+- [x] Unsaved changes show dirty indicator (dot on tab)
+- [x] Closing dirty tab shows "Save / Don't Save / Cancel" prompt
+- [x] "Save" option saves and closes editor
+- [x] "Don't Save" option closes without saving
+- [x] "Cancel" option keeps editor open
+- [x] Save failures prevent editor from closing
+- [x] Prompt matches standard VS Code behavior
 
 ## Dependencies
 

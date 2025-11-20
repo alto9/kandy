@@ -62,6 +62,9 @@ export class CronJobsSubcategory {
                     namespace: cronjobInfo.namespace
                 }
             );
+            
+            // Set context value for "View YAML" menu
+            item.contextValue = 'resource:CronJob';
 
             // Set description to show namespace and schedule
             item.description = `${cronjobInfo.namespace} • ${cronjobInfo.schedule}`;

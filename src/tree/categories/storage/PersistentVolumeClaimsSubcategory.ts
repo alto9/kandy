@@ -61,6 +61,9 @@ export class PersistentVolumeClaimsSubcategory {
                     namespace: pvcInfo.namespace
                 }
             );
+            
+            // Set context value for "View YAML" menu
+            item.contextValue = 'resource:PersistentVolumeClaim';
 
             // Set description to show status
             item.description = pvcInfo.status;

@@ -60,6 +60,9 @@ export class StorageClassesSubcategory {
                     resourceName: scInfo.name
                 }
             );
+            
+            // Set context value for "View YAML" menu
+            item.contextValue = 'resource:StorageClass';
 
             // Set description to show provisioner type
             item.description = scInfo.provisioner;

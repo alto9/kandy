@@ -159,6 +159,26 @@
             display: none;
         }
 
+        .view-yaml-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background-color: var(--vscode-button-secondaryBackground);
+            color: var(--vscode-button-secondaryForeground);
+            border: 1px solid var(--vscode-button-border);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.95em;
+        }
+
+        .view-yaml-btn:hover {
+            background-color: var(--vscode-button-secondaryHoverBackground);
+        }
+
+        .view-yaml-btn .btn-icon {
+            font-size: 1.1em;
+        }
 
         /* Notification banner styles */
         .notification {
@@ -374,6 +394,10 @@
     <div class="container">
         <div class="namespace-header">
             <h1 class="namespace-title">{{NAMESPACE_NAME}}</h1>
+            <button id="view-namespace-yaml" class="view-yaml-btn" data-namespace="{{NAMESPACE_NAME}}">
+                <span class="btn-icon">📄</span>
+                <span class="btn-text">View YAML</span>
+            </button>
             <button id="set-default-namespace" class="default-namespace-btn">
                 <span class="btn-icon">✓</span>
                 <span class="btn-text">Set as Default Namespace</span>

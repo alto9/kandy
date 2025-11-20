@@ -63,6 +63,9 @@ export class StatefulSetsSubcategory {
                     labelSelector: statefulsetInfo.selector
                 }
             );
+            
+            // Set context value for "View YAML" menu
+            item.contextValue = 'resource:StatefulSet';
 
             // Set description to show namespace and replica status
             const replicaStatus = `${statefulsetInfo.readyReplicas}/${statefulsetInfo.replicas} ready`;

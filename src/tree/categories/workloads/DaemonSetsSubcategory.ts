@@ -63,6 +63,9 @@ export class DaemonSetsSubcategory {
                     labelSelector: daemonsetInfo.selector
                 }
             );
+            
+            // Set context value for "View YAML" menu
+            item.contextValue = 'resource:DaemonSet';
 
             // Set description to show namespace and node status
             const nodeStatus = `${daemonsetInfo.readyNodes}/${daemonsetInfo.desiredNodes} nodes`;

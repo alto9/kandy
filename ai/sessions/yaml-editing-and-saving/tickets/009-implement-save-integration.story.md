@@ -3,7 +3,7 @@ story_id: implement-save-integration
 session_id: yaml-editing-and-saving
 feature_id: [yaml-editor]
 spec_id: [yaml-editor-spec]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 20
 ---
@@ -39,12 +39,12 @@ VS Code needs to call our save handler when users press Ctrl+S. We hook into the
 
 ## Acceptance Criteria
 
-- [ ] Ctrl+S / Cmd+S triggers save operation
-- [ ] Dirty indicator appears when YAML is edited
-- [ ] Dirty indicator clears after successful save
-- [ ] Save applies changes to cluster
-- [ ] Errors prevent save and show messages
-- [ ] Can save multiple open YAML editors independently
+- [x] Ctrl+S / Cmd+S triggers save operation
+- [x] Dirty indicator appears when YAML is edited
+- [x] Dirty indicator clears after successful save
+- [x] Save applies changes to cluster
+- [x] Errors prevent save and show messages
+- [x] Can save multiple open YAML editors independently
 
 ## Dependencies
 

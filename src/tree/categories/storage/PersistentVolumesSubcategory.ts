@@ -60,6 +60,9 @@ export class PersistentVolumesSubcategory {
                     resourceName: pvInfo.name
                 }
             );
+            
+            // Set context value for "View YAML" menu
+            item.contextValue = 'resource:PersistentVolume';
 
             // Set description to show status
             item.description = pvInfo.status;
