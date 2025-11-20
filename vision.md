@@ -16,7 +16,7 @@ kube9-vscode will become the **default Kubernetes management tool for VS Code us
 
 1. **Seamless Integration**: Kubernetes operations feel native to VS Code, not like a separate tool
 2. **Progressive Enhancement**: Start with powerful free features, unlock advanced capabilities as needs grow
-3. **Intelligent Assistance**: AI-powered recommendations help developers make better decisions about their clusters
+3. **Proactive AI Intelligence**: AI-powered insights find problems before they impact users (Pro tier)
 4. **Multi-Cluster Mastery**: Manage multiple clusters and contexts effortlessly from a single interface
 5. **Visual Clarity**: Complex Kubernetes relationships become understandable through visual representations
 6. **GitOps Integration**: Native GitOps capabilities eliminate the need for separate deployment tools
@@ -95,17 +95,132 @@ kube9-vscode will become the **default Kubernetes management tool for VS Code us
 ### Differentiation from Competitors
 
 - **vs. kubectl**: Visual, interactive interface vs. command-line only
-- **vs. Lens/Octant**: IDE-integrated vs. separate application
+- **vs. Lens/Octant**: IDE-integrated vs. separate application, proactive AI vs. reactive visualization
 - **vs. Cloud Console**: Works with any cluster vs. cloud-specific
-- **vs. Generic K8s Tools**: AI-powered insights vs. basic CRUD operations
+- **vs. Generic K8s Tools**: Proactive AI insights vs. basic CRUD operations
+- **vs. Cursor/Claude**: Specialized K8s intelligence vs. general purpose (complementary)
+
+## AI Insights Integration (Pro Tier)
+
+### How Insights Work in VS Code
+
+**1. Automatic Insight Display**
+- Extension reads insights from OperatorStatus CRD (local Kubernetes API call)
+- No server communication needed - all data already in cluster
+- Insights appear automatically in sidebar and resource views
+- Real resource names displayed (operator already de-obfuscated)
+
+**2. Contextual Display**
+- **Sidebar badge**: "3 new insights" notification
+- **Insights panel**: Full list of active insights with filters
+- **Resource context**: Viewing a deployment? See its specific insights inline
+- **Dashboard**: Overview of all insights grouped by severity
+
+**3. User Interactions**
+- **Click insight**: View full details, AI analysis, and recommendations
+- **Acknowledge**: Mark insight as seen, removes from active list
+- **Dismiss**: Mark as not relevant, feedback for AI improvement
+- **Analyze with AI**: Trigger on-demand analysis (uses 1 of 24 daily quota)
+
+**4. Insight Lifecycle**
+```
+1. Operator polls kube9-server every hour
+2. Receives insights with obfuscated names
+3. De-obfuscates using local mapping
+4. Stores in OperatorStatus CRD
+5. Extension reads CRD via Kubernetes API
+6. Displays insights in UI
+7. User acknowledges → Extension patches CRD
+8. Operator syncs acknowledgement to server
+```
+
+**5. On-Demand Analysis**
+- Right-click any resource → "Analyze with AI"
+- Extension patches OperatorStatus with analysis request
+- Operator detects, calls server API
+- New insights appear within minutes (analysis may generate multiple)
+- Consumes 1 of 24 daily analyses
+
+### Insight Types & Display
+
+**Issue Insights (Red)**
+- Pod crashes, deployment failures
+- Resource exhaustion predictions
+- Configuration errors
+- Display prominently with fix steps
+
+**Security Insights (Orange)**
+- Containers running as root
+- Missing network policies
+- Certificate expirations
+- Actionable remediation steps
+
+**Optimization Insights (Blue)**
+- Over/under-provisioned resources
+- Cost savings opportunities
+- Performance improvements
+- ROI calculations included
+
+**Health Insights (Green/Yellow)**
+- Cluster health trends
+- Resource utilization patterns
+- Anomaly detection
+- Predictive warnings
+
+**Trend Insights (Purple)**
+- Historical pattern analysis
+- Capacity planning
+- Usage forecasting
+- Long-term recommendations
+
+### Free vs Pro Tier Experience
+
+**Free Tier:**
+- Visual kubectl replacement
+- Tree view navigation
+- Resource viewer/editor
+- Multi-cluster support
+- All operations local
+- No AI insights
+
+**Pro Tier:**
+- Everything in Free
+- 24 AI analyses per day (each can find multiple issues)
+- Proactive issue detection
+- Security/health scans
+- Optimization recommendations
+- On-demand analysis
+- Trend analysis
+
+### Performance & UX
+
+**Fast & Local:**
+- Insights read from local CRD (no network call)
+- Sub-100ms to display insights
+- Works offline (shows cached insights)
+- No impact on cluster performance
+
+**Graceful Degradation:**
+- If operator unreachable: Shows last known insights
+- If server down: Operator shows cached insights
+- If quota exceeded: Clear messaging, queues requests
+- Never blocks core functionality
+
+**Clear Status Indicators:**
+- Operator status: "Connected", "Degraded", "Offline"
+- Quota remaining: "14 of 24 analyses available today"
+- Insights today: "Generated 23 insights from 10 analyses"
+- Last sync: "Insights updated 23 minutes ago"
+- Next sync: "Next check in 37 minutes"
 
 ## Target Outcomes
 
 ### For Developers
-- **Faster Kubernetes Operations**: Reduce time spent on cluster management by 50%+
+- **Proactive Problem Prevention**: Find issues before they impact users
+- **Faster Troubleshooting**: AI explains what's wrong and how to fix it
 - **Better Decision Making**: AI-powered recommendations prevent common mistakes
 - **Reduced Context Switching**: Manage clusters without leaving VS Code
-- **Learning Tool**: Visual interface helps developers understand Kubernetes concepts
+- **Learning Tool**: Visual interface + AI explanations help understand Kubernetes
 
 ### For Organizations
 - **Improved Developer Productivity**: Less time on infrastructure, more on features
