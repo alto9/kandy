@@ -118,7 +118,7 @@ export class OperatorStatusClient {
         // Query cluster for operator status
         try {
             // Note: getConfigMap will be added in story 002. Using type assertion for now.
-            const result = await (ConfigurationCommands as any).getConfigMap(
+            const result = await (ConfigurationCommands as {getConfigMap: (name: string, namespace: string, kubeconfigPath: string, contextName: string) => Promise<unknown>}).getConfigMap(
                 this.STATUS_CONFIGMAP_NAME,
                 this.STATUS_NAMESPACE,
                 kubeconfigPath,
@@ -389,7 +389,8 @@ export class OperatorStatusClient {
      * @param contextName The context name for error messages
      * @returns Error message if validation fails, null if valid
      */
-    private validateStatusFields(status: OperatorStatus, contextName: string): string | null {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    private validateStatusFields(status: OperatorStatus, _contextName: string): string | null {
         const missingFields: string[] = [];
         
         // Check required fields

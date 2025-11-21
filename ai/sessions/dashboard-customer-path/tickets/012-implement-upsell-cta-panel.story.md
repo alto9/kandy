@@ -4,7 +4,7 @@ session_id: dashboard-customer-path
 feature_id: [operated-dashboard]
 spec_id: [free-operated-dashboard-spec]
 diagram_id: [dashboard-architecture]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 25
 ---
@@ -38,13 +38,13 @@ When operator status is "operated" (no API key), show an upsell panel encouragin
 
 ## Acceptance Criteria
 
-- [ ] Upsell panel displays with star icon
-- [ ] Headline is clear and compelling
-- [ ] Benefits list shows 4-5 clear advantages
-- [ ] "Configure API Key" button is prominent
-- [ ] Button triggers configureApiKey message
-- [ ] Panel design is inviting not pushy
-- [ ] Uses VSCode theme colors appropriately
+- [x] Upsell panel displays with star icon
+- [x] Headline is clear and compelling
+- [x] Benefits list shows 4-5 clear advantages
+- [x] "Configure API Key" button is prominent
+- [x] Button triggers configureApiKey message
+- [x] Panel design is inviting not pushy
+- [x] Uses VSCode theme colors appropriately
 
 ## Dependencies
 

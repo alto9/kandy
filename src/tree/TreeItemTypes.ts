@@ -10,6 +10,7 @@ import { ClusterStatus } from '../kubernetes/ClusterTypes';
  * - info: Informational items (e.g., auth status)
  * 
  * Category types (appear under clusters):
+ * - dashboard: Dashboard category (appears first)
  * - nodes: Nodes category and individual node items
  * - namespaces: Namespaces category
  * - workloads: Workloads category
@@ -48,6 +49,7 @@ export type TreeItemType =
     | 'namespace' 
     | 'allNamespaces' 
     | 'info'
+    | 'dashboard'
     | 'nodes'
     | 'namespaces'
     | 'workloads'

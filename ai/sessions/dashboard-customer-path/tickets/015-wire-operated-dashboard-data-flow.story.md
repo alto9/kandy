@@ -4,7 +4,7 @@ session_id: dashboard-customer-path
 feature_id: [operated-dashboard]
 spec_id: [dashboard-webview-spec, free-operated-dashboard-spec]
 diagram_id: [dashboard-architecture]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 25
 ---
@@ -38,14 +38,14 @@ Update the `openDashboard` command to check operator status and route to either 
 
 ## Acceptance Criteria
 
-- [ ] Command checks operator status first
-- [ ] Routes to Free Dashboard if status is 'basic'
-- [ ] Routes to Operated Dashboard if operator installed
-- [ ] Operated Dashboard fetches operator data successfully
-- [ ] Conditional content displays based on API key
-- [ ] Loading states work
-- [ ] Error handling works
-- [ ] Both dashboard types work end-to-end
+- [x] Command checks operator status first
+- [x] Routes to Free Dashboard if status is 'basic'
+- [x] Routes to Operated Dashboard if operator installed
+- [x] Operated Dashboard fetches operator data successfully
+- [x] Conditional content displays based on API key
+- [x] Loading states work
+- [x] Error handling works
+- [x] Both dashboard types work end-to-end
 
 ## Dependencies
 

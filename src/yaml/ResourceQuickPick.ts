@@ -35,7 +35,7 @@ interface ResourceNameQuickPickItem extends vscode.QuickPickItem {
  * Cache entry for resource lists
  */
 interface ResourceCache {
-    data: any[];
+    data: Array<{name: string; namespace?: string}>;
     timestamp: number;
 }
 
@@ -273,7 +273,7 @@ export class ResourceQuickPick {
                 const cached = this.resourceCache.get(cacheKey);
                 const now = Date.now();
 
-                let resources: any[];
+                let resources: Array<{name: string; namespace?: string}>;
                 if (cached && (now - cached.timestamp) < this.CACHE_TTL_MS) {
                     // Use cached data
                     resources = cached.data;

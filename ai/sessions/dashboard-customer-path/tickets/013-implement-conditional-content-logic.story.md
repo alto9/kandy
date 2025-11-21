@@ -4,7 +4,7 @@ session_id: dashboard-customer-path
 feature_id: [operated-dashboard]
 spec_id: [free-operated-dashboard-spec, dashboard-webview-spec]
 diagram_id: [dashboard-architecture]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 25
 ---
@@ -34,12 +34,12 @@ The Operated Dashboard needs to detect API key presence and show the appropriate
 
 ## Acceptance Criteria
 
-- [ ] With API key: AI recommendations panel displays
-- [ ] Without API key: Upsell CTA panel displays
-- [ ] Only one panel displays at a time
-- [ ] Logic correctly interprets operator status
-- [ ] Content switches if status changes
-- [ ] Both panels work in their respective scenarios
+- [x] With API key: AI recommendations panel displays
+- [x] Without API key: Upsell CTA panel displays
+- [x] Only one panel displays at a time
+- [x] Logic correctly interprets operator status
+- [x] Content switches if status changes
+- [x] Both panels work in their respective scenarios
 
 ## Dependencies
 

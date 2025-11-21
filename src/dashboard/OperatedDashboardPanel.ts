@@ -1,0 +1,403 @@
+import * as vscode from 'vscode';
+import { getOperatedDashboardHtml } from './operatedDashboardHtml';
+import { OperatorDashboardStatus } from './types';
+import { getAIRecommendations } from './AIRecommendationsQuery';
+import { DashboardDataProvider } from './DashboardDataProvider';
+import { DashboardRefreshManager } from './RefreshManager';
+import { getOperatorDashboardStatus } from './OperatorStatusQuery';
+
+/**
+ * Interface for storing panel information.
+ * Each panel is associated with a specific cluster context.
+ */
+interface PanelInfo {
+    panel: vscode.WebviewPanel;
+    kubeconfigPath: string;
+    contextName: string;
+    clusterName: string;
+    operatorStatus: OperatorDashboardStatus;
+    refreshManager: DashboardRefreshManager;
+}
+
+/**
+ * OperatedDashboardPanel manages webview panels for Operated Dashboards.
+ * Supports multiple simultaneous panels (one per cluster).
+ * Displays operator metrics and conditional content (AI recommendations or upsell CTA).
+ */
+export class OperatedDashboardPanel {
+    /**
+     * Map of open webview panels keyed by contextName.
+     * Allows reusing existing panels when the same dashboard is opened again.
+     */
+    private static openPanels: Map<string, PanelInfo> = new Map();
+    
+    /**
+     * Extension context for managing subscriptions.
+     */
+    private static extensionContext: vscode.ExtensionContext | undefined;
+
+    /**
+     * Show an Operated Dashboard webview panel.
+     * Creates a new panel or reveals an existing one for the given cluster.
+     * 
+     * @param context - The VS Code extension context
+     * @param kubeconfigPath - Path to the kubeconfig file
+     * @param contextName - The kubectl context name
+     * @param clusterName - The display name of the cluster
+     * @param operatorStatus - The operator status for this cluster
+     */
+    public static show(
+        context: vscode.ExtensionContext,
+        kubeconfigPath: string,
+        contextName: string,
+        clusterName: string,
+        operatorStatus: OperatorDashboardStatus
+    ): void {
+        // Store the extension context for later use
+        OperatedDashboardPanel.extensionContext = context;
+
+        // Create a unique key for this dashboard panel
+        const panelKey = contextName;
+
+        // If we already have a panel for this cluster, reveal it
+        const existingPanelInfo = OperatedDashboardPanel.openPanels.get(panelKey);
+        if (existingPanelInfo) {
+            existingPanelInfo.panel.reveal(vscode.ViewColumn.One);
+            return;
+        }
+
+        // Create a new webview panel
+        const panel = vscode.window.createWebviewPanel(
+            'kube9OperatedDashboard',
+            `Dashboard: ${clusterName}`,
+            vscode.ViewColumn.One,
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true,
+                localResourceRoots: [
+                    vscode.Uri.joinPath(context.extensionUri, 'src', 'dashboard')
+                ]
+            }
+        );
+
+        // Create refresh manager for this panel
+        const refreshManager = new DashboardRefreshManager();
+
+        // Store the panel and its context in our map
+        OperatedDashboardPanel.openPanels.set(panelKey, {
+            panel,
+            kubeconfigPath,
+            contextName,
+            clusterName,
+            operatorStatus,
+            refreshManager
+        });
+
+        // Set the webview's HTML content
+        panel.webview.html = getOperatedDashboardHtml(panel.webview, clusterName, operatorStatus);
+
+        // Start auto-refresh
+        refreshManager.startAutoRefresh(
+            panel,
+            kubeconfigPath,
+            contextName,
+            OperatedDashboardPanel.sendDashboardDataWithStatusCheck.bind(OperatedDashboardPanel)
+        );
+
+        // Handle messages from the webview
+        panel.webview.onDidReceiveMessage(
+            async (message) => {
+                await OperatedDashboardPanel.handleWebviewMessage(
+                    message,
+                    panel,
+                    kubeconfigPath,
+                    contextName
+                );
+            },
+            undefined,
+            context.subscriptions
+        );
+
+        // Handle panel disposal
+        panel.onDidDispose(
+            () => {
+                const panelInfo = OperatedDashboardPanel.openPanels.get(panelKey);
+                if (panelInfo) {
+                    panelInfo.refreshManager.stopAutoRefresh();
+                }
+                OperatedDashboardPanel.openPanels.delete(panelKey);
+            },
+            null,
+            context.subscriptions
+        );
+    }
+
+    /**
+     * Handle messages received from the webview.
+     * 
+     * @param message - The message from the webview
+     * @param panel - The webview panel
+     * @param kubeconfigPath - Path to the kubeconfig file
+     * @param contextName - The kubectl context name
+     */
+    private static async handleWebviewMessage(
+        message: { type: string; [key: string]: unknown },
+        panel: vscode.WebviewPanel,
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<void> {
+        switch (message.type) {
+            case 'requestData':
+                await OperatedDashboardPanel.sendDashboardData(
+                    panel,
+                    kubeconfigPath,
+                    contextName
+                );
+                break;
+
+            case 'refresh':
+                await OperatedDashboardPanel.sendDashboardData(
+                    panel,
+                    kubeconfigPath,
+                    contextName
+                );
+                break;
+
+            case 'configureApiKey':
+                await OperatedDashboardPanel.handleConfigureApiKey(panel, contextName);
+                break;
+
+            default:
+                console.log('Unknown message type:', message.type);
+        }
+    }
+
+    /**
+     * Determine which conditional content type to display based on operator status.
+     * Implements the logic from the free-operated-dashboard-spec:
+     * - degraded health -> degraded-warning
+     * - hasApiKey && mode=enabled -> ai-recommendations
+     * - otherwise -> upsell-cta
+     * 
+     * @param operatorStatus - The operator status for this cluster
+     * @returns The type of conditional content to display
+     */
+    private static determineConditionalContentType(
+        operatorStatus: OperatorDashboardStatus
+    ): 'ai-recommendations' | 'upsell-cta' | 'degraded-warning' {
+        // Check for degraded health first (highest priority)
+        if (operatorStatus.health === 'degraded') {
+            return 'degraded-warning';
+        }
+        
+        // Check if API key present AND mode is enabled
+        if (operatorStatus.hasApiKey && operatorStatus.mode === 'enabled') {
+            return 'ai-recommendations';
+        }
+        
+        // Default to upsell CTA
+        return 'upsell-cta';
+    }
+
+    /**
+     * Send dashboard data with operator status re-check.
+     * This method is called by the refresh manager to ensure operator status
+     * is re-queried on each refresh, allowing detection of API key configuration changes.
+     * 
+     * @param panel - The webview panel
+     * @param kubeconfigPath - Path to the kubeconfig file
+     * @param contextName - The kubectl context name
+     */
+    private static async sendDashboardDataWithStatusCheck(
+        panel: vscode.WebviewPanel,
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<void> {
+        // Re-query operator status to detect changes (e.g., API key configuration)
+        const freshOperatorStatus = await getOperatorDashboardStatus(contextName);
+        
+        // Update stored operator status in panel info
+        const panelInfo = OperatedDashboardPanel.openPanels.get(contextName);
+        if (panelInfo && freshOperatorStatus) {
+            panelInfo.operatorStatus = freshOperatorStatus;
+        }
+        
+        // Call existing sendDashboardData method
+        await OperatedDashboardPanel.sendDashboardData(
+            panel,
+            kubeconfigPath,
+            contextName
+        );
+    }
+
+    /**
+     * Send dashboard data to the webview.
+     * Fetches operator dashboard data and AI recommendations if API key is configured.
+     * 
+     * @param panel - The webview panel
+     * @param kubeconfigPath - Path to the kubeconfig file
+     * @param contextName - The kubectl context name
+     */
+    private static async sendDashboardData(
+        panel: vscode.WebviewPanel,
+        kubeconfigPath: string,
+        contextName: string
+    ): Promise<void> {
+        try {
+            // Send loading state
+            panel.webview.postMessage({ type: 'loading' });
+
+            // Get panel info to check operator status
+            const panelInfo = OperatedDashboardPanel.openPanels.get(contextName);
+            
+            // Determine which conditional content to display
+            const conditionalContentType = panelInfo 
+                ? OperatedDashboardPanel.determineConditionalContentType(panelInfo.operatorStatus)
+                : 'upsell-cta';
+            
+            // Fetch operator dashboard data
+            const operatorData = await DashboardDataProvider.getOperatorDashboardData(
+                kubeconfigPath,
+                contextName
+            );
+
+            // Handle case where operator data is not available
+            if (!operatorData) {
+                throw new Error('Operator dashboard data not available');
+            }
+
+            // Construct dashboard data with operator metrics
+            const dashboardData: {
+                namespaceCount: number;
+                workloads: typeof operatorData.workloads;
+                nodes: typeof operatorData.nodes;
+                operatorMetrics: {
+                    collectorsRunning: number;
+                    dataPointsCollected: number;
+                    lastCollectionTime: string;
+                };
+                lastUpdated: string;
+                hasApiKey: boolean;
+                conditionalContentType: string;
+                aiRecommendations?: Array<{id: string; type: string; severity: string; title: string; description: string}>;
+            } = {
+                namespaceCount: operatorData.namespaceCount,
+                workloads: operatorData.workloads,
+                nodes: operatorData.nodes,
+                operatorMetrics: {
+                    collectorsRunning: operatorData.operatorMetrics.collectorsRunning,
+                    dataPointsCollected: operatorData.operatorMetrics.dataPointsCollected,
+                    lastCollectionTime: operatorData.operatorMetrics.lastCollectionTime.toISOString()
+                },
+                lastUpdated: operatorData.lastUpdated.toISOString(),
+                hasApiKey: panelInfo?.operatorStatus.hasApiKey || false,
+                conditionalContentType: conditionalContentType
+            };
+
+            // Only query AI recommendations if we're showing that panel
+            if (conditionalContentType === 'ai-recommendations') {
+                const aiRecommendations = await getAIRecommendations(contextName);
+                if (aiRecommendations && aiRecommendations.recommendations.length > 0) {
+                    dashboardData.aiRecommendations = aiRecommendations.recommendations;
+                }
+            }
+
+            // Send data to webview
+            panel.webview.postMessage({
+                type: 'updateData',
+                data: dashboardData
+            });
+        } catch (error) {
+            // Send error to webview
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            panel.webview.postMessage({
+                type: 'error',
+                error: `Failed to load dashboard data: ${errorMessage}`
+            });
+        }
+    }
+
+    /**
+     * Handle API key configuration request from webview.
+     * Prompts user for API key, validates input, stores securely, and refreshes dashboard.
+     * 
+     * @param panel - The webview panel
+     * @param contextName - The kubectl context name
+     */
+    private static async handleConfigureApiKey(
+        panel: vscode.WebviewPanel,
+        contextName: string
+    ): Promise<void> {
+        try {
+            // Show input box for API key
+            const apiKey = await vscode.window.showInputBox({
+                prompt: 'Enter your kube9 API key',
+                password: true,
+                placeHolder: 'API key',
+                validateInput: (value) => {
+                    if (!value || value.trim().length === 0) {
+                        return 'API key cannot be empty';
+                    }
+                    return null;
+                }
+            });
+            
+            // User cancelled
+            if (!apiKey) {
+                console.log('API key configuration cancelled by user');
+                return;
+            }
+            
+            // Store API key securely
+            if (OperatedDashboardPanel.extensionContext) {
+                const { Settings } = await import('../config/Settings');
+                await Settings.setApiKey(OperatedDashboardPanel.extensionContext, apiKey.trim());
+                
+                // Show success message
+                vscode.window.showInformationMessage('API key configured successfully');
+                
+                // Log for debugging
+                console.log('API key configured for context:', contextName);
+                
+                // Get panel info to retrieve kubeconfig path
+                const panelInfo = OperatedDashboardPanel.openPanels.get(contextName);
+                if (panelInfo) {
+                    // Refresh the dashboard to show AI recommendations
+                    await OperatedDashboardPanel.sendDashboardData(
+                        panel,
+                        panelInfo.kubeconfigPath,
+                        contextName
+                    );
+                }
+            } else {
+                throw new Error('Extension context not available');
+            }
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            console.error('Failed to configure API key:', errorMessage);
+            vscode.window.showErrorMessage(`Failed to configure API key: ${errorMessage}`);
+        }
+    }
+
+    /**
+     * Get all open dashboard panels.
+     * Used for testing purposes.
+     * 
+     * @returns Map of open panels
+     */
+    public static getOpenPanels(): Map<string, PanelInfo> {
+        return OperatedDashboardPanel.openPanels;
+    }
+
+    /**
+     * Close all open dashboard panels.
+     * Used for cleanup during testing or extension deactivation.
+     */
+    public static closeAllPanels(): void {
+        for (const panelInfo of OperatedDashboardPanel.openPanels.values()) {
+            panelInfo.panel.dispose();
+        }
+        OperatedDashboardPanel.openPanels.clear();
+    }
+}
+

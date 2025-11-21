@@ -4,7 +4,7 @@ session_id: dashboard-customer-path
 feature_id: [free-dashboard, operated-dashboard]
 spec_id: [dashboard-webview-spec]
 diagram_id: [dashboard-architecture]
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 25
 ---
@@ -36,13 +36,30 @@ Users should be able to open dashboards for multiple clusters at once. Each dash
 
 ## Acceptance Criteria
 
-- [ ] Multiple dashboards can be open simultaneously
-- [ ] One dashboard per cluster
-- [ ] Clicking Dashboard again reveals existing panel
-- [ ] Each dashboard shows data for its specific cluster
-- [ ] Panel disposal removes from map
-- [ ] State is independent per dashboard
-- [ ] Can switch between dashboard panels freely
+- [x] Multiple dashboards can be open simultaneously
+- [x] One dashboard per cluster
+- [x] Clicking Dashboard again reveals existing panel
+- [x] Each dashboard shows data for its specific cluster
+- [x] Panel disposal removes from map
+- [x] State is independent per dashboard
+- [x] Can switch between dashboard panels freely
+
+## Implementation Notes
+
+**Status**: This feature was already fully implemented during story 016 (add-operated-dashboard-refresh).
+
+**Design Decision**: The story suggested creating a separate `DashboardManager.ts` file, but the actual implementation uses a superior approach:
+- Each panel class (FreeDashboardPanel, OperatedDashboardPanel) manages its own instances via static `openPanels` Map
+- This provides better type safety, encapsulation, and consistency with other webview classes (NamespaceWebview)
+- Free and Operated dashboards have different PanelInfo structures (operatorStatus field), making separate Maps cleaner
+
+**Implementation Details**:
+- `FreeDashboardPanel.ts` (lines 27, 56-60, 80, 120): Multi-panel support with Map keyed by contextName
+- `OperatedDashboardPanel.ts` (lines 32, 63-67, 87, 128): Identical pattern with operator-specific fields
+- Each panel maintains independent state via its own DashboardRefreshManager
+- Panel disposal properly cleans up from Map and stops refresh timers
+
+All acceptance criteria verified and met by existing implementation.
 
 ## Dependencies
 

@@ -81,6 +81,11 @@
         "command": "kube9.viewResourceYAMLFromPalette",
         "title": "View Resource YAML",
         "category": "Kube9"
+      },
+      {
+        "command": "kube9.openDashboard",
+        "title": "Open Dashboard",
+        "category": "kube9"
       }
     ],
     "menus": {

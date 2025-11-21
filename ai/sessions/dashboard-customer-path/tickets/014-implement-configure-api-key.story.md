@@ -3,7 +3,7 @@ story_id: implement-configure-api-key
 session_id: dashboard-customer-path
 feature_id: [operated-dashboard]
 spec_id: [free-operated-dashboard-spec]
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 20
 ---
@@ -37,13 +37,13 @@ When users click "Configure API Key" in the upsell panel, prompt them for their 
 
 ## Acceptance Criteria
 
-- [ ] Clicking button shows VSCode input box
-- [ ] Input box uses password mode
-- [ ] Non-empty validation works
-- [ ] User can cancel without error
-- [ ] API key stored securely (placeholder OK for now)
-- [ ] Success message shown after configuration
-- [ ] Dashboard refreshes to show AI panel
+- [x] Clicking button shows VSCode input box
+- [x] Input box uses password mode
+- [x] Non-empty validation works
+- [x] User can cancel without error
+- [x] API key stored securely (using VSCode secret storage)
+- [x] Success message shown after configuration
+- [x] Dashboard refreshes to show AI panel
 
 ## Dependencies
 

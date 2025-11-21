@@ -8,6 +8,33 @@ import { TreeItemData } from './TreeItemTypes';
  */
 export class TreeItemFactory {
     /**
+     * Creates the Dashboard category tree item.
+     * Provides access to cluster dashboard with overview and metrics.
+     * 
+     * @param resourceData Cluster context and cluster information
+     * @returns Configured Dashboard category tree item
+     */
+    static createDashboardCategory(resourceData: TreeItemData): ClusterTreeItem {
+        const item = new ClusterTreeItem(
+            'Dashboard',
+            'dashboard',
+            vscode.TreeItemCollapsibleState.None,
+            resourceData
+        );
+        item.iconPath = new vscode.ThemeIcon('dashboard');
+        item.tooltip = 'View cluster dashboard';
+        
+        // Add command to open dashboard when clicked
+        item.command = {
+            command: 'kube9.openDashboard',
+            title: 'Open Dashboard',
+            arguments: [item]
+        };
+        
+        return item;
+    }
+
+    /**
      * Creates the Nodes category tree item.
      * Displays all nodes in the cluster.
      * 

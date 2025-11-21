@@ -4,7 +4,7 @@ session_id: dashboard-customer-path
 feature_id: [free-dashboard]
 spec_id: [dashboard-webview-spec, free-nonoperated-dashboard-spec]
 diagram_id: [dashboard-architecture]
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 20
 ---
@@ -38,13 +38,13 @@ The Free Dashboard should auto-refresh data every 30 seconds to keep statistics 
 
 ## Acceptance Criteria
 
-- [ ] Dashboard auto-refreshes every 30 seconds
-- [ ] Manual refresh button works
-- [ ] Refresh shows loading indicator
-- [ ] Auto-refresh stops when panel is not visible
-- [ ] Auto-refresh stops when panel is disposed
-- [ ] Refresh doesn't disrupt user interaction
-- [ ] Multiple refreshes don't stack up
+- [x] Dashboard auto-refreshes every 30 seconds
+- [x] Manual refresh button works
+- [x] Refresh shows loading indicator
+- [x] Auto-refresh stops when panel is not visible
+- [x] Auto-refresh stops when panel is disposed
+- [x] Refresh doesn't disrupt user interaction
+- [x] Multiple refreshes don't stack up
 
 ## Dependencies
 

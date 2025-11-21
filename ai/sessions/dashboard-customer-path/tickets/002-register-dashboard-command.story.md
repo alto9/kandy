@@ -4,7 +4,7 @@ session_id: dashboard-customer-path
 feature_id: [free-dashboard, operated-dashboard]
 spec_id: [dashboard-webview-spec]
 diagram_id: [dashboard-architecture]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 20
 ---
@@ -34,12 +34,12 @@ This command needs to be registered in the extension activation and will serve a
 
 ## Acceptance Criteria
 
-- [ ] `kube9.openDashboard` command is registered successfully
-- [ ] Command accepts ClusterTreeItem parameter
-- [ ] Command extracts cluster context correctly
-- [ ] Command checks operator status
-- [ ] Command is properly disposed on deactivation
-- [ ] Clicking Dashboard tree item triggers the command
+- [x] `kube9.openDashboard` command is registered successfully
+- [x] Command accepts ClusterTreeItem parameter
+- [x] Command extracts cluster context correctly
+- [x] Command checks operator status
+- [x] Command is properly disposed on deactivation
+- [x] Clicking Dashboard tree item triggers the command
 
 ## Dependencies
 

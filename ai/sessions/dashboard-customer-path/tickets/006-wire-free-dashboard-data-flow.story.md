@@ -4,7 +4,7 @@ session_id: dashboard-customer-path
 feature_id: [free-dashboard]
 spec_id: [dashboard-webview-spec, free-nonoperated-dashboard-spec]
 diagram_id: [dashboard-architecture]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 25
 ---

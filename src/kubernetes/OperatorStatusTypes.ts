@@ -56,6 +56,9 @@ export interface OperatorStatus {
     /** Whether operator is registered with kube9-server (pro tier only) */
     registered: boolean;
     
+    /** Whether an API key is configured */
+    apiKeyConfigured: boolean;
+    
     /** Error message if unhealthy or degraded */
     error: string | null;
     

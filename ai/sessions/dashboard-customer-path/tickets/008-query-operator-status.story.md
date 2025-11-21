@@ -4,7 +4,7 @@ session_id: dashboard-customer-path
 feature_id: [operated-dashboard]
 spec_id: [free-operated-dashboard-spec]
 diagram_id: [dashboard-architecture]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 25
 ---
@@ -40,12 +40,12 @@ The Operated Dashboard needs to detect operator presence and API key configurati
 
 ## Acceptance Criteria
 
-- [ ] Function queries operator status ConfigMap successfully
-- [ ] Parses mode, hasApiKey, tier, version, health correctly
-- [ ] Returns null or basic status if ConfigMap doesn't exist
-- [ ] Uses 5-second timeout for kubectl query
-- [ ] Handles JSON parsing errors gracefully
-- [ ] Returns structured OperatorStatus object
+- [x] Function queries operator status ConfigMap successfully
+- [x] Parses mode, hasApiKey, tier, version, health correctly
+- [x] Returns null or basic status if ConfigMap doesn't exist
+- [x] Uses 5-second timeout for kubectl query
+- [x] Handles JSON parsing errors gracefully
+- [x] Returns structured OperatorStatus object
 
 ## Dependencies
 

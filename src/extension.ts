@@ -13,6 +13,10 @@ import { NamespaceStatusBar } from './ui/statusBar';
 import { YAMLEditorManager, ResourceIdentifier } from './yaml/YAMLEditorManager';
 import { Kube9YAMLFileSystemProvider } from './yaml/Kube9YAMLFileSystemProvider';
 import { ClusterTreeItem } from './tree/ClusterTreeItem';
+import { OperatorStatusClient } from './services/OperatorStatusClient';
+import { OperatorStatusMode } from './kubernetes/OperatorStatusTypes';
+import { FreeDashboardPanel } from './dashboard/FreeDashboardPanel';
+import { OperatedDashboardPanel } from './dashboard/OperatedDashboardPanel';
 
 /**
  * Global extension context accessible to all components.
@@ -475,6 +479,77 @@ function registerCommands(): void {
     );
     context.subscriptions.push(viewResourceYAMLFromPaletteCmd);
     disposables.push(viewResourceYAMLFromPaletteCmd);
+    
+    // Register open dashboard command
+    const openDashboardCmd = vscode.commands.registerCommand(
+        'kube9.openDashboard',
+        async (treeItem: ClusterTreeItem) => {
+            try {
+                // Extract cluster information from tree item
+                if (!treeItem || !treeItem.resourceData) {
+                    throw new Error('Invalid tree item: missing resource data');
+                }
+                
+                const clusterName = treeItem.resourceData.cluster.name;
+                const contextName = treeItem.resourceData.context.name;
+                
+                console.log('Opening dashboard for cluster:', clusterName, 'context:', contextName);
+                
+                // Get kubeconfig path from the tree provider
+                const treeProvider = getClusterTreeProvider();
+                const kubeconfigPath = treeProvider.getKubeconfigPath();
+                
+                if (!kubeconfigPath) {
+                    throw new Error('Kubeconfig path not available');
+                }
+                
+                // Get operator status to determine dashboard type
+                const operatorStatusClient = new OperatorStatusClient();
+                const cachedStatus = await operatorStatusClient.getStatus(
+                    kubeconfigPath,
+                    contextName
+                );
+                
+                console.log('Operator status:', cachedStatus.mode);
+                
+                // Open appropriate dashboard based on operator status
+                if (cachedStatus.mode === OperatorStatusMode.Basic) {
+                    // Open Free (Non-Operated) Dashboard
+                    FreeDashboardPanel.show(
+                        context,
+                        kubeconfigPath,
+                        contextName,
+                        clusterName
+                    );
+                } else {
+                    // Convert CachedOperatorStatus to OperatorDashboardStatus for dashboard
+                    const operatorStatus = {
+                        mode: cachedStatus.mode.toLowerCase() as 'basic' | 'operated' | 'enabled' | 'degraded',
+                        hasApiKey: cachedStatus.status?.apiKeyConfigured || false,
+                        tier: cachedStatus.status?.tier,
+                        version: cachedStatus.status?.version,
+                        health: cachedStatus.status?.health
+                    };
+                    
+                    // Open Operated Dashboard with operator status
+                    OperatedDashboardPanel.show(
+                        context,
+                        kubeconfigPath,
+                        contextName,
+                        clusterName,
+                        operatorStatus
+                    );
+                }
+                
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                console.error('Failed to open dashboard:', errorMessage);
+                vscode.window.showErrorMessage(`Failed to open dashboard: ${errorMessage}`);
+            }
+        }
+    );
+    context.subscriptions.push(openDashboardCmd);
+    disposables.push(openDashboardCmd);
 }
 
 /**

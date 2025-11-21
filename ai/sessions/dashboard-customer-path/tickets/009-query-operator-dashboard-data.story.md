@@ -4,7 +4,7 @@ session_id: dashboard-customer-path
 feature_id: [operated-dashboard]
 spec_id: [free-operated-dashboard-spec]
 diagram_id: [dashboard-architecture]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 25
 ---
@@ -38,12 +38,12 @@ When the operator is installed, dashboard statistics come from operator-managed 
 
 ## Acceptance Criteria
 
-- [ ] Function queries operator dashboard data ConfigMap
-- [ ] Parses namespace, workload, node, and operator metrics
-- [ ] Returns structured OperatorDashboardData object
-- [ ] Uses 5-second timeout
-- [ ] Handles missing ConfigMap gracefully
-- [ ] Handles JSON parsing errors
+- [x] Function queries operator dashboard data ConfigMap
+- [x] Parses namespace, workload, node, and operator metrics
+- [x] Returns structured OperatorDashboardData object
+- [x] Uses 5-second timeout
+- [x] Handles missing ConfigMap gracefully
+- [x] Handles JSON parsing errors
 
 ## Dependencies
 

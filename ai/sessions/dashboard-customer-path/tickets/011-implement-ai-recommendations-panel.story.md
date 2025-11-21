@@ -4,7 +4,7 @@ session_id: dashboard-customer-path
 feature_id: [operated-dashboard]
 spec_id: [free-operated-dashboard-spec]
 diagram_id: [dashboard-architecture]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 30
 ---
@@ -40,13 +40,13 @@ When the operator status is "enabled" (has API key), show the AI Recommendations
 
 ## Acceptance Criteria
 
-- [ ] AI Recommendations panel displays with lightbulb icon
-- [ ] Recommendations query kube9-ai-recommendations ConfigMap
-- [ ] Each recommendation shows as a card with title and description
-- [ ] Panel has distinct visual style
-- [ ] Handles empty recommendations gracefully
-- [ ] Loading state while fetching recommendations
-- [ ] Error handling if ConfigMap doesn't exist
+- [x] AI Recommendations panel displays with lightbulb icon
+- [x] Recommendations query kube9-ai-recommendations ConfigMap
+- [x] Each recommendation shows as a card with title and description
+- [x] Panel has distinct visual style
+- [x] Handles empty recommendations gracefully
+- [x] Loading state while fetching recommendations
+- [x] Error handling if ConfigMap doesn't exist
 
 ## Dependencies
 

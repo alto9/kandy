@@ -138,8 +138,9 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
 
     /**
      * Get resource categories for a cluster.
-     * Returns categories conditionally based on operator status:
-     * - If operator status is NOT Basic: Reports appears first, followed by Nodes, Namespaces, Workloads, Storage, Helm, Configuration, Custom Resources
+     * Returns categories with Dashboard always appearing first, followed by conditional and standard categories:
+     * - Dashboard always appears first (for all clusters)
+     * - If operator status is NOT Basic: Reports appears second, followed by Nodes, Namespaces, Workloads, Storage, Helm, Configuration, Custom Resources
      * - If operator status is Basic or undefined: Returns Nodes, Namespaces, Workloads, Storage, Helm, Configuration, Custom Resources (no Reports)
      * 
      * @param clusterElement The cluster tree item to get categories for
@@ -163,12 +164,17 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
         // Prepend Reports category if operator is installed (status is NOT Basic)
         if (clusterElement.operatorStatus !== undefined && clusterElement.operatorStatus !== OperatorStatusMode.Basic) {
             return [
+                TreeItemFactory.createDashboardCategory(clusterElement.resourceData),
                 TreeItemFactory.createReportsCategory(clusterElement.resourceData),
                 ...categories
             ];
         }
 
-        return categories;
+        // Dashboard appears first for all clusters
+        return [
+            TreeItemFactory.createDashboardCategory(clusterElement.resourceData),
+            ...categories
+        ];
     }
 
     /**
@@ -178,7 +184,8 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
      * @returns True if the type is a category type
      */
     private isCategoryType(type: TreeItemType): boolean {
-        return type === 'nodes' || 
+        return type === 'dashboard' ||
+               type === 'nodes' || 
                type === 'namespaces' || 
                type === 'workloads' || 
                type === 'deployments' ||
@@ -661,6 +668,15 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     }
 
     /**
+     * Get the kubeconfig file path.
+     * 
+     * @returns The kubeconfig file path, or undefined if not set
+     */
+    getKubeconfigPath(): string | undefined {
+        return this.kubeconfig?.filePath;
+    }
+
+    /**
      * Refresh the tree view.
      * Call this method to trigger a complete refresh of the tree view.
      * VS Code will call getChildren() again to rebuild the tree.
@@ -1022,7 +1038,6 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
     ): void {
         // Determine the appropriate icon based on operator status (if available) or connectivity status
         let iconId: string;
-        let statusText: string;
         let iconColor: vscode.ThemeColor | undefined;
 
         // Prioritize operator status over connectivity status when operator status is available
@@ -1030,22 +1045,18 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             switch (operatorStatus) {
                 case OperatorStatusMode.Basic:
                     iconId = 'circle-outline';
-                    statusText = 'Operator not installed';
                     // No color - use default
                     break;
                 case OperatorStatusMode.Operated:
                     iconId = 'shield';
-                    statusText = 'Operator installed (free tier)';
                     // No color - use default
                     break;
                 case OperatorStatusMode.Enabled:
                     iconId = 'verified';
-                    statusText = 'Operator enabled (pro tier)';
                     iconColor = new vscode.ThemeColor('testing.iconPassed');
                     break;
                 case OperatorStatusMode.Degraded:
                     iconId = 'warning';
-                    statusText = 'Operator degraded';
                     iconColor = new vscode.ThemeColor('editorWarning.foreground');
                     break;
             }
@@ -1053,22 +1064,17 @@ export class ClusterTreeProvider implements vscode.TreeDataProvider<ClusterTreeI
             // Fall back to connectivity-based icons when operator status is not available
             if (status === ClusterStatus.Unknown) {
                 iconId = 'loading~spin';
-                statusText = 'Checking connection...';
             } else if (status === ClusterStatus.Connected) {
                 if (isCurrentContext) {
                     iconId = 'vm-active'; // Active VM icon for current + connected
-                    statusText = 'Current context (connected)';
                 } else {
                     iconId = 'vm-connect'; // Connected VM icon
-                    statusText = 'Connected';
                 }
             } else { // Disconnected
                 if (isCurrentContext) {
                     iconId = 'warning'; // Warning icon for current + disconnected
-                    statusText = 'Current context (disconnected)';
                 } else {
                     iconId = 'warning'; // Warning icon for disconnected clusters
-                    statusText = 'Disconnected';
                 }
             }
         }

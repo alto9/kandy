@@ -4,7 +4,7 @@ session_id: dashboard-customer-path
 feature_id: [operated-dashboard]
 spec_id: [dashboard-webview-spec, free-operated-dashboard-spec]
 diagram_id: [dashboard-architecture]
-status: pending
+status: completed
 priority: high
 estimated_minutes: 30
 ---
@@ -37,13 +37,13 @@ The Operated Dashboard is similar to Free Dashboard but adds operator metrics an
 
 ## Acceptance Criteria
 
-- [ ] Webview panel opens with correct title
-- [ ] Operator status badge displays in header
-- [ ] Operator metrics section is visible
-- [ ] Conditional content container exists (empty for now)
-- [ ] Message passing works
-- [ ] Panel uses VSCode theme colors
-- [ ] Panel similar to Free Dashboard with operator additions
+- [x] Webview panel opens with correct title
+- [x] Operator status badge displays in header
+- [x] Operator metrics section is visible
+- [x] Conditional content container exists (empty for now)
+- [x] Message passing works
+- [x] Panel uses VSCode theme colors
+- [x] Panel similar to Free Dashboard with operator additions
 
 ## Dependencies
 

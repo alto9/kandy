@@ -4,7 +4,7 @@ session_id: dashboard-customer-path
 feature_id: [operated-dashboard]
 spec_id: [dashboard-webview-spec, free-operated-dashboard-spec]
 diagram_id: [dashboard-architecture]
-status: pending
+status: completed
 priority: medium
 estimated_minutes: 20
 ---
@@ -37,13 +37,13 @@ Operated Dashboard needs to refresh data every 30 seconds like Free Dashboard, b
 
 ## Acceptance Criteria
 
-- [ ] Auto-refresh works every 30 seconds
-- [ ] Manual refresh button works
-- [ ] Refresh re-checks operator status
-- [ ] Conditional content updates if API key configured
-- [ ] Dashboard switches from upsell to AI panel on key configuration
-- [ ] Refresh stops when panel disposed
-- [ ] Loading indicator shows during refresh
+- [x] Auto-refresh works every 30 seconds
+- [x] Manual refresh button works
+- [x] Refresh re-checks operator status
+- [x] Conditional content updates if API key configured
+- [x] Dashboard switches from upsell to AI panel on key configuration
+- [x] Refresh stops when panel disposed
+- [x] Loading indicator shows during refresh
 
 ## Dependencies
 
