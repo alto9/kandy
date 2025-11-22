@@ -307,14 +307,38 @@ API keys are stored securely in VS Code's secret storage.
 
 ## Contributing
 
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on:
+
+- How to set up your development environment
+- Our code style and conventions
+- How to submit pull requests
+- Our development workflow
+
+This project uses the [Forge methodology](https://github.com/alto9/forge) for context engineering:
+
 1. Check `ai/tasks/` for current priorities
 2. Review `ai/decisions/` for architectural context
 3. Follow specifications in `ai/specs/`
 4. Update progress in `ai/tasks/`
 
-This project uses the [Forge methodology](https://github.com/alto9/forge) for context engineering.
+### Quick Start for Contributors
+
+```bash
+# Fork and clone
+git clone https://github.com/alto9/kube9-vscode.git
+cd kube9-vscode
+
+# Install dependencies
+npm install
+
+# Run in development mode
+npm run watch
+# Press F5 in VS Code to launch Extension Development Host
+```
 
 ## Security
+
+For security concerns, please see our [Security Policy](SECURITY.md).
 
 ### Free Tier
 - All data stays on your machine
@@ -329,6 +353,8 @@ This project uses the [Forge methodology](https://github.com/alto9/forge) for co
 - Data sanitization at source (operator level)
 - User controls what operator can access via RBAC
 
+**To report a security vulnerability**, please email **security@alto9.com** (do not open a public issue).
+
 ## License
 
 MIT License - see LICENSE file for details
@@ -336,8 +362,11 @@ MIT License - see LICENSE file for details
 ## Support
 
 - [Documentation](https://docs.kube9.dev)
-- [GitHub Issues](https://github.com/alto9/kube9/issues)
-- [Community Discussions](https://github.com/alto9/kube9/discussions)
+- [GitHub Issues](https://github.com/alto9/kube9-vscode/issues) - Report bugs, request features
+- [GitHub Discussions](https://github.com/alto9/kube9-vscode/discussions) - Ask questions, share ideas
+- [Contributing Guide](CONTRIBUTING.md) - How to contribute
+- [Security Policy](SECURITY.md) - Security reporting
+- [Code of Conduct](CODE_OF_CONDUCT.md) - Community guidelines
 - [Portal Support](https://portal.kube9.dev/support)
 
 ---

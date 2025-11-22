@@ -1,0 +1,9 @@
+blank_issues_enabled: false
+contact_links:
+  - name: GitHub Discussions
+    url: https://github.com/alto9/kube9-vscode/discussions
+    about: Ask questions, share ideas, and discuss kube9 with the community
+  - name: Feature Roadmap
+    url: https://github.com/alto9/kube9-vscode/issues
+    about: View planned features and vote on what to build next
+
